@@ -1,0 +1,50 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+ENV/
+.env
+.env.*
+pip-wheel-metadata/
+
+# --- OS/IDE ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# --- Logs ---
+*.log
+
+# --- Terraform ---
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# --- Kubernetes/Helm (optional local artifacts) ---
+*.tgz
+
+# --- Secrets / keys ---
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
