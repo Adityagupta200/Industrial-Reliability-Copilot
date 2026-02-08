@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+
+langchain
+llama-index
+
+sentence-transformers
+qdrant-client
+
+ragas
+
+prometheus-client
+loguru

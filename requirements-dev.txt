@@ -1,0 +1,11 @@
+-r requirements.txt
+
+pytest
+pytest-cov
+
+ruff
+black
+mypy
+pre-commit
+
+pip-audit
