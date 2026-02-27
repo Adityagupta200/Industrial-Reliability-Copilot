@@ -1,13 +1,34 @@
-fastapi
-uvicorn[standard]
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+loguru>=0.7.2
+prometheus-client>=0.20.0
 
-langchain
-llama-index
+numpy>=1.26.0
+joblib>=1.3.2
+scikit-learn==1.6.1
 
-sentence-transformers
-qdrant-client
+mlflow>=2.12.0
 
-ragas
+torch>=2.6.0,<3.0.0
 
-prometheus-client
-loguru
+sqlalchemy>=2.0.30
+psycopg[binary]>=3.1.19
+alembic>=1.13.1
+pandas>=2.2.2
+
+qdrant-client>=1.10.1
+tenacity>=8.2.3
+
+pymupdf>=1.24.9
+langchain-text-splitters>=0.2.2
+
+typer>=0.12.3
+python-dotenv>=1.0.1
+
+# embeddings
+openai>=1.40.0
+tiktoken>=0.7.0
+sentence-transformers>=3.0.1
+
