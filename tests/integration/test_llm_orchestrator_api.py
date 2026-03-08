@@ -1,7 +1,14 @@
+import os
 import pytest
 import respx
 import httpx
+from httpx import ASGITransport  # Import ASGITransport
 
+# 1. INJECT DUMMY SECRETS BEFORE IMPORTING APP MODULES
+os.environ["LLM_OPENAI_API_KEY"] = "dummy-test-key"
+os.environ["LLM_PRIMARY_PROVIDER"] = "ollama"
+
+# 2. Now it is safe to import the application
 from llm_orchestrator.main import create_app
 
 
@@ -16,8 +23,10 @@ async def test_query_root_cause_smoke():
             200, json={"docs": [{"id": "1", "text": "Bearing wear occurs when lubrication fails."}]}
         )
 
-        # Force LLM to be ollama in env when running tests (or monkeypatch LLMClient)
-        async with httpx.AsyncClient(app=app, base_url="http://test") as client:
+        # Force LLM to be ollama in env when running tests
+        # FIX: Use ASGITransport to pass the FastAPI app to httpx.AsyncClient
+        transport = ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             payload = {
                 "chain": "root_cause",
                 "root_cause": {

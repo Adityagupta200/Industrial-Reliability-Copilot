@@ -20,10 +20,13 @@ class FakeProvider(LLMProvider):
 
 @pytest.mark.asyncio
 async def test_fallback_triggers(monkeypatch):
+    # 1. Inject dummy API key so OpenAIProvider initialization doesn't crash
+    monkeypatch.setenv("LLM_OPENAI_API_KEY", "dummy-test-key")
+
     s = LLMSettings(primary_provider="openai", fallback_provider="ollama", max_retries=3)
 
     c = LLMClient(s)
-    # override providers
+    # 2. override providers with FakeProvider
     c._providers["openai"] = FakeProvider("openai", fail_times=3)
     c._providers["ollama"] = FakeProvider("ollama", fail_times=0)
 
@@ -33,9 +36,13 @@ async def test_fallback_triggers(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_retry_then_success(monkeypatch):
+    # 1. Inject dummy API key so OpenAIProvider initialization doesn't crash
+    monkeypatch.setenv("LLM_OPENAI_API_KEY", "dummy-test-key")
+
     s = LLMSettings(primary_provider="openai", fallback_provider="ollama", max_retries=3)
 
     c = LLMClient(s)
+    # 2. override providers with FakeProvider
     c._providers["openai"] = FakeProvider("openai", fail_times=2)
     c._providers["ollama"] = FakeProvider("ollama", fail_times=0)
 

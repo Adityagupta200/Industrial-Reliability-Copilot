@@ -47,6 +47,7 @@ langchain>=0.2.14
 langchain-core>=0.2.34
 langchain-openai>=0.1.22
 langchain-community>=0.2.12
+langchain-ollama>=0.1.1
 
 # Historical Search (text-to-SQL safety + DB)
 sqlglot>=25.10.0
