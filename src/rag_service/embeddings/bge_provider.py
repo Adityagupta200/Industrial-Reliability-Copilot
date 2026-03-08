@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from sentence_transformers import SentenceTransformer
+import os
+
 from rag_service.core.config import settings
+from rag_service.core.model_cache import get_sentence_transformer
 from rag_service.embeddings.base import EmbeddingProvider
 
 
 class BGEEmbeddingProvider(EmbeddingProvider):
     def __init__(self) -> None:
-        self.model = SentenceTransformer(settings.bge_model_name)
+        # Prefer a dedicated config if you have one, else fall back to EMBEDDING_DEVICE.
+        device = getattr(settings, "bge_device", None) or os.getenv("EMBEDDING_DEVICE", "cpu")
+        self.model = get_sentence_transformer(settings.bge_model_name, device=device)
 
     def dim(self) -> int:
         return int(self.model.get_sentence_embedding_dimension())

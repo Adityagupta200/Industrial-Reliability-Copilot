@@ -1,0 +1,5 @@
+{
+  "source_file": "data/raw/procedures/overheating_motor_basic_checks.md",
+  "doc_type": "procedure",
+  "text": "# Procedure: Motor Overheating Basic Checks\n\n## Steps\n1. Check ventilation paths and clean vents.\n2. Verify load current is within rated limits.\n3. Inspect bearings for friction and misalignment.\n4. Check ambient temperature and cooling system.\n\n## Verification\n- Temperature trend normalizes within 20 minutes."
+}

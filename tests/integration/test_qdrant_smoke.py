@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import uuid
+
 from rag_service.vectorstore.qdrant_store import QdrantStore, VectorPoint
 
 
@@ -8,7 +12,12 @@ def test_qdrant_upsert_and_count() -> None:
     store.upsert(
         "test_collection_smoke",
         [
-            VectorPoint(id="p1", vector=[0.1, 0.2, 0.3, 0.4], payload={"k": "v"}),
+            VectorPoint(
+                id=str(uuid.uuid4()),
+                vector=[0.1, 0.2, 0.3, 0.4],
+                payload={"k": "v"},
+            ),
         ],
     )
+
     assert store.count("test_collection_smoke") >= 1

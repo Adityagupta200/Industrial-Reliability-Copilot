@@ -1,0 +1,10 @@
+{
+  "name": "historical_search",
+  "version": "1.0",
+  "created_date": "2026-03-04",
+  "notes": "Dual-source synthesis; JSON-only output; SQL vs DOC source tags.",
+  "test_results": {
+    "sql_safety_checks": "enforced via sqlglot",
+    "json_parse_pass_rate": null
+  }
+}

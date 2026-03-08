@@ -1,0 +1,5 @@
+{
+  "source_file": "data/raw/procedures/cavitation_triage_pump.md",
+  "doc_type": "procedure",
+  "text": "# Procedure: Cavitation Triage for Pumps\n\n## Symptoms\n- Noise like gravel, fluctuating discharge pressure, reduced flow.\n\n## Steps\n1. Check suction strainer for blockage.\n2. Verify NPSH conditions and suction valve position.\n3. Inspect for air ingress on suction side.\n4. Reduce speed/load temporarily and observe changes.\n\n## Verification\n- Stable pressure and flow after corrective action."
+}

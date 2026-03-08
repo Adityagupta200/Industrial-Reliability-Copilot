@@ -1,0 +1,43 @@
+import pytest
+
+from llm_orchestrator.providers.base import LLMProvider, LLMResult, LLMTransientError
+from llm_orchestrator.llm_config import LLMSettings
+from llm_orchestrator.llm_client import LLMClient
+
+
+class FakeProvider(LLMProvider):
+    def __init__(self, name: str, fail_times: int = 0):
+        self.provider_name = name
+        self._fail_times = fail_times
+        self.calls = 0
+
+    async def invoke(self, prompt: str) -> LLMResult:
+        self.calls += 1
+        if self.calls <= self._fail_times:
+            raise LLMTransientError("transient")
+        return LLMResult(content='{"ok": true}', model="fake", provider=self.provider_name)
+
+
+@pytest.mark.asyncio
+async def test_fallback_triggers(monkeypatch):
+    s = LLMSettings(primary_provider="openai", fallback_provider="ollama", max_retries=3)
+
+    c = LLMClient(s)
+    # override providers
+    c._providers["openai"] = FakeProvider("openai", fail_times=3)
+    c._providers["ollama"] = FakeProvider("ollama", fail_times=0)
+
+    out = await c.invoke("hi")
+    assert out.provider == "ollama"
+
+
+@pytest.mark.asyncio
+async def test_retry_then_success(monkeypatch):
+    s = LLMSettings(primary_provider="openai", fallback_provider="ollama", max_retries=3)
+
+    c = LLMClient(s)
+    c._providers["openai"] = FakeProvider("openai", fail_times=2)
+    c._providers["ollama"] = FakeProvider("ollama", fail_times=0)
+
+    out = await c.invoke("hi")
+    assert out.provider == "openai"

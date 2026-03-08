@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
-import tiktoken
+import uuid
 
+import tiktoken
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from rag_service.core.config import settings
 
 
@@ -17,6 +19,14 @@ class Chunk:
 
 def _token_len(text: str, enc) -> int:
     return len(enc.encode(text))
+
+
+def _stable_chunk_uuid(*, source_id: str, doc_type: str, chunk_index: int) -> str:
+    """
+    Deterministic UUID for a chunk. Ensures Qdrant-valid point IDs and stable upserts.
+    """
+    name = f"{doc_type}:{source_id}:{chunk_index}"
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, name))
 
 
 def chunk_text(
@@ -37,6 +47,7 @@ def chunk_text(
 
     pieces = splitter.split_text(text)
     chunks: list[Chunk] = []
+
     for idx, piece in enumerate(pieces):
         piece = piece.strip()
         if not piece:
@@ -44,7 +55,8 @@ def chunk_text(
         if len(piece) > settings.max_context_chars_per_chunk:
             piece = piece[: settings.max_context_chars_per_chunk]
 
-        chunk_id = f"{source_id}::c{idx:05d}"
+        chunk_id = _stable_chunk_uuid(source_id=source_id, doc_type=doc_type, chunk_index=idx)
+
         meta = dict(extra_meta)
         meta.update(
             {
@@ -53,5 +65,7 @@ def chunk_text(
                 "chunk_index": idx,
             }
         )
+
         chunks.append(Chunk(chunk_id=chunk_id, text=piece, metadata=meta))
+
     return chunks

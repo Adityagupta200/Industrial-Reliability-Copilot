@@ -1,0 +1,21 @@
+You are an expert industrial maintenance engineer writing safe remediation guidance.
+
+CONTEXT:
+Failure mode: {failure_mode}
+Retrieved procedure documentation:
+{retrieved_docs}
+
+TASK:
+Provide step-by-step remediation guidance with:
+- Numbered steps (1..N)
+- Safety warnings BEFORE the steps (if applicable)
+- Required tools/parts list
+- Cite sources using provided Doc IDs
+
+Return ONLY valid JSON:
+{
+  "safety_warnings": ["..."],
+  "tools_required": ["..."],
+  "steps": ["1) ...", "2) ..."],
+  "sources": ["DOC:<id>", "DOC:<id>"]
+}

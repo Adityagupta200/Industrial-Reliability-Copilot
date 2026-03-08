@@ -1,0 +1,104 @@
+{
+  "manual::data/raw/manuals/Gas_Turbine_Engines_maintenance_documentation.pdf": {
+    "detail": null,
+    "sha256": "428e2e21dae1e27a4c83d2137fddf75ec05011233281fbbb71703c0f36146250",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:24:23.129266+00:00"
+  },
+  "manual::data/raw/manuals/Industrial_pump_handbook_GB.pdf": {
+    "detail": null,
+    "sha256": "a1c26d28ae874cf99571fee19b214110c3524cbde8f0d08294e36f9b696241e6",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:40:15.597967+00:00"
+  },
+  "manual::data/raw/manuals/bearing_installation_manuals.pdf": {
+    "detail": null,
+    "sha256": "14a6679f24105032acc8b616e2ec62147d4dfdece4591e959a63edf5570b6448",
+    "status": "ok",
+    "updated_at": "2026-03-03T09:23:33.375041+00:00"
+  },
+  "manual::data/raw/manuals/bearing_installation_manuals2.pdf": {
+    "detail": null,
+    "sha256": "6bea21bb32d2cc84201e72d60e415904bebb097dbdfe89bf7cc257ede7be4157",
+    "status": "ok",
+    "updated_at": "2026-03-03T09:33:50.996425+00:00"
+  },
+  "manual::data/raw/manuals/compressor_maintenance_documentation.pdf": {
+    "detail": null,
+    "sha256": "b2d0be18cf7d67c2ce904e0f32ff4c40efc6c54bc0d14a8a51a4f72de8ce2911",
+    "status": "ok",
+    "updated_at": "2026-03-03T09:42:42.740079+00:00"
+  },
+  "manual::data/raw/manuals/datasheet.pdf": {
+    "detail": null,
+    "sha256": "ad94bc28c6ba686e15cbcb1e820704b061a14971aaf456c5b86e5976a5b1251e",
+    "status": "ok",
+    "updated_at": "2026-03-03T09:44:25.327824+00:00"
+  },
+  "manual::data/raw/manuals/datasheet2.pdf": {
+    "detail": null,
+    "sha256": "54bc576ae2ab13c98f7282cde6023eef85e069a9bc48076f932cc56f5a70c13e",
+    "status": "ok",
+    "updated_at": "2026-03-03T09:45:12.178405+00:00"
+  },
+  "manual::data/raw/manuals/engine_maintenance_documentation.pdf": {
+    "detail": null,
+    "sha256": "38f30a4853392db845cc97d5e2ae5cf1b618a0eba4952722d22d616376b1e11d",
+    "status": "ok",
+    "updated_at": "2026-03-03T10:38:41.560611+00:00"
+  },
+  "manual::data/raw/manuals/engine_maintenance_documentation2.pdf": {
+    "detail": null,
+    "sha256": "55964e589d96f657812938d932280d0502d9055c387ea07707cbc9777d3cfec8",
+    "status": "ok",
+    "updated_at": "2026-03-03T10:50:24.335364+00:00"
+  },
+  "manual::data/raw/manuals/pump_manual2.pdf": {
+    "detail": null,
+    "sha256": "c89d022e7122a517806f745d8febaab136f49418603ae2e4c1f245d453eb5c21",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:43:54.838630+00:00"
+  },
+  "manual::tmp/mini/raw/manuals/bearing_installation_manuals.pdf": {
+    "detail": null,
+    "sha256": "14a6679f24105032acc8b616e2ec62147d4dfdece4591e959a63edf5570b6448",
+    "status": "ok",
+    "updated_at": "2026-03-04T06:29:46.463198+00:00"
+  },
+  "procedure::data/raw/procedures/bearing_replacement_pump_P-23.md": {
+    "detail": null,
+    "sha256": "81b25cbddd11dfbbc013db335a79b60dca59dfcebabde0c8f9a8e50a77099ebf",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:43:58.521881+00:00"
+  },
+  "procedure::data/raw/procedures/cavitation_triage_pump.md": {
+    "detail": null,
+    "sha256": "8a8c16ee7672efab3883deb1f7d9950007fd421445308df43d11d52d7c047169",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:44:00.054295+00:00"
+  },
+  "procedure::data/raw/procedures/overheating_motor_basic_checks.md": {
+    "detail": null,
+    "sha256": "219b4e4466394cd7882aea27cdeacbcd9df88fdeb7e515c2226b9db7b03a46e0",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:44:01.145527+00:00"
+  },
+  "procedure::data/raw/procedures/scheduled_maintenance_template.md": {
+    "detail": null,
+    "sha256": "3b7fd9745b17911fd7632352189df1ba01ea39f6e752a29dc9c5e7898507582f",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:44:02.975728+00:00"
+  },
+  "procedure::data/raw/procedures/sensor_recalibration_pressure_transducer.md": {
+    "detail": null,
+    "sha256": "f2fe50a3f4a8e26f7a6f3e35ea1e122170fde9ab4d36adfc2de0f6549f0a09a0",
+    "status": "ok",
+    "updated_at": "2026-03-03T11:44:04.449648+00:00"
+  },
+  "procedure::tmp/mini/raw/procedures/bearing_replacement_pump_P-23.md": {
+    "detail": null,
+    "sha256": "81b25cbddd11dfbbc013db335a79b60dca59dfcebabde0c8f9a8e50a77099ebf",
+    "status": "ok",
+    "updated_at": "2026-03-04T06:29:49.475077+00:00"
+  }
+}

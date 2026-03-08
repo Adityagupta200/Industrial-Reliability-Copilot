@@ -1,0 +1,5 @@
+{
+  "source_file": "data/raw/procedures/scheduled_maintenance_template.md",
+  "doc_type": "procedure",
+  "text": "# Procedure: Scheduled Preventive Maintenance Template\n\n## Steps\n1. Visual inspection (leaks, corrosion, loose fasteners).\n2. Verify instrumentation readings and alarms.\n3. Lubrication check and replacement as required.\n4. Functional test and post-maintenance verification.\n\n## Verification\n- All checks passed; update CMMS."
+}

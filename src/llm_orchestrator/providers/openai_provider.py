@@ -1,0 +1,43 @@
+from __future__ import annotations
+
+from typing import Optional
+
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
+
+from .base import LLMProvider, LLMResult, LLMTransientError, LLMFatalError
+
+
+class OpenAIProvider(LLMProvider):
+    provider_name = "openai"
+
+    def __init__(
+        self,
+        api_key: Optional[str],
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        timeout_s: float,
+        base_url: Optional[str] = None,
+    ) -> None:
+        if not api_key:
+            raise LLMFatalError("OpenAI API key is not configured (LLM_OPENAI_API_KEY).")
+
+        self._model_name = model
+        self._client = ChatOpenAI(
+            api_key=api_key,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout_s,
+            base_url=base_url,
+        )
+
+    async def invoke(self, prompt: str) -> LLMResult:
+        try:
+            msg = await self._client.ainvoke([HumanMessage(content=prompt)])
+            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            return LLMResult(content=content, model=self._model_name, provider=self.provider_name)
+        except Exception as e:  # network/timeouts/rate limits typically land here
+            # Treat as transient to allow retry/fallback
+            raise LLMTransientError(f"OpenAI invocation failed: {e}") from e

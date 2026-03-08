@@ -16,6 +16,10 @@ from rag_service.ingestion.cleaning import clean_text
 from rag_service.ingestion.chunking import chunk_text
 
 
+def _log(msg: str) -> None:
+    print(msg, flush=True)
+
+
 def _write_processed_text(source_id: str, obj: dict[str, Any]) -> None:
     out_dir = Path(settings.processed_texts_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -26,15 +30,17 @@ def _write_processed_text(source_id: str, obj: dict[str, Any]) -> None:
 def ingest_all() -> dict[str, Any]:
     manifest = Manifest.load()
 
+    _log("Initializing embedding provider...")
     embedder = get_embedding_provider()
+    _log("Initializing Qdrant store...")
     store = QdrantStore()
 
-    # Create collections with correct vector size (derived from chosen embedding provider)
     dim = embedder.dim()
+    _log(f"Embedding dim={dim}. Ensuring collections exist...")
     store.ensure_collection(settings.qdrant_collection_docs, vector_size=dim)
     store.ensure_collection(settings.qdrant_collection_procedures, vector_size=dim)
 
-    stats = {
+    stats: dict[str, Any] = {
         "processed_files": 0,
         "skipped_files": 0,
         "failed_files": 0,
@@ -43,16 +49,21 @@ def ingest_all() -> dict[str, Any]:
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    # --- Manuals (PDF) ---
+    # ----------------
+    # Manuals (PDF)
+    # ----------------
     manuals_dir = Path(settings.raw_manuals_dir)
     pdfs = sorted(manuals_dir.glob("**/*.pdf"))
-    for pdf in pdfs:
+    _log(f"Manuals dir: {manuals_dir} (exists={manuals_dir.exists()}); PDFs found={len(pdfs)}")
+
+    for n, pdf in enumerate(pdfs, start=1):
         key = f"manual::{pdf.as_posix()}"
         sha = sha256_file(pdf)
         if manifest.is_unchanged(key, sha):
             stats["skipped_files"] += 1
             continue
 
+        _log(f"[manual {n}/{len(pdfs)}] Processing: {pdf}")
         try:
             pages = extract_pdf_text(pdf)
             pages = remove_common_headers_footers(pages)
@@ -78,69 +89,10 @@ def ingest_all() -> dict[str, Any]:
                 },
             )
 
-            # Embed + upsert in batches
-            texts = [c.text for c in chunks]
-            for i in range(0, len(texts), settings.embed_batch_size):
-                batch_chunks = chunks[i : i + settings.embed_batch_size]
-                batch_texts = [c.text for c in batch_chunks]
-                vecs = embedder.embed_texts(batch_texts)
-
-                points: list[VectorPoint] = []
-                for c, v in zip(batch_chunks, vecs):
-                    payload = dict(c.metadata)
-                    payload["text"] = c.text
-                    points.append(VectorPoint(id=c.chunk_id, vector=v, payload=payload))
-
-                # upsert in smaller batches to reduce request size
-                for j in range(0, len(points), settings.upsert_batch_size):
-                    store.upsert(
-                        settings.qdrant_collection_docs, points[j : j + settings.upsert_batch_size]
-                    )
-                    stats["points_upserted"] += len(points[j : j + settings.upsert_batch_size])
-
-            stats["processed_files"] += 1
             stats["chunks_created"] += len(chunks)
-            manifest.mark(key, sha, status="ok")
-        except Exception as e:
-            stats["failed_files"] += 1
-            manifest.mark(key, sha, status="failed", detail=str(e))
+            _log(f"[manual {n}/{len(pdfs)}] chunks={len(chunks)} embedding/upserting...")
 
-    # --- Procedures (Markdown) ---
-    proc_dir = Path(settings.raw_procedures_dir)
-    mds = sorted([*proc_dir.glob("**/*.md"), *proc_dir.glob("**/*.markdown")])
-    for md in mds:
-        key = f"procedure::{md.as_posix()}"
-        sha = sha256_file(md)
-        if manifest.is_unchanged(key, sha):
-            stats["skipped_files"] += 1
-            continue
-
-        try:
-            text = clean_text(load_markdown(md))
-            source_id = f"procedure__{md.stem}"
-
-            _write_processed_text(
-                source_id,
-                {
-                    "source_file": md.as_posix(),
-                    "doc_type": "procedure",
-                    "text": text,
-                },
-            )
-
-            # For procedures, keep steps together by using larger chunks and low overlap
-            chunks = chunk_text(
-                text,
-                source_id=source_id,
-                doc_type="procedure",
-                extra_meta={
-                    "source_file": md.name,
-                    "path": md.as_posix(),
-                },
-            )
-
-            texts = [c.text for c in chunks]
-            for i in range(0, len(texts), settings.embed_batch_size):
+            for i in range(0, len(chunks), settings.embed_batch_size):
                 batch_chunks = chunks[i : i + settings.embed_batch_size]
                 vecs = embedder.embed_texts([c.text for c in batch_chunks])
 
@@ -151,28 +103,100 @@ def ingest_all() -> dict[str, Any]:
                     points.append(VectorPoint(id=c.chunk_id, vector=v, payload=payload))
 
                 for j in range(0, len(points), settings.upsert_batch_size):
-                    store.upsert(
-                        settings.qdrant_collection_procedures,
-                        points[j : j + settings.upsert_batch_size],
-                    )
-                    stats["points_upserted"] += len(points[j : j + settings.upsert_batch_size])
+                    batch = points[j : j + settings.upsert_batch_size]
+                    store.upsert(settings.qdrant_collection_docs, batch)
+                    stats["points_upserted"] += len(batch)
 
             stats["processed_files"] += 1
-            stats["chunks_created"] += len(chunks)
             manifest.mark(key, sha, status="ok")
+            _log(f"[manual {n}/{len(pdfs)}] done")
         except Exception as e:
             stats["failed_files"] += 1
             manifest.mark(key, sha, status="failed", detail=str(e))
+            _log(f"[manual {n}/{len(pdfs)}] FAILED: {e!r}")
+
+    # ----------------
+    # Procedures (Markdown)
+    # ----------------
+    proc_dir = Path(settings.raw_procedures_dir)
+    mds = sorted([*proc_dir.glob("**/*.md"), *proc_dir.glob("**/*.markdown")])
+    _log(f"Procedures dir: {proc_dir} (exists={proc_dir.exists()}); MD files found={len(mds)}")
+
+    for n, md in enumerate(mds, start=1):
+        key = f"procedure::{md.as_posix()}"
+        sha = sha256_file(md)
+        if manifest.is_unchanged(key, sha):
+            stats["skipped_files"] += 1
+            continue
+
+        _log(f"[procedure {n}/{len(mds)}] Processing: {md}")
+        try:
+            text = clean_text(load_markdown(md))
+            if not text.strip():
+                stats["failed_files"] += 1
+                manifest.mark(
+                    key, sha, status="failed", detail="Empty procedure text after cleaning"
+                )
+                _log(f"[procedure {n}/{len(mds)}] FAILED: empty text after cleaning")
+                continue
+
+            source_id = f"procedure__{md.stem}"
+            _write_processed_text(
+                source_id,
+                {
+                    "source_file": md.as_posix(),
+                    "doc_type": "procedure",
+                    "text": text,
+                },
+            )
+
+            chunks = chunk_text(
+                text,
+                source_id=source_id,
+                doc_type="procedure",
+                extra_meta={
+                    "source_file": md.name,
+                    "path": md.as_posix(),
+                },
+            )
+
+            stats["chunks_created"] += len(chunks)
+            _log(f"[procedure {n}/{len(mds)}] chunks={len(chunks)} embedding/upserting...")
+
+            for i in range(0, len(chunks), settings.embed_batch_size):
+                batch_chunks = chunks[i : i + settings.embed_batch_size]
+                vecs = embedder.embed_texts([c.text for c in batch_chunks])
+
+                points: list[VectorPoint] = []
+                for c, v in zip(batch_chunks, vecs):
+                    payload = dict(c.metadata)
+                    payload["text"] = c.text
+                    points.append(VectorPoint(id=c.chunk_id, vector=v, payload=payload))
+
+                for j in range(0, len(points), settings.upsert_batch_size):
+                    batch = points[j : j + settings.upsert_batch_size]
+                    store.upsert(settings.qdrant_collection_procedures, batch)
+                    stats["points_upserted"] += len(batch)
+
+            stats["processed_files"] += 1
+            manifest.mark(key, sha, status="ok")
+            _log(f"[procedure {n}/{len(mds)}] done")
+        except Exception as e:
+            stats["failed_files"] += 1
+            manifest.mark(key, sha, status="failed", detail=str(e))
+            _log(f"[procedure {n}/{len(mds)}] FAILED: {e!r}")
 
     manifest.save()
+
     stats["finished_at"] = datetime.now(timezone.utc).isoformat()
     stats["qdrant_counts"] = {
         settings.qdrant_collection_docs: store.count(settings.qdrant_collection_docs),
         settings.qdrant_collection_procedures: store.count(settings.qdrant_collection_procedures),
     }
+    _log(f"Finished. Qdrant counts: {stats['qdrant_counts']}")
     return stats
 
 
 if __name__ == "__main__":
     out = ingest_all()
-    print(json.dumps(out, indent=2))
+    print(json.dumps(out, indent=2), flush=True)

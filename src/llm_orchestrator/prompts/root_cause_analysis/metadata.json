@@ -1,0 +1,10 @@
+{
+  "name": "root_cause_analysis",
+  "version": "1.0",
+  "created_date": "2026-03-04",
+  "notes": "JSON-only output; citations required as DOC:<id>",
+  "test_results": {
+    "json_parse_pass_rate": null,
+    "hallucination_notes": null
+  }
+}
