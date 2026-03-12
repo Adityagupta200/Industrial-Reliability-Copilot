@@ -26,7 +26,10 @@ class LLMSettings(BaseSettings):
     # Generation controls
     temperature: float = 0.2
     max_tokens: int = 800
-    request_timeout_s: float = 20.0
+
+    # FIX: Increased default from 20.0 to 600.0 to guarantee local CPU models
+    # have enough time, even if the docker environment variable fails to bind.
+    request_timeout_s: float = 600.0
 
     # Reliability
     max_retries: int = 3

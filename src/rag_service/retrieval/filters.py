@@ -1,10 +1,7 @@
 from __future__ import annotations
-
 from datetime import datetime
 from typing import Optional
-
 from qdrant_client.http import models as qmodels
-
 from .types import RetrievalFilters
 
 
@@ -17,32 +14,46 @@ def _dt_to_rfc3339(dt: datetime) -> str:
 def build_qdrant_filter(
     filters: Optional[RetrievalFilters],
     *,
-    equipment_id_key: str,
-    severity_key: str,
-    date_key: str,
+    equipment_id_key: str = "equipment_id",
+    severity_key: str = "severity",
+    date_key: str = "date",
+    plant_id_key: str = "plant_id",  # Added for multi-tenancy
+    roles_key: str = "allowed_roles",  # Added for RBAC
 ) -> Optional[qmodels.Filter]:
     if not filters:
         return None
 
     must: list[qmodels.Condition] = []
 
-    if filters.equipment_id:
+    if getattr(filters, "equipment_id", None):
         must.append(
             qmodels.FieldCondition(
-                key=equipment_id_key,
-                match=qmodels.MatchValue(value=filters.equipment_id),
+                key=equipment_id_key, match=qmodels.MatchValue(value=filters.equipment_id)
             )
         )
 
-    if filters.severity:
+    if getattr(filters, "severity", None):
         must.append(
             qmodels.FieldCondition(
-                key=severity_key,
-                match=qmodels.MatchValue(value=filters.severity),
+                key=severity_key, match=qmodels.MatchValue(value=filters.severity)
             )
         )
 
-    if filters.date_from or filters.date_to:
+    # Multi-tenant isolation: strict match on plant_id
+    if getattr(filters, "plant_id", None):
+        must.append(
+            qmodels.FieldCondition(
+                key=plant_id_key, match=qmodels.MatchValue(value=filters.plant_id)
+            )
+        )
+
+    # Access control: ensure user_role intersects with allowed_roles array in metadata
+    if getattr(filters, "user_role", None):
+        must.append(
+            qmodels.FieldCondition(key=roles_key, match=qmodels.MatchAny(any=[filters.user_role]))
+        )
+
+    if getattr(filters, "date_from", None) or getattr(filters, "date_to", None):
         rng = qmodels.Range(
             gte=_dt_to_rfc3339(filters.date_from) if filters.date_from else None,
             lte=_dt_to_rfc3339(filters.date_to) if filters.date_to else None,

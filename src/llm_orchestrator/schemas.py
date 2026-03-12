@@ -34,6 +34,7 @@ class RootCauseResponse(BaseModel):
 
 
 class RemediationRequest(BaseModel):
+    user_query: str | None = None
     failure_mode: str
     equipment_id: Optional[str] = None
     prompt_version: str = "1.0"

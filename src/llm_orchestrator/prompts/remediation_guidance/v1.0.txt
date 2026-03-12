@@ -13,9 +13,9 @@ Provide step-by-step remediation guidance with:
 - Cite sources using provided Doc IDs
 
 Return ONLY valid JSON:
-{
+{{
   "safety_warnings": ["..."],
   "tools_required": ["..."],
   "steps": ["1) ...", "2) ..."],
   "sources": ["DOC:<id>", "DOC:<id>"]
-}
+}}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import httpx
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
 
@@ -18,12 +19,19 @@ class OllamaProvider(LLMProvider):
         timeout_s: float,
     ) -> None:
         self._model_name = model
+
+        # FIX: Create an explicit httpx Timeout object.
+        # langchain_ollama's default timeout parameter sometimes fails to pass through
+        # to the underlying async httpx client, causing ReadTimeout crashes.
+        timeout_config = httpx.Timeout(timeout_s)
+
         self._client = ChatOllama(
             base_url=base_url,
             model=model,
             temperature=temperature,
             num_predict=max_tokens,
-            timeout=timeout_s,
+            timeout=timeout_s,  # Keep for sync fallback compatibility
+            client_kwargs={"timeout": timeout_config},  # Force async client timeout
         )
 
     async def invoke(self, prompt: str) -> LLMResult:

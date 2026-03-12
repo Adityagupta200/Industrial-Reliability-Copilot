@@ -17,6 +17,7 @@ services:
       retries: 20
 
   qdrant:
+    image: irc-qdrant-local:latest
     build:
       context: .
       dockerfile: qdrant.Dockerfile
@@ -34,6 +35,7 @@ services:
       start_period: 30s
 
   rag-service:
+    image: irc-rag-service-local:latest
     container_name: irc-rag-service
     build:
       context: .
@@ -41,21 +43,20 @@ services:
     environment:
       QDRANT_URL: http://qdrant:6333
       POSTGRES_DSN: postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance
-      INCIDENTS_DB_DSN: postgresql://irc:irc_password@postgres:5432/industrial_maintenance
+      INCIDENTS_DB_DSN: postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance
       HOST: 0.0.0.0
       PORT: "8002"
       PYTHONPATH: /app/src
-
       EMBEDDING_PROVIDER: bge
       BGE_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
       EMBEDDING_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
       EMBEDDING_NORMALIZE: "true"
-
     ports:
       - "127.0.0.1:8002:8002"
     volumes:
       - ./data/raw:/app/data/raw:ro
       - irc_rag_processed:/app/data/processed
+      - ./src/rag_service:/app/src/rag_service:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,7 +86,87 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  ollama-model-puller:
+    image: ollama/ollama:latest
+    container_name: irc-ollama-init
+    volumes:
+      - irc_ollama_data:/root/.ollama
+    dns:
+      - 8.8.8.8
+    entrypoint: /bin/sh
+    command: -c "ollama serve & sleep 5 && ollama pull llama3.2:1b"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: irc-ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - irc_ollama_data:/root/.ollama
+    depends_on:
+      ollama-model-puller:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  llm-orchestrator:
+    image: irc-llm-orchestrator-local:latest
+    container_name: irc-llm-orchestrator
+    build:
+      context: .
+      dockerfile: src/llm_orchestrator/Dockerfile
+    ports:
+      - "127.0.0.1:8080:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - PYTHONPATH=/app/src
+      - RAG_SERVICE_URL=http://rag-service:8002
+      - INCIDENTS_DB_DSN=postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance
+      - LLM_OPENAI_API_KEY=sk-mock-key-for-local-testing
+      - LLM_PRIMARY_PROVIDER=ollama
+      - LLM_FALLBACK_PROVIDER=ollama
+      - LLM_OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_OLLAMA_MODEL=llama3.2:1b
+      - LLM_REQUEST_TIMEOUT_S=600.0
+    depends_on:
+      rag-service:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    command:
+      [
+        "uvicorn",
+        "llm_orchestrator.main:app",
+        "--app-dir",
+        "/app/src",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--loop",
+        "asyncio"
+      ]
+    volumes:
+      # FIX: Mount the entire directory so schemas.py changes are synced instantly
+      - ./src/llm_orchestrator:/app/src/llm_orchestrator:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
+
 volumes:
   irc_pgdata:
   irc_qdrant:
   irc_rag_processed:
+  irc_ollama_data:

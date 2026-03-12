@@ -16,8 +16,8 @@ Synthesize an answer using both sources. Include:
 - 3-5 supporting bullets with citations (DOC:<id> for docs; SQL for structured facts)
 
 Return ONLY valid JSON:
-{
+{{
   "summary": "...",
-  "key_stats": {"incident_count": 0, "top_failure_modes": []},
-  "evidence": [{"claim": "...", "source": "SQL|DOC:<id>"}]
-}
+  "key_stats": {{"incident_count": 0, "top_failure_modes": []}},
+  "evidence": [{{"claim": "...", "source": "SQL|DOC:<id>"}}]
+}}

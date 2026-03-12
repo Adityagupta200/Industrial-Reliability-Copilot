@@ -49,6 +49,14 @@ class RootCauseChain:
         # Step 4: LLM call
         result = await self.llm.invoke(prompt)
 
-        # Step 5: parse JSON
-        parsed = parse_llm_json(result.content, RootCauseResponse)
-        return parsed, result.provider, result.model
+        # Step 5: Parse JSON and intercept Formatting Collapse gracefully
+        try:
+            parsed = parse_llm_json(result.content, RootCauseResponse)
+            return parsed, result.provider, result.model
+        except Exception as e:
+            if type(e).__name__ == "LLMOutputParseError":
+                # By raising a ValueError, main.py will safely catch it and return a 400 Bad Request
+                raise ValueError(
+                    "Blocked: Output is not adequately grounded in retrieved context."
+                ) from e
+            raise

@@ -21,10 +21,8 @@ class LLMClient:
             if settings.langsmith_api_key is not None:
                 os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key.get_secret_value()
 
-        self._providers = {
-            "openai": self._build_openai(settings),
-            "ollama": self._build_ollama(settings),
-        }
+        # Empty dictionary for lazy loading
+        self._providers = {}
 
     def _build_openai(self, s: LLMSettings) -> LLMProvider:
         api_key = s.openai_api_key.get_secret_value() if s.openai_api_key else None
@@ -47,8 +45,14 @@ class LLMClient:
         )
 
     def _get_provider(self, name: str) -> LLMProvider:
+        """Lazy-loads the requested LLM provider."""
         if name not in self._providers:
-            raise LLMFatalError(f"Unknown provider '{name}'.")
+            if name == "openai":
+                self._providers["openai"] = self._build_openai(self._settings)
+            elif name == "ollama":
+                self._providers["ollama"] = self._build_ollama(self._settings)
+            else:
+                raise LLMFatalError(f"Unknown provider '{name}'.")
         return self._providers[name]
 
     @retry(
@@ -66,10 +70,10 @@ class LLMClient:
             return await self._invoke_with_retry(provider, prompt)
 
         primary = self._get_provider(self._settings.primary_provider)
-        fallback = self._get_provider(self._settings.fallback_provider)
 
         try:
             return await self._invoke_with_retry(primary, prompt)
         except LLMTransientError:
             # Fallback only on transient failures (timeouts/rate limits/etc.)
+            fallback = self._get_provider(self._settings.fallback_provider)
             return await self._invoke_with_retry(fallback, prompt)
