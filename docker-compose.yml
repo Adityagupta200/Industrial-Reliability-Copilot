@@ -10,6 +10,13 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - irc_pgdata:/var/lib/postgresql/data
+    networks:
+      - irc_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U irc -d industrial_maintenance"]
       interval: 5s
@@ -27,6 +34,13 @@ services:
       - "127.0.0.1:6334:6334"
     volumes:
       - irc_qdrant:/qdrant/storage
+    networks:
+      - irc_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:6333/readyz > /dev/null || exit 1"]
       interval: 5s
@@ -57,6 +71,13 @@ services:
       - ./data/raw:/app/data/raw:ro
       - irc_rag_processed:/app/data/processed
       - ./src/rag_service:/app/src/rag_service:ro
+    networks:
+      - irc_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,10 +112,13 @@ services:
     container_name: irc-ollama-init
     volumes:
       - irc_ollama_data:/root/.ollama
+    networks:
+      - irc_network
     dns:
       - 8.8.8.8
     entrypoint: /bin/sh
-    command: -c "ollama serve & sleep 5 && ollama pull llama3.2:1b"
+    
+    command: -c "ollama serve & sleep 5 && ollama pull llama3.2:1b && ollama pull llama3.2:3b"
 
   ollama:
     image: ollama/ollama:latest
@@ -103,6 +127,25 @@ services:
       - "127.0.0.1:11434:11434"
     volumes:
       - irc_ollama_data:/root/.ollama
+    networks:
+      - irc_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    # -----------------------------------------------------------------------
+    # SRE/MLOPS NOTE: 
+    # In a true enterprise production environment, this block would be 
+    # uncommented to assign dedicated GPU resources to the inference server.
+    # -----------------------------------------------------------------------
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
     depends_on:
       ollama-model-puller:
         condition: service_completed_successfully
@@ -134,6 +177,13 @@ services:
       - LLM_OLLAMA_BASE_URL=http://ollama:11434
       - LLM_OLLAMA_MODEL=llama3.2:1b
       - LLM_REQUEST_TIMEOUT_S=600.0
+    networks:
+      - irc_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
     depends_on:
       rag-service:
         condition: service_healthy
@@ -155,8 +205,9 @@ services:
         "asyncio"
       ]
     volumes:
-      # FIX: Mount the entire directory so schemas.py changes are synced instantly
       - ./src/llm_orchestrator:/app/src/llm_orchestrator:ro
+      # Mount the evaluation directory so the logger is accessible inside Docker
+      - ./src/evaluation:/app/src/evaluation:ro 
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health > /dev/null || exit 1"]
       interval: 10s
@@ -164,6 +215,11 @@ services:
       retries: 15
       start_period: 30s
     restart: unless-stopped
+
+networks:
+  irc_network:
+    driver: bridge
+    name: irc_internal_network
 
 volumes:
   irc_pgdata:

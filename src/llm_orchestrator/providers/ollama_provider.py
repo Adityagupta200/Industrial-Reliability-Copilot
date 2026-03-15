@@ -32,6 +32,7 @@ class OllamaProvider(LLMProvider):
             num_predict=max_tokens,
             timeout=timeout_s,  # Keep for sync fallback compatibility
             client_kwargs={"timeout": timeout_config},  # Force async client timeout
+            format="json",  # MLE FIX: Force Constrained Decoding to strictly output valid JSON
         )
 
     async def invoke(self, prompt: str) -> LLMResult:
