@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from contextlib import asynccontextmanager
 
 import mlflow
@@ -8,7 +7,6 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from loguru import logger
 
 from anomaly_service.core.config import settings
-
 from .core.logging import setup_logging
 from .core.metrics import REQUESTS, Timer
 from .core.model_loader import LoadedModels, load_anomaly_model, load_rul_model
@@ -31,6 +29,7 @@ ANOM_ARTIFACTS = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global MODELS, ANOM_SCHEMA, RUL_SCHEMA, ANOM_ARTIFACTS
+
     setup_logging(settings.log_level)
 
     anomaly_model = None
@@ -79,11 +78,44 @@ async def prometheus_mw(request: Request, call_next):
     return resp
 
 
+# --- Legacy Health Endpoint (Preserved for existing tests) ---
 @app.get("/health", response_model=HealthResponse)
 def health():
     assert MODELS is not None
     ok_anom = MODELS.anomaly_model is not None
     ok_rul = MODELS.rul_model is not None
+
+    return HealthResponse(
+        status="ok" if (ok_anom and ok_rul) else "degraded",
+        anomaly_model_loaded=ok_anom,
+        rul_model_loaded=ok_rul,
+    )
+
+
+# --- Phase 7: Kubernetes Probes ---
+@app.get("/health/live", tags=["Health"])
+def liveness_probe() -> dict[str, str]:
+    """
+    Kubernetes liveness probe.
+    Verifies the container is running and the event loop is active.
+    """
+    return {"status": "alive"}
+
+
+@app.get("/health/ready", response_model=HealthResponse, tags=["Health"])
+def readiness_probe(response: Response):
+    """
+    Kubernetes readiness probe.
+    Ensures traffic is only routed when ML models are successfully loaded in memory.
+    """
+    assert MODELS is not None
+    ok_anom = MODELS.anomaly_model is not None
+    ok_rul = MODELS.rul_model is not None
+
+    if not (ok_anom and ok_rul):
+        # 503 prevents K8s from routing traffic to a pod whose models failed to load
+        response.status_code = 503
+
     return HealthResponse(
         status="ok" if (ok_anom and ok_rul) else "degraded",
         anomaly_model_loaded=ok_anom,
@@ -103,7 +135,6 @@ def predict_anomaly(req: SensorRequest):
         raise HTTPException(status_code=503, detail="Anomaly model not available")
 
     schema_id = req.schema_id or infer_schema_id(req.sensor_values)
-
     if schema_id not in ANOM_SCHEMA["schemas"]:
         raise HTTPException(status_code=400, detail=f"Unsupported schema_id={schema_id}")
 

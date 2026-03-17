@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 import logging
 import time
 import uuid
-
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks
 from fastapi.responses import ORJSONResponse
 from pydantic import BaseModel
@@ -64,7 +62,6 @@ def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
 
 def create_app() -> FastAPI:
     settings = load_settings()
-
     llm = LLMClient(settings.llm)
     prompts = PromptLoader()
 
@@ -102,13 +99,23 @@ def create_app() -> FastAPI:
     )
 
     app = FastAPI(title="LLM Orchestrator", version="0.1.0", default_response_class=ORJSONResponse)
-
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    @app.get("/health")
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
+    # --- Phase 7: Kubernetes Probes ---
+    @app.get("/health/live", tags=["Health"])
+    async def liveness_probe() -> dict[str, str]:
+        """
+        Kubernetes liveness probe: checks if the container and FastApi event loop are running.
+        """
+        return {"status": "alive"}
+
+    @app.get("/health/ready", tags=["Health"])
+    async def readiness_probe() -> dict[str, str]:
+        """
+        Kubernetes readiness probe: checks if the service is ready to accept traffic.
+        """
+        return {"status": "ready"}
 
     @app.post("/query", response_model=QueryResponse)
     @limiter.limit("10/minute")
@@ -132,7 +139,6 @@ def create_app() -> FastAPI:
 
             if query_text:
                 safe_text = InputGuardrails.process(query_text)
-
                 if req.root_cause:
                     req.root_cause.user_query = safe_text
                 elif req.remediation:
@@ -161,11 +167,9 @@ def create_app() -> FastAPI:
         except ValueError as ve:
             logger.warning(f"Guardrail/Validation Blocked: {ve}")
             raise HTTPException(status_code=400, detail=str(ve))
-
         except HTTPException as he:
             logger.error(f"HTTP Error raised in pipeline: {he.status_code} - {he.detail}")
             raise he
-
         except Exception as e:
             logger.exception("Fatal LLM Orchestrator Crash:")
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {repr(e)}") from e

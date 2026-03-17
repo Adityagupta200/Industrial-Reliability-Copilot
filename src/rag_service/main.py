@@ -28,11 +28,24 @@ app = FastAPI(
 app.include_router(retrieve_router, prefix="/retrieve", tags=["retrieve"])
 
 
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+# --- Phase 7: Kubernetes Probes ---
 
 
-@app.get("/ready")
-async def ready() -> dict[str, str]:
+@app.get("/health/live", tags=["Health"])
+async def liveness_probe() -> dict[str, str]:
+    """
+    Kubernetes liveness probe.
+    Returns 200 OK as long as the FastAPI event loop is running.
+    """
+    return {"status": "alive"}
+
+
+@app.get("/health/ready", tags=["Health"])
+async def readiness_probe() -> dict[str, str]:
+    """
+    Kubernetes readiness probe.
+    Confirms the application is fully booted and ready to route traffic.
+    In a fully fleshed-out production app, you might add a lightweight ping
+    to your Qdrant DB here to ensure the connection is active before accepting queries.
+    """
     return {"status": "ready"}

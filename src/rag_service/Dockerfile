@@ -64,18 +64,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin appuser
+# --- Phase 7 Production Patches ---
+
+# 1. Prevent running as root (Standardized Security Context)
+RUN addgroup --system appgroup && adduser --system --group appuser
 
 COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder --chown=appuser:appuser /app/src /app/src
+COPY --from=builder /app/src /app/src
 
+# Create necessary directories for local volume mounting and assign secure ownership
 RUN mkdir -p \
       /app/data/raw/manuals \
       /app/data/raw/procedures \
       /app/data/raw/incidents \
       /app/data/processed/texts \
       /app/data/processed/manifest \
- && chown -R appuser:appuser /app/data
+ && chown -R appuser:appgroup /app
 
 RUN python -m pip check \
  && python -c "import numpy, typing_extensions; print('runtime deps ok')" \
@@ -84,5 +88,9 @@ RUN python -m pip check \
 
 USER appuser
 EXPOSE 8002
+
+# 2. Native Container Healthcheck (Utilizes the new /health/live endpoint mapped to RAG port 8002)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8002/health/live || exit 1
 
 CMD ["uvicorn", "rag_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8002", "--log-level", "debug"]

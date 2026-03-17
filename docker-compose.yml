@@ -48,6 +48,51 @@ services:
       retries: 40
       start_period: 30s
 
+  # --- Phase 7: Added Anomaly Service ---
+  anomaly-service:
+    image: irc-anomaly-service-local:latest
+    container_name: irc-anomaly-service
+    build:
+      context: .
+      dockerfile: src/anomaly_service/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8001"
+      PYTHONPATH: /app/src
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - ./src/anomaly_service:/app/src/anomaly_service:ro
+    networks:
+      - irc_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    command:
+      [
+        "uvicorn",
+        "anomaly_service.main:app",
+        "--app-dir",
+        "/app/src",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8001",
+        "--proxy-headers",
+        "--forwarded-allow-ips",
+        "*"
+      ]
+    healthcheck:
+      # Updated to Phase 7 Readiness Probe
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health/ready > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
   rag-service:
     image: irc-rag-service-local:latest
     container_name: irc-rag-service
@@ -100,7 +145,8 @@ services:
         "debug"
       ]
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8002/health > /dev/null || exit 1"]
+      # Updated to Phase 7 Readiness Probe
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/health/ready > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -117,7 +163,6 @@ services:
     dns:
       - 8.8.8.8
     entrypoint: /bin/sh
-    
     command: -c "ollama serve & sleep 5 && ollama pull llama3.2:1b && ollama pull llama3.2:3b"
 
   ollama:
@@ -135,8 +180,8 @@ services:
         max-size: "50m"
         max-file: "3"
     # -----------------------------------------------------------------------
-    # SRE/MLOPS NOTE: 
-    # In a true enterprise production environment, this block would be 
+    # SRE/MLOPS NOTE:
+    # In a true enterprise production environment, this block would be
     # uncommented to assign dedicated GPU resources to the inference server.
     # -----------------------------------------------------------------------
     # deploy:
@@ -170,6 +215,7 @@ services:
       - PORT=8000
       - PYTHONPATH=/app/src
       - RAG_SERVICE_URL=http://rag-service:8002
+      - ANOMALY_SERVICE_URL=http://anomaly-service:8001
       - INCIDENTS_DB_DSN=postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance
       - LLM_OPENAI_API_KEY=sk-mock-key-for-local-testing
       - LLM_PRIMARY_PROVIDER=ollama
@@ -186,6 +232,8 @@ services:
         max-file: "3"
     depends_on:
       rag-service:
+        condition: service_healthy
+      anomaly-service:
         condition: service_healthy
       postgres:
         condition: service_healthy
@@ -206,14 +254,61 @@ services:
       ]
     volumes:
       - ./src/llm_orchestrator:/app/src/llm_orchestrator:ro
-      # Mount the evaluation directory so the logger is accessible inside Docker
-      - ./src/evaluation:/app/src/evaluation:ro 
+      - ./src/evaluation:/app/src/evaluation:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health > /dev/null || exit 1"]
+      # Updated to Phase 7 Readiness Probe
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health/ready > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15
       start_period: 30s
+    restart: unless-stopped
+
+  # --- Phase 7: Added API Gateway ---
+  api-gateway:
+    image: irc-api-gateway-local:latest
+    container_name: irc-api-gateway
+    build:
+      context: .
+      dockerfile: src/api_gateway/Dockerfile
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - PYTHONPATH=/app/src
+      # Gateway forwards external requests specifically to the Orchestrator
+      - ORCHESTRATOR_URL=http://llm-orchestrator:8000 
+    ports:
+      # This serves as the single entry point to the system mimicking the Load Balancer
+      - "127.0.0.1:8000:8000" 
+    volumes:
+      - ./src/api_gateway:/app/src/api_gateway:ro
+    networks:
+      - irc_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    depends_on:
+      llm-orchestrator:
+        condition: service_healthy
+    command:
+      [
+        "uvicorn",
+        "api_gateway.main:app",
+        "--app-dir",
+        "/app/src",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health/ready > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
     restart: unless-stopped
 
 networks:

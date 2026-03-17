@@ -56,14 +56,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin appuser
-
 # Copy virtual environment and code from builder
 COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder --chown=appuser:appuser /app/src /app/src
+COPY --from=builder /app/src /app/src
 
+# --- Phase 7 Production Patches ---
+
+# 1. Prevent running as root (Critical Security Requirement)
+RUN addgroup --system appgroup && adduser --system --group appuser
+RUN chown -R appuser:appgroup /app
 USER appuser
+
 EXPOSE 8000
+
+# 2. Native Container Healthcheck (Utilizes the new /health/live endpoint)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:8000/health/live || exit 1
 
 # Start the Orchestrator service
 CMD ["uvicorn", "llm_orchestrator.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
