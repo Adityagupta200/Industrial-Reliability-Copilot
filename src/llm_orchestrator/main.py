@@ -2,9 +2,14 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from contextlib import asynccontextmanager
+
+import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from prometheus_client import Counter, Histogram, CONTENT_TYPE_LATEST, generate_latest
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -25,10 +30,28 @@ from .guardrails.input_filters import InputGuardrails
 # Assuming logger.py is placed in src/evaluation/online/ as per Phase 6 instructions
 from evaluation.online.logger import log_interaction_sync, SessionLocal, QueryLog
 
-logging.basicConfig(level=logging.INFO)
+# --- Production Logging Setup ---
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
+
+# --- Phase 7: Prometheus Metrics ---
+REQUEST_COUNT = Counter(
+    "orchestrator_requests_total",
+    "Total queries routed through the orchestrator",
+    ["method", "endpoint", "http_status"],
+)
+REQUEST_LATENCY = Histogram(
+    "orchestrator_request_duration_seconds",
+    "Latency of requests through the orchestrator",
+    ["endpoint"],
+)
+
+# Global HTTP Client strictly for K8s dependency health checking
+health_check_client: httpx.AsyncClient | None = None
 
 
 class FeedbackRequest(BaseModel):
@@ -58,6 +81,24 @@ def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
     except Exception as e:
         logger.warning(f"Failed to extract log data from response: {e}")
         return str(response.result), []
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for handling background resources.
+    Crucial for graceful shutdowns in Kubernetes.
+    """
+    global health_check_client
+    # Initialize a fast-failing client to ping downstream microservices
+    health_check_client = httpx.AsyncClient(timeout=2.0)
+    logger.info("Orchestrator background resources initialized.")
+
+    yield
+
+    if health_check_client:
+        await health_check_client.aclose()
+        logger.info("Orchestrator background resources cleaned up.")
 
 
 def create_app() -> FastAPI:
@@ -98,26 +139,90 @@ def create_app() -> FastAPI:
         root_cause=root_chain, remediation=rem_chain, historical=hist_chain
     )
 
-    app = FastAPI(title="LLM Orchestrator", version="0.1.0", default_response_class=ORJSONResponse)
+    app = FastAPI(
+        title="Industrial Reliability Copilot - LLM Orchestrator",
+        version="1.0.0",
+        default_response_class=ORJSONResponse,
+        lifespan=lifespan,
+    )
+
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    # --- Phase 7: Kubernetes Probes ---
+    # --- Phase 7 Security: CORS Middleware ---
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # --- Phase 7 Observability: Metrics Middleware ---
+    @app.middleware("http")
+    async def metrics_middleware(request: Request, call_next):
+        start_time = time.time()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            latency = time.time() - start_time
+            REQUEST_LATENCY.labels(endpoint=request.url.path).observe(latency)
+            REQUEST_COUNT.labels(
+                method=request.method, endpoint=request.url.path, http_status=status_code
+            ).inc()
+
+    # --- Phase 7: Kubernetes Probes & Telemetry ---
     @app.get("/health/live", tags=["Health"])
     async def liveness_probe() -> dict[str, str]:
-        """
-        Kubernetes liveness probe: checks if the container and FastApi event loop are running.
-        """
+        """Kubernetes liveness probe: container and event loop check."""
         return {"status": "alive"}
 
     @app.get("/health/ready", tags=["Health"])
     async def readiness_probe() -> dict[str, str]:
         """
-        Kubernetes readiness probe: checks if the service is ready to accept traffic.
+        Kubernetes readiness probe: Dependency-aware check.
+        Ensures traffic is NOT routed to the orchestrator if core backend APIs are offline.
         """
-        return {"status": "ready"}
+        assert health_check_client is not None
+        try:
+            # Check if internal peer microservices are healthy
+            anom_resp = await health_check_client.get(
+                f"{settings.services.anomaly_service_url}/health/ready"
+            )
+            rag_resp = await health_check_client.get(
+                f"{settings.services.rag_service_url}/health/ready"
+            )
 
-    @app.post("/query", response_model=QueryResponse)
+            if anom_resp.status_code == 200 and rag_resp.status_code == 200:
+                return {"status": "ready"}
+
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "degraded",
+                    "detail": "Downstream RAG or Anomaly service not ready",
+                },
+            )
+        except Exception as e:
+            logger.warning(f"Readiness dependency check failed: {e}")
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "status": "degraded",
+                    "detail": "Connectivity to downstream services failed",
+                },
+            )
+
+    @app.get("/metrics", tags=["Telemetry"])
+    def get_metrics():
+        """Prometheus scrape endpoint."""
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+    # --- Core Application Routing ---
+    @app.post("/query", response_model=QueryResponse, tags=["Inference"])
     @limiter.limit("10/minute")
     async def query(
         request: Request, req: QueryRequest, response: Response, background_tasks: BackgroundTasks
@@ -174,7 +279,7 @@ def create_app() -> FastAPI:
             logger.exception("Fatal LLM Orchestrator Crash:")
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {repr(e)}") from e
 
-    @app.post("/feedback")
+    @app.post("/feedback", tags=["Evaluation"])
     @limiter.limit("20/minute")
     async def submit_feedback(request: Request, feedback: FeedbackRequest):
         """Endpoint to receive user thumbs up/down feedback for online evaluation."""
