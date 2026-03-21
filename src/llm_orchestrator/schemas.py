@@ -16,8 +16,10 @@ class RetrievedDoc(BaseModel):
 
 class RootCauseRequest(BaseModel):
     user_query: str
-    anomaly_description: str
-    sensor_data: dict[str, Any]
+    # Defaulting to an empty string to allow purely conversational requests
+    anomaly_description: str = ""
+    # Defaulting to an empty dict so it isn't strictly required in the payload
+    sensor_data: dict[str, Any] = Field(default_factory=dict)
     equipment_id: Optional[str] = None
     prompt_version: str = "1.0"
 
@@ -35,7 +37,8 @@ class RootCauseResponse(BaseModel):
 
 class RemediationRequest(BaseModel):
     user_query: str | None = None
-    failure_mode: str
+    # Defaulting to an empty string to allow conversational queries
+    failure_mode: str = ""
     equipment_id: Optional[str] = None
     prompt_version: str = "1.0"
 
