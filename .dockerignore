@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.env
+.venv
+venv/
+ENV/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Environment variables
+.env
+.env.local
+.env.production
+secrets/
+
+# IDEs and OS
+.vscode/
+.idea/
+*.swp
+*.DS_Store
+.DS_Store
+
+# Data and Models (Exclude large local artifacts, let volumes/S3 handle them in K8s)
+data/
+tmp/
+models/
+artifacts/
+
+# Terraform
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+tests/

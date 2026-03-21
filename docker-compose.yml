@@ -27,7 +27,7 @@ services:
     image: irc-qdrant-local:latest
     build:
       context: .
-      dockerfile: qdrant.Dockerfile
+      dockerfile: qdrant.dockerfile
     container_name: irc-qdrant
     ports:
       - "127.0.0.1:6333:6333"
@@ -48,7 +48,6 @@ services:
       retries: 40
       start_period: 30s
 
-  # --- Phase 7: Added Anomaly Service ---
   anomaly-service:
     image: irc-anomaly-service-local:latest
     container_name: irc-anomaly-service
@@ -61,8 +60,10 @@ services:
       PYTHONPATH: /app/src
     ports:
       - "127.0.0.1:8001:8001"
-    volumes:
-      - ./src/anomaly_service:/app/src/anomaly_service:ro
+    # VOLUMES COMMENTED OUT: We explicitly want to test the built Docker image 
+    # to ensure parity with the upcoming Kubernetes EKS deployment.
+    # volumes:
+    #   - ./src/anomaly_service:/app/src/anomaly_service:ro
     networks:
       - irc_network
     logging:
@@ -85,7 +86,6 @@ services:
         "*"
       ]
     healthcheck:
-      # Updated to Phase 7 Readiness Probe
       test: ["CMD-SHELL", "curl -sf http://localhost:8001/health/ready > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
@@ -107,15 +107,15 @@ services:
       PORT: "8002"
       PYTHONPATH: /app/src
       EMBEDDING_PROVIDER: bge
-      BGE_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
-      EMBEDDING_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
+      # FIXED: Aligned to the local BAAI ingestion model to prevent vector dimensionality crashes
+      BGE_MODEL_NAME: BAAI/bge-large-en-v1.5
+      EMBEDDING_MODEL_NAME: BAAI/bge-large-en-v1.5
       EMBEDDING_NORMALIZE: "true"
     ports:
       - "127.0.0.1:8002:8002"
     volumes:
       - ./data/raw:/app/data/raw:ro
       - irc_rag_processed:/app/data/processed
-      - ./src/rag_service:/app/src/rag_service:ro
     networks:
       - irc_network
     logging:
@@ -145,7 +145,6 @@ services:
         "debug"
       ]
     healthcheck:
-      # Updated to Phase 7 Readiness Probe
       test: ["CMD-SHELL", "curl -sf http://localhost:8002/health/ready > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
@@ -153,17 +152,28 @@ services:
       start_period: 20s
     restart: unless-stopped
 
+  # --- K8s InitContainer Simulation ---
   ollama-model-puller:
     image: ollama/ollama:latest
     container_name: irc-ollama-init
-    volumes:
-      - irc_ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
     networks:
       - irc_network
-    dns:
-      - 8.8.8.8
-    entrypoint: /bin/sh
-    command: -c "ollama serve & sleep 5 && ollama pull llama3.2:1b && ollama pull llama3.2:3b"
+    # Explicitly override the default entrypoint to execute a shell script
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Ollama API to settle..."
+        sleep 5
+        echo "Pulling llama3.2:1b..."
+        ollama pull llama3.2:1b
+        echo "Pulling llama3.2:3b..."
+        ollama pull llama3.2:3b
+        echo "Models successfully pulled into the volume!"
+    depends_on:
+      ollama:
+        condition: service_healthy
 
   ollama:
     image: ollama/ollama:latest
@@ -179,21 +189,6 @@ services:
       options:
         max-size: "50m"
         max-file: "3"
-    # -----------------------------------------------------------------------
-    # SRE/MLOPS NOTE:
-    # In a true enterprise production environment, this block would be
-    # uncommented to assign dedicated GPU resources to the inference server.
-    # -----------------------------------------------------------------------
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-    depends_on:
-      ollama-model-puller:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 10s
@@ -237,8 +232,9 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-      ollama:
-        condition: service_healthy
+      ollama-model-puller:
+        # Crucial: Prevents the orchestrator from failing probes while the LLM model is still downloading
+        condition: service_completed_successfully
     command:
       [
         "uvicorn",
@@ -252,11 +248,10 @@ services:
         "--loop",
         "asyncio"
       ]
-    volumes:
-      - ./src/llm_orchestrator:/app/src/llm_orchestrator:ro
-      - ./src/evaluation:/app/src/evaluation:ro
+    # volumes:
+    #   - ./src/llm_orchestrator:/app/src/llm_orchestrator:ro
+    #   - ./src/evaluation:/app/src/evaluation:ro
     healthcheck:
-      # Updated to Phase 7 Readiness Probe
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health/ready > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
@@ -264,7 +259,6 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # --- Phase 7: Added API Gateway ---
   api-gateway:
     image: irc-api-gateway-local:latest
     container_name: irc-api-gateway
@@ -275,13 +269,11 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
       - PYTHONPATH=/app/src
-      # Gateway forwards external requests specifically to the Orchestrator
       - ORCHESTRATOR_URL=http://llm-orchestrator:8000 
     ports:
-      # This serves as the single entry point to the system mimicking the Load Balancer
       - "127.0.0.1:8000:8000" 
-    volumes:
-      - ./src/api_gateway:/app/src/api_gateway:ro
+    # volumes:
+    #   - ./src/api_gateway:/app/src/api_gateway:ro
     networks:
       - irc_network
     logging:

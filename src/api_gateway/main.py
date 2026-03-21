@@ -151,13 +151,9 @@ async def route_query(request: Request):
 
     try:
         # Proxy request using the globally pooled client
-        response = await http_client.post(f"{ORCHESTRATOR_URL}/query", json=body)
-
-        # Pass through the exact status code and payload from the orchestrator
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-
-        return response.json()
+        # Forward the client's actual IP so the Orchestrator's rate limiter works correctly
+        headers = {"X-Forwarded-For": request.client.host} if request.client else {}
+        response = await http_client.post(f"{ORCHESTRATOR_URL}/query", json=body, headers=headers)
 
     except httpx.RequestError as e:
         # Handles connection errors (e.g., DNS resolution fails, orchestrator pod crashed)
@@ -165,6 +161,18 @@ async def route_query(request: Request):
         raise HTTPException(
             status_code=502, detail="Bad Gateway: Failed to communicate with downstream service."
         )
-    except Exception:
+    except Exception as e:
         logger.exception("Unexpected Gateway Error")
         raise HTTPException(status_code=500, detail="Internal Gateway Error")
+
+    # FIX: Move validation outside the try-except block to prevent exception swallowing.
+    # Pass through the exact status code and payload from the orchestrator
+    if response.status_code != 200:
+        # Return the exact error content and status code the Orchestrator provided
+        return Response(
+            content=response.content, 
+            status_code=response.status_code, 
+            media_type="application/json"
+        )
+        
+    return response.json()

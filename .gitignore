@@ -12,7 +12,7 @@ dist/
 build/
 *.egg-info/
 .venv/
-venv/
+myenv/
 ENV/
 .env
 .env.*

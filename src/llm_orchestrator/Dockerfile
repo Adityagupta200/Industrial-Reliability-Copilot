@@ -1,10 +1,11 @@
 # syntax=docker/dockerfile:1.6
 
 ########################
-# Builder
+# Builder Stage
 ########################
 FROM python:3.11-slim AS builder
 
+# Set build-time environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -13,65 +14,79 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install system dependencies required for building Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential \
+      gcc \
       curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create and activate virtual environment
 RUN python -m venv "${VENV_PATH}"
 ENV PATH="${VENV_PATH}/bin:${PATH}"
 
+# Upgrade base packaging tools
 RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
-# Copy the main requirements.txt which has LangChain, Presidio, spaCy, and slowapi
+# Copy dependency files
+# Note: Assumes requirements.txt is located at the root of the build context
 COPY requirements.txt /app/requirements.txt
 
-# FIX: Added --extra-index-url to force CPU-only torch to prevent Docker OOM / EOF crashes
+# Install dependencies with CPU-only PyTorch to optimize image size and prevent OOM
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --index-url https://pypi.org/simple \
     --extra-index-url https://download.pytorch.org/whl/cpu \
     -r /app/requirements.txt
 
-# --- PHASE 5: Use lightweight model to prevent OOM on constrained hardware ---
+# Download spaCy model explicitly into the virtual environment
 RUN python -m spacy download en_core_web_sm
 
-# Copy the source code
-COPY src/ /app/src/
-
 ########################
-# Runtime
+# Runtime Stage
 ########################
 FROM python:3.11-slim AS runtime
 
+# Production environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
     VENV_PATH=/opt/venv \
     PATH="/opt/venv/bin:${PATH}" \
-    PYTHONPATH=/app/src
+    PYTHONPATH=/app/src \
+    PORT=8000
 
 WORKDIR /app
 
+# Install runtime utilities (tini for signal handling, curl for local health checks)
+# Tini ensures graceful shutdown of FastAPI workers upon receiving SIGTERM from Kubernetes
 RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
+      tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy virtual environment and code from builder
-COPY --from=builder /opt/venv /opt/venv
-COPY --from=builder /app/src /app/src
+# Create a strict non-root user and group with explicit explicit numeric IDs
+# This ensures compatibility with strict Kubernetes SecurityContext policies
+RUN groupadd --system --gid 10001 appgroup && \
+    useradd --system --uid 10001 --gid 10001 --create-home appuser
 
-# --- Phase 7 Production Patches ---
+# Copy virtual environment from builder using single-layer chown
+COPY --from=builder --chown=10001:10001 /opt/venv /opt/venv
 
-# 1. Prevent running as root (Critical Security Requirement)
-RUN addgroup --system appgroup && adduser --system --group appuser
-RUN chown -R appuser:appgroup /app
-USER appuser
+# Copy application source code using single-layer chown
+COPY --chown=10001:10001 src/ /app/src/
+
+# Switch to the non-root user for all subsequent commands and container execution
+USER appuser:appgroup
 
 EXPOSE 8000
 
-# 2. Native Container Healthcheck (Utilizes the new /health/live endpoint)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+# Local Docker Compose Healthcheck
+# Note: Kubernetes will ignore this and use the Liveness/Readiness probes defined in your manifest
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8000/health/live || exit 1
 
-# Start the Orchestrator service
-CMD ["uvicorn", "llm_orchestrator.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
+# Use Tini as the entrypoint for proper PID 1 signal forwarding
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Start the Orchestrator service. 
+# Explicitly setting --workers 1 because Kubernetes HPA handles concurrency scaling in production.
+CMD ["uvicorn", "llm_orchestrator.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info"]
