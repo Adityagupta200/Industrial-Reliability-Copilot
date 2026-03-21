@@ -37,8 +37,9 @@ class BM25KeywordRetriever:
 
     def __init__(self, *, qdrant: Optional[QdrantBackend] = None, index_path: Optional[str] = None):
         self.qdrant = qdrant or QdrantBackend()
+        # FIX 4: Cloud-Native compliance. Stateless containers must write temporary caches to /tmp
         self.index_path = index_path or os.getenv(
-            "BM25_INDEX_PATH", "data/processed/bm25_index.pkl"
+            "BM25_INDEX_PATH", "/tmp/bm25_index.pkl"
         )
         self._lock = threading.RLock()
         self._index: Optional[_BM25Index] = None
