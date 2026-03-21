@@ -11,7 +11,6 @@ from rank_bm25 import BM25Okapi
 from .qdrant_backend import QdrantBackend
 from .types import Document, RetrievalFilters
 
-
 _TOKEN_RE = re.compile(r"[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")
 
 
@@ -80,20 +79,32 @@ class BM25KeywordRetriever:
             tokenized: list[list[str]] = []
             equipment_to_indices: dict[str, list[int]] = {}
 
-            for i, p in enumerate(points):
-                payload = dict(p["payload"])
+            for p in points:
+                # FIX 1: Access Qdrant Record attributes via dot notation, not dict subscripting
+                payload = dict(p.payload or {}) if hasattr(p, "payload") else {}
                 text = str(payload.get(text_key, ""))
                 if not text.strip():
                     continue
 
-                doc_ids.append(str(p["id"]))
+                # FIX 2: Compute current index safely to prevent index drift
+                current_idx = len(doc_ids)
+
+                doc_id = str(p.id) if hasattr(p, "id") else ""
+                doc_ids.append(doc_id)
                 texts.append(text)
                 metadatas.append(payload)
                 tokenized.append(_tokenize(text))
 
                 eq = payload.get(self.qdrant.settings.payload_equipment_id_key)
                 if isinstance(eq, str) and eq:
-                    equipment_to_indices.setdefault(eq, []).append(i)
+                    equipment_to_indices.setdefault(eq, []).append(current_idx)
+
+            # FIX 3: Prevent rank_bm25 from crashing with ZeroDivisionError if DB is empty
+            if not tokenized:
+                tokenized = [[""]]
+                doc_ids = ["empty_db_dummy"]
+                texts = [""]
+                metadatas = [{}]
 
             bm25 = BM25Okapi(tokenized)
             idx = _BM25Index(
@@ -137,6 +148,10 @@ class BM25KeywordRetriever:
 
         docs: list[Document] = []
         for i, s in results:
+            # Ignore the safety dummy document if the DB was empty
+            if idx.doc_ids[i] == "empty_db_dummy":
+                continue
+
             meta = idx.metadatas[i]
             if filters and filters.severity:
                 if meta.get(self.qdrant.settings.payload_severity_key) != filters.severity:
