@@ -32,17 +32,23 @@ spec:
           limits:
             memory: "2Gi"
             cpu: "1000m"
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8002
+          failureThreshold: 60    # Gives up to 10 minutes (60 * 10s) for model download
+          periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health/live
             port: 8002
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5  # Reduced since startupProbe handles the heavy lifting
           periodSeconds: 15
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8002
-          initialDelaySeconds: 20
+          initialDelaySeconds: 5
           periodSeconds: 10
 ---
 apiVersion: v1
@@ -110,16 +116,24 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "500m"
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8001
+          failureThreshold: 30    # 5 minutes for initialization
+          periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health/live
             port: 8001
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
+          periodSeconds: 15
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8001
-          initialDelaySeconds: 20
+          initialDelaySeconds: 5
+          periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
@@ -188,16 +202,24 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "1000m"
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8000
+          failureThreshold: 30
+          periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health/live
             port: 8000
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
+          periodSeconds: 15
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
-          initialDelaySeconds: 20
+          initialDelaySeconds: 5
+          periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
@@ -264,14 +286,24 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        startupProbe:
+          httpGet:
+            path: /health/live
+            port: 8000
+          failureThreshold: 15
+          periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health/live
             port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 15
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
