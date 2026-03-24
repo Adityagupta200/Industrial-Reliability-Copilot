@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
     limits = httpx.Limits(max_keepalive_connections=50, max_connections=100)
 
     # 5 seconds to connect to the internal service, 120 seconds for the LLM to stream/generate a response
-    timeout = httpx.Timeout(120.0, connect=5.0)
+    timeout = httpx.Timeout(600.0, connect=10.0)
 
     http_client = httpx.AsyncClient(limits=limits, timeout=timeout)
     logger.info("Gateway HTTP client initialized with connection pooling.")

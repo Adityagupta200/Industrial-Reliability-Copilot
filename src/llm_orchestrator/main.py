@@ -110,7 +110,7 @@ def create_app() -> FastAPI:
         base_url=settings.services.anomaly_service_url,
         predict_anomaly_path=settings.services.anomaly_predict_anomaly_path,
         predict_rul_path=settings.services.anomaly_predict_rul_path,
-        timeout_s=10.0,
+        timeout_s=60.0,
     )
 
     rag_client = RAGClient(
@@ -118,7 +118,7 @@ def create_app() -> FastAPI:
         hybrid_path=settings.services.rag_retrieve_hybrid_path,
         procedures_path=settings.services.rag_retrieve_procedures_path,
         semantic_path=settings.services.rag_retrieve_semantic_path,
-        timeout_s=60.0,
+        timeout_s=300.0,
     )
 
     incident_repo = IncidentRepo(settings.services.incidents_db_dsn)

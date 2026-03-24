@@ -17,7 +17,7 @@ class RAGClient:
     hybrid_path: str
     procedures_path: str  # Kept for compatibility, but we will route around it
     semantic_path: str
-    timeout_s: float = 60.0
+    timeout_s: float = 300.0  # INCREASED default from 60.0s to 300.0s to accommodate heavy ML cold starts
 
     def _extract_docs(self, response_data: Any) -> list[dict[str, Any]]:
         if isinstance(response_data, dict):
@@ -37,6 +37,15 @@ class RAGClient:
         logger.warning(f"Unexpected RAG response format: {type(response_data)}")
         return []
 
+    def _get_timeout_config(self) -> httpx.Timeout:
+        """Returns a robust timeout configuration allowing enough time for ML model inference."""
+        return httpx.Timeout(
+            self.timeout_s, 
+            connect=10.0, 
+            read=self.timeout_s, 
+            write=self.timeout_s
+        )
+
     async def retrieve_hybrid(
         self, query: str, *, equipment_id: Optional[str] = None, k: int = 8
     ) -> list[RetrievedDoc]:
@@ -45,7 +54,7 @@ class RAGClient:
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
 
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_s) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=self._get_timeout_config()) as client:
             r = await client.post(self.hybrid_path, json=payload)
             r.raise_for_status()
 
@@ -61,7 +70,7 @@ class RAGClient:
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
 
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_s) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=self._get_timeout_config()) as client:
             # FIX: Send to semantic_path instead of the non-existent procedures_path
             r = await client.post(self.semantic_path, json=payload)
             r.raise_for_status()
@@ -76,7 +85,7 @@ class RAGClient:
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
 
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout_s) as client:
+        async with httpx.AsyncClient(base_url=self.base_url, timeout=self._get_timeout_config()) as client:
             r = await client.post(self.semantic_path, json=payload)
             r.raise_for_status()
 

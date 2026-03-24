@@ -23,7 +23,7 @@ class OllamaProvider(LLMProvider):
         # FIX: Create an explicit httpx Timeout object.
         # langchain_ollama's default timeout parameter sometimes fails to pass through
         # to the underlying async httpx client, causing ReadTimeout crashes.
-        timeout_config = httpx.Timeout(timeout_s)
+        timeout_config = httpx.Timeout(timeout_s, connect=10.0, read=timeout_s, write=timeout_s)
 
         self._client = ChatOllama(
             base_url=base_url,
