@@ -82,4 +82,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Lock workers to 1 (HPA will handle scale-out)
-CMD ["uvicorn", "anomaly_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8001", "--workers", "1", "--log-level", "info"]
+CMD ["uvicorn", "anomaly_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8001", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "600"]

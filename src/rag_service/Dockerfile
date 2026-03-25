@@ -105,6 +105,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
 
 # 4. Use Tini to handle Kubernetes SIGTERM scaling gracefully
 ENTRYPOINT ["/usr/bin/tini", "--"]
-
+ENV HF_HOME=/tmp/huggingface
 # 5. Lock workers to 1 (Rely on Kubernetes HPA for scaling) and set log-level to info for production
-CMD ["uvicorn", "rag_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8002", "--workers", "1", "--log-level", "info"]
+CMD ["uvicorn", "rag_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8002", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "600"]

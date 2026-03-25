@@ -27,11 +27,11 @@ spec:
         - containerPort: 8002
         resources:
           requests:
-            memory: "1Gi"
+            memory: "1.5Gi" # INCREASED: Accommodates BGE-Large
             cpu: "500m"
           limits:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "4Gi"   # INCREASED: Prevents OOMKilled during inference spikes
+            cpu: "2000m"
         startupProbe:
           httpGet:
             path: /health/live
@@ -42,14 +42,18 @@ spec:
           httpGet:
             path: /health/live
             port: 8002
-          initialDelaySeconds: 5  # Reduced since startupProbe handles the heavy lifting
+          initialDelaySeconds: 5
           periodSeconds: 15
+          timeoutSeconds: 5       # NEW: Tolerates CPU starvation delay
+          failureThreshold: 5     # NEW: Allows multiple missed pings before killing
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8002
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 5       # NEW
+          failureThreshold: 5     # NEW
 ---
 apiVersion: v1
 kind: Service
@@ -120,7 +124,7 @@ spec:
           httpGet:
             path: /health/live
             port: 8001
-          failureThreshold: 30    # 5 minutes for initialization
+          failureThreshold: 30
           periodSeconds: 10
         livenessProbe:
           httpGet:
@@ -128,12 +132,16 @@ spec:
             port: 8001
           initialDelaySeconds: 5
           periodSeconds: 15
+          timeoutSeconds: 5       # NEW
+          failureThreshold: 5     # NEW
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8001
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 5       # NEW
+          failureThreshold: 5     # NEW
 ---
 apiVersion: v1
 kind: Service
@@ -200,7 +208,7 @@ spec:
             memory: "512Mi"
             cpu: "500m"
           limits:
-            memory: "1Gi"
+            memory: "2Gi"   # INCREASED: Provides breathing room for large JSON payloads
             cpu: "1000m"
         startupProbe:
           httpGet:
@@ -214,12 +222,16 @@ spec:
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 15
+          timeoutSeconds: 5       # NEW
+          failureThreshold: 5     # NEW
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 5       # NEW
+          failureThreshold: 5     # NEW
 ---
 apiVersion: v1
 kind: Service
@@ -298,12 +310,16 @@ spec:
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 15
+          timeoutSeconds: 5       # NEW
+          failureThreshold: 5     # NEW
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
           initialDelaySeconds: 5
           periodSeconds: 10
+          timeoutSeconds: 5       # NEW
+          failureThreshold: 5     # NEW
 ---
 apiVersion: v1
 kind: Service
