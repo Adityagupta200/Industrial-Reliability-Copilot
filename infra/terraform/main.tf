@@ -26,7 +26,9 @@ module "eks" {
   version = "19.17.2"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.28"
+  
+  # FIX: Upgraded from deprecated 1.28 to supported 1.31 LTS version
+  cluster_version = "1.31"
 
   vpc_id                         = module.vpc.vpc_id
   subnet_ids                     = module.vpc.private_subnets
@@ -34,10 +36,13 @@ module "eks" {
 
   eks_managed_node_groups = {
     standard_nodes = {
-      min_size     = 2
-      max_size     = 10
-      desired_size = 2
+      min_size       = 2
+      max_size       = 10
+      desired_size   = 2
       instance_types = ["t3.medium"] # Matches PDF spec
+      
+      # FIX: Explicitly set modern Amazon Linux 2023 AMI to avoid deprecation issues
+      ami_type       = "AL2023_x86_64_STANDARD"
     }
   }
 }
@@ -73,5 +78,23 @@ resource "aws_s3_bucket_versioning" "artifacts_versioning" {
   bucket = aws_s3_bucket.artifacts.id
   versioning_configuration {
     status = "Enabled"
+  }
+}
+
+# 5. Container Registry (ECR)
+resource "aws_ecr_repository" "microservices" {
+  for_each = toset([
+    "irc-api-gateway",
+    "irc-llm-orchestrator",
+    "irc-rag-service",
+    "irc-anomaly-service"
+  ])
+
+  name                 = each.key
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true # Ensures safe destruction without orphaned images
+
+  image_scanning_configuration {
+    scan_on_push = true
   }
 }

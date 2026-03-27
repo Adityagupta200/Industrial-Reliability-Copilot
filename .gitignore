@@ -38,6 +38,8 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+*.hcl
+tfplan
 
 # --- Kubernetes/Helm (optional local artifacts) ---
 *.tgz
