@@ -25,8 +25,8 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "19.17.2"
 
-  cluster_name    = var.cluster_name
-  
+  cluster_name = var.cluster_name
+
   # FIX: Upgraded from deprecated 1.28 to supported 1.31 LTS version
   cluster_version = "1.31"
 
@@ -40,9 +40,9 @@ module "eks" {
       max_size       = 10
       desired_size   = 2
       instance_types = ["t3.medium"] # Matches PDF spec
-      
+
       # FIX: Explicitly set modern Amazon Linux 2023 AMI to avoid deprecation issues
-      ami_type       = "AL2023_x86_64_STANDARD"
+      ami_type = "AL2023_x86_64_STANDARD"
     }
   }
 }

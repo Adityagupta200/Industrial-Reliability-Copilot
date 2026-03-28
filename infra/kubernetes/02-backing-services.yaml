@@ -106,7 +106,22 @@ spec:
         image: ollama/ollama:latest
         ports:
         - containerPort: 11434
-        # In a real cluster, GPU node reservations go here
+        # FIXED: Forces the container to download the LLM so it's ready for inference
+        lifecycle:
+          postStart:
+            exec:
+              command: 
+                - "/bin/sh"
+                - "-c"
+                - "sleep 10 && ollama pull llama3.2:1b"
+        # FIXED: Production resource guarantees for CPU-bound inference
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "6Gi"
+            cpu: "4000m"
 ---
 apiVersion: v1
 kind: Service
