@@ -42,18 +42,18 @@ spec:
           httpGet:
             path: /health/live
             port: 8002
-          initialDelaySeconds: 5
-          periodSeconds: 15
-          timeoutSeconds: 10      # FIXED: Increased to tolerate CPU starvation delay during inference
-          failureThreshold: 10    # FIXED: Allows more missed pings before killing pod
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED: Breathing room for heavy retrieval
+          failureThreshold: 10    # FIXED: Prevents pod termination during CPU spikes
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8002
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5       
-          failureThreshold: 5     
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED: Prevents removal from internal routing 
+          failureThreshold: 10    
 ---
 apiVersion: v1
 kind: Service
@@ -130,18 +130,18 @@ spec:
           httpGet:
             path: /health/live
             port: 8001
-          initialDelaySeconds: 5
-          periodSeconds: 15
-          timeoutSeconds: 5       
-          failureThreshold: 5     
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED
+          failureThreshold: 10    # FIXED
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8001
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5       
-          failureThreshold: 5     
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED
+          failureThreshold: 10    # FIXED
 ---
 apiVersion: v1
 kind: Service
@@ -220,18 +220,18 @@ spec:
           httpGet:
             path: /health/live
             port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 15
-          timeoutSeconds: 10      # FIXED: Increased for CPU spikes
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED: Increased for CPU spikes during inference
           failureThreshold: 10    # FIXED: Increased to prevent premature pod killing
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5       
-          failureThreshold: 5     
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED
+          failureThreshold: 10    # FIXED
 ---
 apiVersion: v1
 kind: Service
@@ -308,18 +308,18 @@ spec:
           httpGet:
             path: /health/live
             port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 15
-          timeoutSeconds: 5       
-          failureThreshold: 5     
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED
+          failureThreshold: 10    # FIXED
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5       
-          failureThreshold: 5     
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 10      # FIXED
+          failureThreshold: 10    # FIXED
 ---
 apiVersion: v1
 kind: Service

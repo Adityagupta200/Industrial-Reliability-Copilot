@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     """
     global health_check_client
     
-    # Initialize a fast-failing client to ping the Vector DB
+    # Initialize a fast-failing client (kept for potential future downstream API calls)
     limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
     health_check_client = httpx.AsyncClient(timeout=2.0, limits=limits)
     
@@ -118,32 +118,13 @@ async def liveness_probe() -> dict[str, str]:
 @app.get("/health/ready", tags=["Health"])
 async def readiness_probe() -> Response:
     """
-    Kubernetes readiness probe.
-    Confirms the application is fully booted AND the Vector Database (Qdrant) is reachable.
-    If Qdrant is down, this returns a 503, preventing Kubernetes from sending traffic 
-    to a service that will inevitably fail.
+    Production Fix: Shallow readiness probe.
+    Confirms the application is fully booted and the event loop is responsive.
+    By removing the deep downstream check to Qdrant, we ensure Kubernetes 
+    does not falsely mark this pod as unready (and sever the ELB connection) 
+    during CPU-heavy embedding inference spikes.
     """
-    assert health_check_client is not None
-    
-    # We dynamically fetch the URL from settings. 
-    # Fallback to standard local docker-compose port if not explicitly set.
-    qdrant_url = getattr(settings, 'qdrant_url', "http://qdrant:6333")
-    
-    try:
-        # Qdrant exposes a /readyz health check endpoint
-        db_resp = await health_check_client.get(f"{qdrant_url}/readyz")
-        if db_resp.status_code == 200:
-            return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ready"})
-            
-        logger.warning(f"Readiness check failed - Qdrant returned status: {db_resp.status_code}")
-    except Exception as e:
-        logger.warning(f"Readiness check failed - Could not connect to Qdrant: {e}")
-        
-    # 503 Service Unavailable ensures K8s removes this pod from the LoadBalancer rotation
-    return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
-        content={"status": "degraded", "detail": "Vector Database (Qdrant) is unreachable"}
-    )
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ready"})
 
 
 @app.get("/metrics", tags=["Telemetry"])

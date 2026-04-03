@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+import asyncio
 from contextlib import asynccontextmanager
 
 import httpx
@@ -27,7 +28,7 @@ from .router import ChainOrchestrator
 from .schemas import QueryRequest, QueryResponse
 from .guardrails.input_filters import InputGuardrails
 
-# Assuming logger.py is placed in src/evaluation/online/ as per Phase 6 instructions
+# Phase 6: Online Logging and Evaluation
 from evaluation.online.logger import log_interaction_sync, SessionLocal, QueryLog
 
 # --- Production Logging Setup ---
@@ -48,6 +49,18 @@ REQUEST_LATENCY = Histogram(
     "orchestrator_request_duration_seconds",
     "Latency of requests through the orchestrator",
     ["endpoint"],
+)
+
+# New Phase 7 Business Metrics (LLMOps)
+QUERY_LATENCY = Histogram(
+    "orchestrator_query_latency_seconds", 
+    "End-to-End Latency of query processing by specific chain", 
+    ["chain"]
+)
+GUARDRAIL_FAILURES = Counter(
+    "orchestrator_guardrail_failures_total", 
+    "Total queries blocked by input or output guardrails", 
+    ["type"]
 )
 
 # Global HTTP Client strictly for K8s dependency health checking
@@ -90,8 +103,8 @@ async def lifespan(app: FastAPI):
     Crucial for graceful shutdowns in Kubernetes.
     """
     global health_check_client
-    # Initialize a fast-failing client to ping downstream microservices
-    health_check_client = httpx.AsyncClient(timeout=2.0)
+    # Initialize a fast-failing client to ping downstream microservices (1s timeout)
+    health_check_client = httpx.AsyncClient(timeout=1.0)
     logger.info("Orchestrator background resources initialized.")
 
     yield
@@ -183,37 +196,31 @@ def create_app() -> FastAPI:
     @app.get("/health/ready", tags=["Health"])
     async def readiness_probe() -> dict[str, str]:
         """
-        Kubernetes readiness probe: Dependency-aware check.
-        Ensures traffic is NOT routed to the orchestrator if core backend APIs are offline.
+        Phase 7 Production Fix: 
+        Uses an asynchronous, parallel, fast-failing (1s timeout) check.
+        Ensures traffic is NOT routed to this orchestrator pod if dependencies are completely unreachable, 
+        but prevents cascading failures caused by slow inference models.
         """
         assert health_check_client is not None
         try:
-            # Check if internal peer microservices are healthy
-            anom_resp = await health_check_client.get(
-                f"{settings.services.anomaly_service_url}/health/ready"
-            )
-            rag_resp = await health_check_client.get(
-                f"{settings.services.rag_service_url}/health/ready"
-            )
+            # Check internal peer microservices concurrently to minimize probe latency
+            rag_req = health_check_client.get(f"{settings.services.rag_service_url}/health/live")
+            anom_req = health_check_client.get(f"{settings.services.anomaly_service_url}/health/live")
+            
+            rag_resp, anom_resp = await asyncio.gather(rag_req, anom_req)
 
-            if anom_resp.status_code == 200 and rag_resp.status_code == 200:
+            if rag_resp.status_code == 200 and anom_resp.status_code == 200:
                 return {"status": "ready"}
 
             return JSONResponse(
                 status_code=503,
-                content={
-                    "status": "degraded",
-                    "detail": "Downstream RAG or Anomaly service not ready",
-                },
+                content={"status": "degraded", "detail": "Downstream services not returning 200 OK"},
             )
         except Exception as e:
             logger.warning(f"Readiness dependency check failed: {e}")
             return JSONResponse(
                 status_code=503,
-                content={
-                    "status": "degraded",
-                    "detail": "Connectivity to downstream services failed",
-                },
+                content={"status": "degraded", "detail": "Connectivity to downstream services failed"},
             )
 
     @app.get("/metrics", tags=["Telemetry"])
@@ -254,8 +261,12 @@ def create_app() -> FastAPI:
             # Execute pipeline
             pipeline_response = await orchestrator.handle(req)
 
+            # Phase 7 Telemetry: Record E2E chain execution time
+            latency_sec = time.time() - start_time
+            QUERY_LATENCY.labels(chain=pipeline_response.chain).observe(latency_sec)
+
             # Extract metrics and schedule non-blocking logging
-            latency_ms = (time.time() - start_time) * 1000
+            latency_ms = latency_sec * 1000
             answer_text, contexts = extract_log_data(pipeline_response)
 
             background_tasks.add_task(
@@ -270,8 +281,16 @@ def create_app() -> FastAPI:
             return pipeline_response
 
         except ValueError as ve:
+            # Distinguish between Input failures and Output Hallucinations
+            error_message = str(ve).lower()
+            if "output guardrail" in error_message or "hallucination" in error_message:
+                GUARDRAIL_FAILURES.labels(type="output_hallucination").inc()
+            else:
+                GUARDRAIL_FAILURES.labels(type="input_validation").inc()
+                
             logger.warning(f"Guardrail/Validation Blocked: {ve}")
-            raise HTTPException(status_code=400, detail=str(ve))
+            # Use 422 Unprocessable Entity for semantic/guardrail rejections
+            raise HTTPException(status_code=422, detail=str(ve)) 
         except HTTPException as he:
             logger.error(f"HTTP Error raised in pipeline: {he.status_code} - {he.detail}")
             raise he

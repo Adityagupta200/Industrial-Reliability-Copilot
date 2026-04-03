@@ -13,3 +13,9 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "dynamodb_lock_table" {
+  description = "Name of the DynamoDB table for Terraform state locking"
+  type        = string
+  default     = "irc-terraform-state-lock"
+}

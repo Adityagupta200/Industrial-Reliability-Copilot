@@ -1,17 +1,16 @@
 terraform {
   required_version = ">= 1.5.0"
 
-  # Step 7.4 Requirement: S3 Backend with Native S3 State Locking (Modern Standard)
+  # Step 7.4 Requirement: S3 Backend with DynamoDB State Locking
   backend "s3" {
-    # CRITICAL: Update '12345' to match the exact globally unique bucket name you created via the AWS CLI
-    bucket = "irc-terraform-state-bucket-12345"
+    # CRITICAL: Update '12345' to match the exact globally unique bucket name you created
+    bucket         = "irc-terraform-state-bucket-12345"
+    key            = "production/terraform.tfstate"
+    region         = "us-east-1" # Or ap-south-1 depending on your bucket
+    encrypt        = true
 
-    key     = "production/terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
-
-    # Modern replacement for the deprecated dynamodb_table locking
-    use_lockfile = true
+    # FIX: Strictly adhering to PDF spec for DynamoDB locking
+    dynamodb_table = "irc-terraform-state-lock"
   }
 
   required_providers {

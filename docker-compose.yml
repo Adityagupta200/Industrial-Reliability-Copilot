@@ -60,10 +60,6 @@ services:
       PYTHONPATH: /app/src
     ports:
       - "127.0.0.1:8001:8001"
-    # VOLUMES COMMENTED OUT: We explicitly want to test the built Docker image 
-    # to ensure parity with the upcoming Kubernetes EKS deployment.
-    # volumes:
-    #   - ./src/anomaly_service:/app/src/anomaly_service:ro
     networks:
       - irc_network
     logging:
@@ -107,15 +103,16 @@ services:
       PORT: "8002"
       PYTHONPATH: /app/src
       EMBEDDING_PROVIDER: bge
-      # FIXED: Aligned to the local BAAI ingestion model to prevent vector dimensionality crashes
       BGE_MODEL_NAME: BAAI/bge-large-en-v1.5
       EMBEDDING_MODEL_NAME: BAAI/bge-large-en-v1.5
       EMBEDDING_NORMALIZE: "true"
+      HF_HOME: /app/data/hf_cache
     ports:
       - "127.0.0.1:8002:8002"
     volumes:
       - ./data/raw:/app/data/raw:ro
       - irc_rag_processed:/app/data/processed
+      - irc_hf_cache:/app/data/hf_cache
     networks:
       - irc_network
     logging:
@@ -142,17 +139,16 @@ services:
         "--forwarded-allow-ips",
         "*",
         "--log-level",
-        "debug"
+        "info"
       ]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8002/health/ready > /dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 20s
+      start_period: 30s
     restart: unless-stopped
 
-  # --- K8s InitContainer Simulation ---
   ollama-model-puller:
     image: ollama/ollama:latest
     container_name: irc-ollama-init
@@ -160,17 +156,14 @@ services:
       - OLLAMA_HOST=http://ollama:11434
     networks:
       - irc_network
-    # Explicitly override the default entrypoint to execute a shell script
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         echo "Waiting for Ollama API to settle..."
         sleep 5
-        echo "Pulling llama3.2:1b..."
-        ollama pull llama3.2:1b
-        echo "Pulling llama3.2:3b..."
-        ollama pull llama3.2:3b
-        echo "Models successfully pulled into the volume!"
+        echo "Pulling llama3.1:8b for production-grade local reasoning..."
+        ollama pull llama3.1:8b
+        echo "Model successfully pulled into the volume!"
     depends_on:
       ollama:
         condition: service_healthy
@@ -212,11 +205,10 @@ services:
       - RAG_SERVICE_URL=http://rag-service:8002
       - ANOMALY_SERVICE_URL=http://anomaly-service:8001
       - INCIDENTS_DB_DSN=postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance
-      - LLM_OPENAI_API_KEY=sk-mock-key-for-local-testing
       - LLM_PRIMARY_PROVIDER=ollama
       - LLM_FALLBACK_PROVIDER=ollama
       - LLM_OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_OLLAMA_MODEL=llama3.2:1b
+      - LLM_OLLAMA_MODEL=llama3.1:8b
       - LLM_REQUEST_TIMEOUT_S=600.0
     networks:
       - irc_network
@@ -233,7 +225,6 @@ services:
       postgres:
         condition: service_healthy
       ollama-model-puller:
-        # Crucial: Prevents the orchestrator from failing probes while the LLM model is still downloading
         condition: service_completed_successfully
     command:
       [
@@ -248,9 +239,6 @@ services:
         "--loop",
         "asyncio"
       ]
-    # volumes:
-    #   - ./src/llm_orchestrator:/app/src/llm_orchestrator:ro
-    #   - ./src/evaluation:/app/src/evaluation:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health/ready > /dev/null || exit 1"]
       interval: 10s
@@ -272,8 +260,6 @@ services:
       - ORCHESTRATOR_URL=http://llm-orchestrator:8000 
     ports:
       - "127.0.0.1:8000:8000" 
-    # volumes:
-    #   - ./src/api_gateway:/app/src/api_gateway:ro
     networks:
       - irc_network
     logging:
@@ -312,4 +298,5 @@ volumes:
   irc_pgdata:
   irc_qdrant:
   irc_rag_processed:
+  irc_hf_cache:
   irc_ollama_data:

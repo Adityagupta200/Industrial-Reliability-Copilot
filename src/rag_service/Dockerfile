@@ -26,15 +26,15 @@ RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
 COPY requirements-rag.txt /app/requirements-rag.txt
 
-# Install heavy ML dependencies with CPU-only index to drastically reduce image size
+# Explicitly cap numpy below 2.0.0 to maintain ABI compatibility with PyTorch 2.1.0
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --index-url https://pypi.org/simple \
     --extra-index-url https://download.pytorch.org/whl/cpu \
-    "numpy>=1.26" \
+    "numpy>=1.26.0,<2.0.0" \
     "typing_extensions>=4.10" \
-    torch==2.10.0+cpu \
-    torchvision==0.25.0+cpu \
-    torchaudio==2.10.0+cpu
+    torch==2.1.0+cpu \
+    torchvision==0.16.0+cpu \
+    torchaudio==2.1.0+cpu
 
 # Install remaining RAG dependencies
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
@@ -76,13 +76,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd --system --gid 10001 appgroup && \
     useradd --system --uid 10001 --gid 10001 --create-home appuser
 
-# Create necessary directories for local volume mounting and assign secure ownership natively
+# FIXED: Added /app/data/hf_cache to pre-create the directory with non-root ownership.
+# When Docker mounts the irc_hf_cache volume, it will inherit these 10001:10001 permissions.
 RUN install -d -m 0755 -o 10001 -g 10001 \
       /app/data/raw/manuals \
       /app/data/raw/procedures \
       /app/data/raw/incidents \
       /app/data/processed/texts \
-      /app/data/processed/manifest
+      /app/data/processed/manifest \
+      /app/data/hf_cache
 
 # 2. Copy code and environment via single-layer chown to drastically reduce image bloat
 COPY --from=builder --chown=10001:10001 /opt/venv /opt/venv
@@ -105,6 +107,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
 
 # 4. Use Tini to handle Kubernetes SIGTERM scaling gracefully
 ENTRYPOINT ["/usr/bin/tini", "--"]
-ENV HF_HOME=/tmp/huggingface
+
+# FIXED: Environment variable to explicitly direct HuggingFace downloads to the new volume
+ENV HF_HOME=/app/data/hf_cache
+
 # 5. Lock workers to 1 (Rely on Kubernetes HPA for scaling) and set log-level to info for production
 CMD ["uvicorn", "rag_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8002", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "600"]

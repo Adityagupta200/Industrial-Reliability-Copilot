@@ -17,7 +17,8 @@ tenacity>=8.2.3
 qdrant-client>=1.10.1
 
 # Retrieval
-numpy>=1.26.0
+# FIXED: Prevent NumPy 2.x from causing C-extension crashes in rank-bm25/torch
+numpy>=1.26.0,<2.0.0
 rank-bm25>=0.2.2
 
 # Chunking / text split
@@ -29,8 +30,10 @@ tiktoken>=0.7.0
 
 # If you use local embeddings/reranker, keep sentence-transformers
 # BUT do NOT put torch in this file; install CPU-only torch via Dockerfile/index-url,
-# otherwise Linux builds can pull huge CUDA-related wheels and time out. [file:16][web:22]
-sentence-transformers>=3.0.1
+# otherwise Linux builds can pull huge CUDA-related wheels and time out.
+# FIXED: Pinned <3.0.0 and transformers <4.40 to prevent demands for torch>=2.4.0
+sentence-transformers>=2.5.0,<3.0.0
+transformers>=4.38.0,<4.40.0
 
 # Postgres + text-to-SQL safety (needed by your safe_sql / historical chain)
 sqlalchemy>=2.0.30

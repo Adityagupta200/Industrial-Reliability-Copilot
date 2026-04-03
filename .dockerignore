@@ -28,6 +28,7 @@ wheels/
 .venv
 venv/
 ENV/
+myenv/
 
 # Jupyter Notebooks
 .ipynb_checkpoints

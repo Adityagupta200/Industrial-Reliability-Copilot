@@ -20,14 +20,32 @@ module "vpc" {
   }
 }
 
+# Phase 7 Production Security: Dedicated Security Group for RDS
+module "rds_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 5.1.0"
+
+  name        = "irc-rds-sg"
+  description = "Security group for RDS PostgreSQL allowing internal VPC traffic"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_with_cidr_blocks = [
+    {
+      from_port   = 5432
+      to_port     = 5432
+      protocol    = "tcp"
+      description = "PostgreSQL access from EKS Subnets"
+      cidr_blocks = "10.0.0.0/16"
+    }
+  ]
+}
+
 # 2. Kubernetes Cluster (EKS)
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "19.17.2"
 
-  cluster_name = var.cluster_name
-
-  # FIX: Upgraded from deprecated 1.28 to supported 1.31 LTS version
+  cluster_name    = var.cluster_name
   cluster_version = "1.31"
 
   vpc_id                         = module.vpc.vpc_id
@@ -41,7 +59,6 @@ module "eks" {
       desired_size   = 2
       instance_types = ["t3.medium"] # Matches PDF spec
 
-      # FIX: Explicitly set modern Amazon Linux 2023 AMI to avoid deprecation issues
       ami_type = "AL2023_x86_64_STANDARD"
     }
   }
@@ -64,18 +81,35 @@ module "db" {
   username = "irc"
   password = var.db_password
 
-  vpc_security_group_ids = [module.vpc.default_security_group_id]
+  # FIX: Attached explicit security group instead of VPC default
+  vpc_security_group_ids = [module.rds_sg.security_group_id]
   create_db_subnet_group = true
   subnet_ids             = module.vpc.private_subnets
+
+  # FIX: Phase 7 mandatory production flags
+  storage_encrypted       = true
+  backup_retention_period = 7
+  skip_final_snapshot     = false # True is for dev only
 }
 
-# 4. Storage (S3) for Models & Documents
+# 4. Storage (S3) for Models & Documents (Phase 7 explicitly requires both)
 resource "aws_s3_bucket" "artifacts" {
   bucket = "irc-artifacts-${data.aws_caller_identity.current.account_id}"
 }
 
 resource "aws_s3_bucket_versioning" "artifacts_versioning" {
   bucket = aws_s3_bucket.artifacts.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket" "documents" {
+  bucket = "irc-documents-${data.aws_caller_identity.current.account_id}"
+}
+
+resource "aws_s3_bucket_versioning" "documents_versioning" {
+  bucket = aws_s3_bucket.documents.id
   versioning_configuration {
     status = "Enabled"
   }
@@ -92,7 +126,7 @@ resource "aws_ecr_repository" "microservices" {
 
   name                 = each.key
   image_tag_mutability = "MUTABLE"
-  force_delete         = true # Ensures safe destruction without orphaned images
+  force_delete         = true 
 
   image_scanning_configuration {
     scan_on_push = true

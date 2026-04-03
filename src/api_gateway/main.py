@@ -109,23 +109,12 @@ async def liveness_probe():
 @app.get("/health/ready", tags=["Health"])
 async def readiness_probe():
     """
-    Kubernetes Readiness Probe.
-    Validates the gateway is ready AND the downstream orchestrator is reachable.
-    If the orchestrator is restarting, the Gateway should not accept external traffic.
+    Production Fix: Shallow Readiness Probe.
+    Validates the gateway is ready to accept traffic. By removing the deep downstream 
+    ping to the orchestrator, we ensure K8s does not falsely mark this pod as unready 
+    and remove it from the AWS ELB rotation during heavy ML inference spikes.
     """
-    assert http_client is not None
-    try:
-        # Fast 2-second timeout just to check if orchestrator is listening
-        resp = await http_client.get(f"{ORCHESTRATOR_URL}/health/ready", timeout=2.0)
-        if resp.status_code == 200:
-            return {"status": "ready"}
-    except Exception as e:
-        logger.warning(f"Readiness check failed - Downstream orchestrator unavailable: {e}")
-
-    return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={"status": "degraded", "detail": "Downstream LLM Orchestrator unavailable"},
-    )
+    return {"status": "ready"}
 
 
 @app.get("/metrics", tags=["Telemetry"])

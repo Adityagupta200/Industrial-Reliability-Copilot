@@ -11,22 +11,24 @@ metadata:
 data:
   ENVIRONMENT: "production"
   LOG_LEVEL: "INFO"
-  # Internal K8s DNS routing
   POSTGRES_DB: "industrial_maintenance"
   POSTGRES_USER: "irc"
   QDRANT_URL: "http://qdrant:6333"
   RAG_SERVICE_URL: "http://rag-service:8002"
   ANOMALY_SERVICE_URL: "http://anomaly-service:8001"
   ORCHESTRATOR_URL: "http://llm-orchestrator:8000"
-  # LLM & Embedding Configs
+  
+  # Proven Production Configuration
   EMBEDDING_PROVIDER: "bge"
   BGE_MODEL_NAME: "BAAI/bge-large-en-v1.5"
   EMBEDDING_MODEL_NAME: "BAAI/bge-large-en-v1.5"
   EMBEDDING_NORMALIZE: "true"
+  
+  # Open-Source Local Intelligence
   LLM_PRIMARY_PROVIDER: "ollama"
   LLM_FALLBACK_PROVIDER: "ollama"
   LLM_OLLAMA_BASE_URL: "http://ollama:11434"
-  LLM_OLLAMA_MODEL: "llama3.2:1b"
+  LLM_OLLAMA_MODEL: "llama3.1:8b"
 ---
 apiVersion: v1
 kind: Secret
@@ -38,4 +40,4 @@ stringData:
   POSTGRES_PASSWORD: "irc_password" 
   POSTGRES_DSN: "postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance"
   INCIDENTS_DB_DSN: "postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance"
-  LLM_OPENAI_API_KEY: "sk-mock-key-for-local-testing"
+  LLM_OPENAI_API_KEY: "mock" # Left blank/mock as we strictly use Ollama

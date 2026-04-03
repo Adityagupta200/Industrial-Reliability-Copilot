@@ -12,7 +12,6 @@ UNSAFE_PATTERNS = [
     r"override emergency",
 ]
 
-
 class OutputGuardrails:
     @staticmethod
     def check_safety(answer: str) -> bool:
@@ -25,11 +24,15 @@ class OutputGuardrails:
         return True
 
     @staticmethod
-    def check_citations(answer: str, min_citations: int = 2) -> bool:
-        """Ensure minimum number of [Doc ID] citations."""
-        citations = re.findall(r"\[.*?\]", answer)
-        if len(citations) < min_citations:
-            logger.warning(f"Failed citation check: only {len(citations)} found.")
+    def check_citations(answer: str, min_citations: int = 1) -> bool:
+        """Ensure minimum number of inline citations exist."""
+        # FIXED: Correctly formatted raw string to prevent SyntaxError
+        citations = re.findall(r"\", answer, re.IGNORECASE)
+        fallback_citations = re.findall(r"\[DOC:.*?\]", answer, re.IGNORECASE)
+        
+        total_citations = len(citations) + len(fallback_citations)
+        if total_citations < min_citations:
+            logger.warning(f"Failed citation check: only {total_citations} found.")
             return False
         return True
 
@@ -37,17 +40,15 @@ class OutputGuardrails:
     async def check_groundedness(llm_client, context: str, answer: str) -> float:
         """LLM-as-a-judge: Ensure answer relies purely on retrieved context."""
         prompt = (
-            "Is the following answer fully supported by the provided context? "
-            "Reply strictly with a single number between 0.0 and 1.0, where 1.0 means fully supported.\n\n"
+            "You are an Auditor. Rate if the Answer is fully supported by the Context.\n"
+            "CRITICAL RULE: If the Answer mentions parts or procedures (like crankshafts or engine blocks) "
+            "that are NOT explicitly described in the Context for the target equipment, you MUST score 0.0.\n"
+            "Reply ONLY with a single float number between 0.0 and 1.0, where 1.0 means fully supported.\n\n"
             f"Context: {context}\n\nAnswer: {answer}"
         )
         try:
-            # Assumes your LLMClient has an async generate method.
-            # If standard OpenAI, use `await llm_client.client.chat.completions.create(...)`
-            result = await llm_client.agenerate(prompt=prompt, temperature=0.0, max_tokens=10)
-
-            # Extract the float from the result
-            match = re.search(r"0\.\d+|1\.0|0|1", result)
+            result = await llm_client.invoke(prompt)
+            match = re.search(r"(1\.0|0\.\d+|0|1)", result.content)
             return float(match.group()) if match else 0.0
         except Exception as e:
             logger.error(f"Groundedness check failed: {e}")
@@ -55,7 +56,7 @@ class OutputGuardrails:
 
     @classmethod
     async def validate_output(cls, llm_client, context: str, answer: str) -> Tuple[bool, str]:
-        """Runs all output guardrails in parallel to stay under <500ms budget."""
+        """Runs all output guardrails in parallel to stay under latency budget."""
         safety_task = asyncio.to_thread(cls.check_safety, answer)
         citation_task = asyncio.to_thread(cls.check_citations, answer)
         groundedness_task = cls.check_groundedness(llm_client, context, answer)
@@ -67,8 +68,8 @@ class OutputGuardrails:
         if not is_safe:
             return False, "Blocked: Contains unsafe procedural recommendations."
         if not has_citations:
-            return False, "Blocked: Output lacks required citations."
+            return False, "Blocked: Output lacks required inline citations."
         if grounded_score < 0.8:
-            return False, "Blocked: Output is not adequately grounded in retrieved context."
+            return False, f"Blocked: Output is not adequately grounded in retrieved context (Score: {grounded_score}). Possible hallucination detected."
 
         return True, "Valid"

@@ -10,25 +10,24 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class LLMSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="LLM_", extra="ignore")
 
-    # Provider routing
+    # Provider routing - 2026 Production Standard
     primary_provider: Literal["openai", "ollama"] = "openai"
     fallback_provider: Literal["openai", "ollama"] = "ollama"
 
-    # OpenAI
+    # OpenAI (Production Intelligence)
     openai_api_key: Optional[SecretStr] = None
-    openai_model: str = "gpt-4o-mini"
-    openai_base_url: Optional[str] = None  # for proxies / Azure-compatible gateways
+    openai_model: str = "gpt-4o"  # Upgraded for complex reasoning & groundedness
+    openai_base_url: Optional[str] = None
 
-    # Ollama (local)
+    # Ollama (Local Fallback - Llama 3.1 8B fits well within a 10GB RAM allocation)
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b-instruct"
 
     # Generation controls
-    temperature: float = 0.2
-    max_tokens: int = 800
+    temperature: float = 0.1  # Lowered for highly deterministic maintenance procedures
+    max_tokens: int = 1000
 
-    # FIX: Increased default from 20.0 to 600.0 to guarantee local CPU models
-    # have enough time, even if the docker environment variable fails to bind.
+    # Extended timeout to guarantee local CPU models have enough time
     request_timeout_s: float = 600.0
 
     # Reliability
@@ -36,10 +35,10 @@ class LLMSettings(BaseSettings):
     retry_min_wait_s: float = 0.3
     retry_max_wait_s: float = 2.5
 
-    # Observability
-    enable_langchain_tracing: bool = False
+    # Observability - Mandatory for production
+    enable_langchain_tracing: bool = True
     langsmith_api_key: Optional[SecretStr] = None
-    langsmith_project: str = "industrial-reliability-copilot"
+    langsmith_project: str = "industrial-reliability-copilot-prod"
 
 
 class ServiceSettings(BaseSettings):
@@ -48,7 +47,7 @@ class ServiceSettings(BaseSettings):
     anomaly_service_url: str = Field(default="http://localhost:8001")
     rag_service_url: str = Field(default="http://localhost:8002")
 
-    # Endpoints (make these match your existing services)
+    # Endpoints
     anomaly_predict_anomaly_path: str = "/predict/anomaly"
     anomaly_predict_rul_path: str = "/predict/rul"
 
@@ -56,7 +55,7 @@ class ServiceSettings(BaseSettings):
     rag_retrieve_procedures_path: str = "/retrieve/procedures"
     rag_retrieve_semantic_path: str = "/retrieve/semantic"
 
-    # DB for historical incidents (direct DB access for Step 4.3 historical chain)
+    # DB for historical incidents
     incidents_db_dsn: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/industrialmaintenance"
     )
@@ -74,8 +73,6 @@ def load_settings() -> Settings:
     services = ServiceSettings()
 
     if llm.primary_provider == "openai" and llm.openai_api_key is None:
-        # Allow running without OpenAI by setting primary_provider=ollama.
-        # In production, you usually want OpenAI configured and Ollama as fallback.
         pass
 
     return Settings(llm=llm, services=services)
