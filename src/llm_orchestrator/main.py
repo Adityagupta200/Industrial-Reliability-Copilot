@@ -51,7 +51,6 @@ REQUEST_LATENCY = Histogram(
     ["endpoint"],
 )
 
-# New Phase 7 Business Metrics (LLMOps)
 QUERY_LATENCY = Histogram(
     "orchestrator_query_latency_seconds", 
     "End-to-End Latency of query processing by specific chain", 
@@ -63,20 +62,16 @@ GUARDRAIL_FAILURES = Counter(
     ["type"]
 )
 
-# Global HTTP Client strictly for K8s dependency health checking
 health_check_client: httpx.AsyncClient | None = None
 
+# PRODUCTION FIX: In-memory store for async polling (Use Redis for multi-pod production)
+JOB_STORE: dict[str, dict] = {}
 
 class FeedbackRequest(BaseModel):
     query_id: str
     score: int  # 1 for thumbs up, -1 for thumbs down
 
-
 def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
-    """
-    Safely extracts a summarized answer and retrieved contexts for logging
-    purposes based on the specific chain executed.
-    """
     try:
         if response.chain == "root_cause":
             answer = "; ".join([h.cause for h in response.result.hypotheses])
@@ -90,29 +85,21 @@ def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
         else:
             answer = str(response.result)
             contexts = []
+            
         return answer, contexts
     except Exception as e:
         logger.warning(f"Failed to extract log data from response: {e}")
         return str(response.result), []
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Lifespan context manager for handling background resources.
-    Crucial for graceful shutdowns in Kubernetes.
-    """
     global health_check_client
-    # Initialize a fast-failing client to ping downstream microservices (1s timeout)
     health_check_client = httpx.AsyncClient(timeout=1.0)
     logger.info("Orchestrator background resources initialized.")
-
     yield
-
     if health_check_client:
         await health_check_client.aclose()
         logger.info("Orchestrator background resources cleaned up.")
-
 
 def create_app() -> FastAPI:
     settings = load_settings()
@@ -162,7 +149,6 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-    # --- Phase 7 Security: CORS Middleware ---
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -171,7 +157,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # --- Phase 7 Observability: Metrics Middleware ---
     @app.middleware("http")
     async def metrics_middleware(request: Request, call_next):
         start_time = time.time()
@@ -187,23 +172,14 @@ def create_app() -> FastAPI:
                 method=request.method, endpoint=request.url.path, http_status=status_code
             ).inc()
 
-    # --- Phase 7: Kubernetes Probes & Telemetry ---
     @app.get("/health/live", tags=["Health"])
     async def liveness_probe() -> dict[str, str]:
-        """Kubernetes liveness probe: container and event loop check."""
         return {"status": "alive"}
 
     @app.get("/health/ready", tags=["Health"])
     async def readiness_probe() -> dict[str, str]:
-        """
-        Phase 7 Production Fix: 
-        Uses an asynchronous, parallel, fast-failing (1s timeout) check.
-        Ensures traffic is NOT routed to this orchestrator pod if dependencies are completely unreachable, 
-        but prevents cascading failures caused by slow inference models.
-        """
         assert health_check_client is not None
         try:
-            # Check internal peer microservices concurrently to minimize probe latency
             rag_req = health_check_client.get(f"{settings.services.rag_service_url}/health/live")
             anom_req = health_check_client.get(f"{settings.services.anomaly_service_url}/health/live")
             
@@ -225,20 +201,12 @@ def create_app() -> FastAPI:
 
     @app.get("/metrics", tags=["Telemetry"])
     def get_metrics():
-        """Prometheus scrape endpoint."""
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-    # --- Core Application Routing ---
-    @app.post("/query", response_model=QueryResponse, tags=["Inference"])
-    @limiter.limit("10/minute")
-    async def query(
-        request: Request, req: QueryRequest, response: Response, background_tasks: BackgroundTasks
-    ) -> QueryResponse:
+    # PRODUCTION FIX: Background task processor to handle high LLM latency
+    async def process_query_bg(job_id: str, req: QueryRequest, trace_id: str):
         start_time = time.time()
-        query_id = str(uuid.uuid4())
-
-        # Attach the query ID to the response headers for the frontend to consume
-        response.headers["X-Query-ID"] = query_id
+        applied_guardrails = []
 
         try:
             query_text = ""
@@ -251,6 +219,7 @@ def create_app() -> FastAPI:
 
             if query_text:
                 safe_text = InputGuardrails.process(query_text)
+                applied_guardrails.append("input_safety")
                 if req.root_cause:
                     req.root_cause.user_query = safe_text
                 elif req.remediation:
@@ -258,50 +227,74 @@ def create_app() -> FastAPI:
                 elif req.historical:
                     req.historical.user_query = safe_text
 
-            # Execute pipeline
             pipeline_response = await orchestrator.handle(req)
+            applied_guardrails.extend(["output_citations", "output_groundedness"])
 
-            # Phase 7 Telemetry: Record E2E chain execution time
             latency_sec = time.time() - start_time
             QUERY_LATENCY.labels(chain=pipeline_response.chain).observe(latency_sec)
 
-            # Extract metrics and schedule non-blocking logging
-            latency_ms = latency_sec * 1000
+            latency_ms = round(latency_sec * 1000.0, 2)
             answer_text, contexts = extract_log_data(pipeline_response)
+            
+            pipeline_response.trace_id = trace_id
+            pipeline_response.latency_ms = latency_ms
+            pipeline_response.guardrails_applied = applied_guardrails
 
-            background_tasks.add_task(
+            # Run synchronous SQLAlchemy logging in a separate thread so it doesn't block the Asyncio event loop
+            await asyncio.to_thread(
                 log_interaction_sync,
-                query_id=query_id,
+                query_id=trace_id, 
                 query=query_text,
                 answer=answer_text,
                 contexts=contexts,
                 latency=latency_ms,
             )
 
-            return pipeline_response
+            JOB_STORE[job_id] = {
+                "job_id": job_id,
+                "status": "completed",
+                "result": pipeline_response.dict()
+            }
 
         except ValueError as ve:
-            # Distinguish between Input failures and Output Hallucinations
-            error_message = str(ve).lower()
-            if "output guardrail" in error_message or "hallucination" in error_message:
+            error_msg = str(ve).lower()
+            if "output guardrail" in error_msg or "hallucination" in error_msg:
                 GUARDRAIL_FAILURES.labels(type="output_hallucination").inc()
             else:
                 GUARDRAIL_FAILURES.labels(type="input_validation").inc()
-                
+            
             logger.warning(f"Guardrail/Validation Blocked: {ve}")
-            # Use 422 Unprocessable Entity for semantic/guardrail rejections
-            raise HTTPException(status_code=422, detail=str(ve)) 
-        except HTTPException as he:
-            logger.error(f"HTTP Error raised in pipeline: {he.status_code} - {he.detail}")
-            raise he
+            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": str(ve)}
+            
         except Exception as e:
-            logger.exception("Fatal LLM Orchestrator Crash:")
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {repr(e)}") from e
+            logger.exception("Fatal LLM Orchestrator Background Crash")
+            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": "Internal Server Error"}
+
+    # PRODUCTION FIX: Accept request, generate ID, and immediately return 202 Accepted
+    @app.post("/query", status_code=202, tags=["Inference"])
+    @limiter.limit("10/minute")
+    async def query(
+        request: Request, req: QueryRequest, response: Response, background_tasks: BackgroundTasks
+    ):
+        trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
+        job_id = trace_id 
+        
+        JOB_STORE[job_id] = {"job_id": job_id, "status": "processing"}
+        background_tasks.add_task(process_query_bg, job_id, req, trace_id)
+        
+        response.headers["X-Trace-ID"] = trace_id
+        return JOB_STORE[job_id]
+
+    # PRODUCTION FIX: Polling endpoint for clients to fetch data when ready
+    @app.get("/query/{job_id}", tags=["Inference"])
+    async def get_query_status(job_id: str):
+        if job_id not in JOB_STORE:
+            raise HTTPException(status_code=404, detail="Job not found")
+        return JOB_STORE[job_id]
 
     @app.post("/feedback", tags=["Evaluation"])
     @limiter.limit("20/minute")
     async def submit_feedback(request: Request, feedback: FeedbackRequest):
-        """Endpoint to receive user thumbs up/down feedback for online evaluation."""
         db = SessionLocal()
         try:
             log_entry = db.query(QueryLog).filter(QueryLog.query_id == feedback.query_id).first()
@@ -318,6 +311,5 @@ def create_app() -> FastAPI:
             db.close()
 
     return app
-
 
 app = create_app()

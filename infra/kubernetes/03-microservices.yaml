@@ -199,8 +199,13 @@ spec:
         envFrom:
         - configMapRef:
             name: copilot-config
-        - secretRef:
-            name: copilot-secrets
+        env:
+        # STRATEGIC API COMPROMISE: Inject API Key for Production SLA
+        - name: LLM_OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: copilot-secrets
+              key: OPENAI_API_KEY
         ports:
         - containerPort: 8000
         resources:
@@ -222,16 +227,16 @@ spec:
             port: 8000
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED: Increased for CPU spikes during inference
-          failureThreshold: 10    # FIXED: Increased to prevent premature pod killing
+          timeoutSeconds: 10
+          failureThreshold: 10
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED
-          failureThreshold: 10    # FIXED
+          timeoutSeconds: 10
+          failureThreshold: 10
 ---
 apiVersion: v1
 kind: Service

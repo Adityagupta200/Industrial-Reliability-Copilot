@@ -61,19 +61,32 @@ class LLMClient:
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4.0),
         reraise=True,
     )
-    async def _invoke_with_retry(self, provider: LLMProvider, prompt: str) -> LLMResult:
-        return await provider.invoke(prompt)
+    async def _invoke_with_retry(self, provider: LLMProvider, prompt: str, json_mode: bool = False) -> LLMResult:
+        # PRODUCTION FIX: Safely attempt to pass json_mode down to the provider. 
+        # If the specific provider implementation hasn't been updated to accept kwargs, fallback to prompt injection.
+        try:
+            return await provider.invoke(prompt, json_mode=json_mode)
+        except TypeError:
+            if json_mode:
+                prompt += "\n\n[SYSTEM]: You MUST output strictly valid JSON format. No markdown, no conversational text."
+            return await provider.invoke(prompt)
 
-    async def invoke(self, prompt: str, *, force_provider: Optional[str] = None) -> LLMResult:
+    async def invoke(self, prompt: str, *, force_provider: Optional[str] = None, json_mode: bool = False) -> LLMResult:
+        """
+        Invokes the configured LLM.
+        Note for MLOps: While json_mode=True handles formatting limits, we explicitly rely 
+        on strict Token-to-Source Mapping in our LLM Chains to prevent hallucinated citations 
+        irrespective of the provider's native JSON enforcement capabilities.
+        """
         if force_provider:
             provider = self._get_provider(force_provider)
-            return await self._invoke_with_retry(provider, prompt)
+            return await self._invoke_with_retry(provider, prompt, json_mode=json_mode)
 
         primary = self._get_provider(self._settings.primary_provider)
 
         try:
-            return await self._invoke_with_retry(primary, prompt)
+            return await self._invoke_with_retry(primary, prompt, json_mode=json_mode)
         except LLMTransientError:
             # Fallback only on transient failures (timeouts/rate limits/etc.)
             fallback = self._get_provider(self._settings.fallback_provider)
-            return await self._invoke_with_retry(fallback, prompt)
+            return await self._invoke_with_retry(fallback, prompt, json_mode=json_mode)

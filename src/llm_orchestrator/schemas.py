@@ -16,9 +16,7 @@ class RetrievedDoc(BaseModel):
 
 class RootCauseRequest(BaseModel):
     user_query: str
-    # Defaulting to an empty string to allow purely conversational requests
     anomaly_description: str = ""
-    # Defaulting to an empty dict so it isn't strictly required in the payload
     sensor_data: dict[str, Any] = Field(default_factory=dict)
     equipment_id: Optional[str] = None
     prompt_version: str = "1.0"
@@ -28,7 +26,7 @@ class Hypothesis(BaseModel):
     cause: str
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: str
-    source: str  # "DOC:<id>"
+    source: str  # e.g., "DOC:manual__bearing_installation.pdf"
 
 
 class RootCauseResponse(BaseModel):
@@ -37,7 +35,6 @@ class RootCauseResponse(BaseModel):
 
 class RemediationRequest(BaseModel):
     user_query: str | None = None
-    # Defaulting to an empty string to allow conversational queries
     failure_mode: str = ""
     equipment_id: Optional[str] = None
     prompt_version: str = "1.0"
@@ -60,7 +57,7 @@ class HistoricalSearchRequest(BaseModel):
 
 class EvidenceItem(BaseModel):
     claim: str
-    source: str  # "SQL" or "DOC:<id>"
+    source: str  
 
 
 class HistoricalSearchResponse(BaseModel):
@@ -77,6 +74,11 @@ class QueryRequest(BaseModel):
 
 
 class QueryResponse(BaseModel):
+    # PRODUCTION FIX: Added distributed observability fields
+    trace_id: Optional[str] = None
+    latency_ms: Optional[float] = None
+    guardrails_applied: list[str] = Field(default_factory=list)
+    
     chain: Literal["root_cause", "remediation", "historical"]
     result: RootCauseResponse | RemediationResponse | HistoricalSearchResponse
     model_provider: str

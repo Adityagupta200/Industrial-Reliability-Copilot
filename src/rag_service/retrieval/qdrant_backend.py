@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 
 @dataclass(frozen=True)
@@ -57,28 +58,33 @@ class QdrantBackend:
         if self.settings.vector_name:
             query = qmodels.NamedVector(name=self.settings.vector_name, vector=query_vector)
 
-        # Preferred API (newer clients): query_points
-        if hasattr(self.client, "query_points"):
-            res = self.client.query_points(
+        try:
+            # Preferred API (newer clients): query_points
+            if hasattr(self.client, "query_points"):
+                res = self.client.query_points(
+                    collection_name=self.settings.collection,
+                    query=query,
+                    query_filter=qfilter,
+                    limit=limit,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+                return list(res.points)
+
+            # Backward compatible API (older clients): search
+            return self.client.search(
                 collection_name=self.settings.collection,
-                query=query,
+                query_vector=query,
                 query_filter=qfilter,
                 limit=limit,
                 with_payload=True,
                 with_vectors=False,
             )
-            # query_points returns an object with `.points`
-            return list(res.points)
-
-        # Backward compatible API (older clients): search
-        return self.client.search(
-            collection_name=self.settings.collection,
-            query_vector=query,  # NamedVector also works here when supported
-            query_filter=qfilter,
-            limit=limit,
-            with_payload=True,
-            with_vectors=False,
-        )
+        except UnexpectedResponse as e:
+            # FIX: Handle cold-start/empty environments where the collection hasn't been created yet.
+            if getattr(e, "status_code", None) == 404 or "Not found" in str(e):
+                return []
+            raise
 
     def scroll_all(
         self,
@@ -95,14 +101,21 @@ class QdrantBackend:
         offset = None
 
         while True:
-            points, offset = self.client.scroll(
-                collection_name=self.settings.collection,
-                scroll_filter=qfilter,
-                limit=batch_size,
-                offset=offset,
-                with_payload=True,
-                with_vectors=False,
-            )
+            try:
+                points, offset = self.client.scroll(
+                    collection_name=self.settings.collection,
+                    scroll_filter=qfilter,
+                    limit=batch_size,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+            except UnexpectedResponse as e:
+                # FIX: Handle cold-start/empty environments where the collection hasn't been created yet.
+                if getattr(e, "status_code", None) == 404 or "Not found" in str(e):
+                    return []
+                raise
+
             for p in points:
                 out.append(
                     {

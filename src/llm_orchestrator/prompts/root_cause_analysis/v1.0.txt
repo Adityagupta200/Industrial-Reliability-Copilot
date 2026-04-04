@@ -10,13 +10,38 @@ Retrieved documentation:
 
 TASK:
 Analyze the root cause of this anomaly. Provide:
-1) Top 3 most likely root cause hypotheses
-2) Confidence score (0-1) for each
-3) Cite specific sources from documentation using the provided Doc IDs
+1) Top 3 most likely root cause hypotheses.
+2) Confidence score (0.0-1.0) for each.
+3) Evidence supporting the claim.
+4) Source ID: You MUST cite specific sources using ONLY the exact string from this allowed list: [{valid_doc_ids}].
 
-Return ONLY valid JSON in this exact shape:
+--- FEW-SHOT EXAMPLE ---
+If retrieved documentation contains:
+[DOC_1] Bearing Installation Manual...
+[DOC_2] Pump Troubleshooting Guide...
+
+Valid JSON Output:
 {{
   "hypotheses": [
-    {{"cause": "...", "confidence": 0.x, "evidence": "...", "source": "DOC:<id>"}}
+    {{
+      "cause": "Bearing Misalignment",
+      "confidence": 0.8,
+      "evidence": "Sensor readings indicate high vibration patterns matching misalignment.",
+      "source": "DOC_1"
+    }},
+    {{
+      "cause": "Insufficient Lubrication",
+      "confidence": 0.6,
+      "evidence": "The model simulated a fault indicative of dry friction.",
+      "source": "DOC_2"
+    }}
   ]
 }}
+------------------------
+
+CRITICAL INSTRUCTIONS: 
+- You MUST format your response exactly like the JSON Few-Shot Example above. 
+- You MUST extract the exact ID from the allowed list: [{valid_doc_ids}] for the "source" field.
+- If no retrieved documents support a hypothesis, you MUST set the "source" to "NONE". 
+- Do NOT hallucinate, invent, or sequentially number citations if they are not in the allowed list.
+- Return ONLY valid JSON.

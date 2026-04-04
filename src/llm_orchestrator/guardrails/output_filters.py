@@ -25,14 +25,14 @@ class OutputGuardrails:
 
     @staticmethod
     def check_citations(answer: str, min_citations: int = 1) -> bool:
-        """Ensure minimum number of inline citations exist."""
-        # FIXED: Correctly formatted raw string to prevent SyntaxError
-        citations = re.findall(r"\", answer, re.IGNORECASE)
-        fallback_citations = re.findall(r"\[DOC:.*?\]", answer, re.IGNORECASE)
+        """Ensure minimum number of valid inline DOC citations exist in the JSON."""
+        # FIXED: Previous regex matched JSON array brackets []. 
+        # Now strictly matches the required "source": "DOC_X" output format.
+        citations = re.findall(r'"source"\s*:\s*"DOC_\d+"', answer)
         
-        total_citations = len(citations) + len(fallback_citations)
+        total_citations = len(citations)
         if total_citations < min_citations:
-            logger.warning(f"Failed citation check: only {total_citations} found.")
+            logger.warning(f"Failed citation check: only {total_citations} valid source citations found.")
             return False
         return True
 
@@ -41,17 +41,18 @@ class OutputGuardrails:
         """LLM-as-a-judge: Ensure answer relies purely on retrieved context."""
         prompt = (
             "You are an Auditor. Rate if the Answer is fully supported by the Context.\n"
-            "CRITICAL RULE: If the Answer mentions parts or procedures (like crankshafts or engine blocks) "
-            "that are NOT explicitly described in the Context for the target equipment, you MUST score 0.0.\n"
-            "Reply ONLY with a single float number between 0.0 and 1.0, where 1.0 means fully supported.\n\n"
+            "CRITICAL RULE: If the Answer mentions parts or procedures that are NOT explicitly "
+            "described in the Context for the target equipment, you MUST score 0.0.\n"
+            "Reply ONLY with a single float number between 0.0 and 1.0.\n\n"
             f"Context: {context}\n\nAnswer: {answer}"
         )
         try:
-            result = await llm_client.invoke(prompt)
+            # Apply a strict 1.0s timeout to the guardrail LLM call to protect the 2s SLA
+            result = await asyncio.wait_for(llm_client.invoke(prompt), timeout=1.0)
             match = re.search(r"(1\.0|0\.\d+|0|1)", result.content)
             return float(match.group()) if match else 0.0
         except Exception as e:
-            logger.error(f"Groundedness check failed: {e}")
+            logger.error(f"Groundedness check failed or timed out: {e}")
             return 0.0
 
     @classmethod
@@ -68,8 +69,8 @@ class OutputGuardrails:
         if not is_safe:
             return False, "Blocked: Contains unsafe procedural recommendations."
         if not has_citations:
-            return False, "Blocked: Output lacks required inline citations."
+            return False, "Blocked: Output lacks required inline citations mapped to valid DOC IDs."
         if grounded_score < 0.8:
-            return False, f"Blocked: Output is not adequately grounded in retrieved context (Score: {grounded_score}). Possible hallucination detected."
-
+            return False, f"Blocked: Output is not adequately grounded in retrieved context (Score: {grounded_score})."
+        
         return True, "Valid"

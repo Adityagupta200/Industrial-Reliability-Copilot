@@ -10,6 +10,7 @@ from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
 
+# Hardened Regex to locate JSON payloads even if wrapped in markdown blocks
 _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 logger = logging.getLogger(__name__)
 
@@ -20,13 +21,21 @@ class LLMOutputParseError(RuntimeError):
 
 def _extract_json_object(text: str) -> str:
     text = text.strip()
+    
+    # Strip common markdown formatting from smaller LLMs
+    if text.startswith("```json"):
+        text = text[7:]
+    if text.endswith("```"):
+        text = text[:-3]
+    text = text.strip()
+
     if text.startswith("{") and text.endswith("}"):
         return text
+        
     m = _JSON_BLOCK_RE.search(text)
     if not m:
         # MLE FIX: If the LLM truncates the JSON (hitting max_tokens mid-generation),
         # return an empty JSON object instead of crashing.
-        # The lenient schema mapper will intercept this and generate safe default values.
         logger.warning("Truncated or missing JSON detected. Triggering graceful fallback.")
         return "{}"
     return m.group(0)
@@ -44,7 +53,6 @@ def _lenient_schema_mapper(data: dict[str, Any], model: type[T]) -> dict[str, An
             else:
                 sanitized[field_name] = val
         else:
-            # Auto-fills fields that were chopped off by token limits
             if "list" in expected_type_str:
                 sanitized[field_name] = []
             elif "str" in expected_type_str:
@@ -65,7 +73,6 @@ def parse_llm_json(text: str, model: type[T]) -> T:
         try:
             data = json.loads(candidate)
         except Exception:
-            # If standard loading fails due to broken brackets, trigger fallback
             data = {}
 
     try:

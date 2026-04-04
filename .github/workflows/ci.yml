@@ -32,23 +32,29 @@ jobs:
       - run: pip install -r requirements.txt
       - run: pip install -r requirements-dev.txt
       
-      - name: Install and Start Ollama (Local LLM)
+      - name: Install and Start Ollama (Local Fallback LLM)
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve &
           sleep 5
-          ollama pull llama3
+          ollama pull llama3.1:8b-instruct
           
       - name: Start Background Services
         run: docker-compose up -d db qdrant
         
       - name: Start API Server
+        env:
+          # Inject production API key for primary routing in testing
+          LLM_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
         run: |
           uvicorn src.llm_orchestrator.main:app --host 0.0.0.0 --port 8000 &
           sleep 10
           
-      - name: Run Ragas Offline Evaluation (Air-gapped)
+      - name: Run Ragas Offline Evaluation (API Compromise Path)
+        env:
+          # Inject key for the Ragas evaluator models
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python src/evaluation/offline/ragas_eval.py
         
-      - name: Enforce Quality Gate
+      - name: Enforce Quality Gate (Fails CI if Faithfulness < 0.85)
         run: python scripts/rag_quality_gate.py

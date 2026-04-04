@@ -22,8 +22,8 @@ class RetrievalFiltersPayload(BaseModel):
     severity: str | None = None
     date_from: datetime | None = None
     date_to: datetime | None = None
-    plant_id: str | None = None  # Multi-tenant isolation
-    user_role: str | None = None  # Role-Based Access Control
+    plant_id: str | None = None 
+    user_role: str | None = None 
 
 
 class SemanticRetrieveRequest(BaseModel):
@@ -77,14 +77,18 @@ def _to_filters(payload: RetrievalFiltersPayload) -> RetrievalFilters | None:
         severity=payload.severity,
         date_from=payload.date_from,
         date_to=payload.date_to,
-        plant_id=payload.plant_id,  # Passed to Qdrant filters
-        user_role=payload.user_role,  # Passed to Qdrant filters
+        plant_id=payload.plant_id,
+        user_role=payload.user_role, 
     )
 
 
 def _to_document_response(doc: Document) -> DocumentResponse:
     doc_text = doc.text
-    metadata = dict(doc.metadata)  # Create a mutable copy of the metadata
+    metadata = dict(doc.metadata) 
+
+    # PRODUCTION FIX: Guarantee a unified 'file_name' key for Orchestrator citation mapping
+    if "file_name" not in metadata:
+        metadata["file_name"] = metadata.get("source", f"unknown_source_{doc.id[:8]}")
 
     # --- PHASE 5: Data Freshness Check ---
     last_updated_str = metadata.get("last_updated")
@@ -95,12 +99,10 @@ def _to_document_response(doc: Document) -> DocumentResponse:
             if last_updated.tzinfo is None:
                 last_updated = last_updated.replace(tzinfo=timezone.utc)
         else:
-            # FIX: Fallback for legacy documents ingested without timestamp metadata
             last_updated = datetime(2000, 1, 1, tzinfo=timezone.utc)
 
         now = datetime.now(timezone.utc)
 
-        # Check if document is older than 2 years (approx 730 days)
         if (now - last_updated).days > 730:
             doc_text = f"(outdated) {doc_text}"
             metadata["is_outdated"] = True
