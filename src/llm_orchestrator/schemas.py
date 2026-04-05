@@ -26,7 +26,8 @@ class Hypothesis(BaseModel):
     cause: str
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: str
-    source: str  # e.g., "DOC:manual__bearing_installation.pdf"
+    # PRODUCTION FIX: Clear documentation for Pydantic schema on valid source states
+    source: str = Field(..., description='Must be a valid mapped ID like "DOC_1" or "NONE"')
 
 
 class RootCauseResponse(BaseModel):

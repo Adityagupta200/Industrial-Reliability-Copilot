@@ -26,7 +26,8 @@ class Settings(BaseSettings):
 
     embedding_provider: str = Field(default="bge")
     openai_api_key: str | None = Field(default=None)
-    openai_embedding_model: str = Field(default="text-embedding-3-large")
+    # PRODUCTION FIX: Default to the 'small' model for ultra-low latency & cost
+    openai_embedding_model: str = Field(default="text-embedding-3-small")
     bge_model_name: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
 
     chunk_size_tokens: int = Field(default=700)
@@ -37,6 +38,5 @@ class Settings(BaseSettings):
     upsert_batch_size: int = Field(default=128)
 
     log_level: str = Field(default="INFO")
-
 
 settings = Settings()

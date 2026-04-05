@@ -126,12 +126,18 @@ async def route_query(request: Request):
         headers={"X-Trace-ID": trace_id}
     )
 
-# PRODUCTION FIX: Forward async polling requests to the Orchestrator
 @app.get("/query/{job_id}", tags=["Routing"])
 async def get_query_status(job_id: str):
     assert http_client is not None
     try:
         response = await http_client.get(f"{ORCHESTRATOR_URL}/query/{job_id}")
+        
+        # PRODUCTION FIX: Log explicit errors parsed from the downstream orchestrator payload
+        if response.status_code == 200:
+            payload = response.json()
+            if payload.get("status") == "failed" and "API Configuration Error" in payload.get("error", ""):
+                logger.error(f"Gateway observed downstream API Configuration Error for Job {job_id}")
+                
         return Response(
             content=response.content,
             status_code=response.status_code,

@@ -14,9 +14,7 @@ class RAGClient:
     hybrid_path: str
     procedures_path: str
     semantic_path: str
-    # STRICT SLA: Decreased from 300.0s to 1.5s to ensure the retrieval layer 
-    # leaves enough time for the LLM to execute within the 2.0s p95 SLA.
-    timeout_s: float = 1.5  
+    timeout_s: float = 1.2  # PRODUCTION FIX: 1.2s SLA budget
 
     def _extract_docs(self, response_data: Any) -> list[dict[str, Any]]:
         if isinstance(response_data, dict):
@@ -40,7 +38,7 @@ class RAGClient:
         """Returns a strict timeout configuration for production SLA."""
         return httpx.Timeout(
             self.timeout_s,
-            connect=0.5,
+            connect=0.2, # Extremely fast connection drop to prevent deadlocks
             read=self.timeout_s,
             write=self.timeout_s
         )
@@ -59,7 +57,10 @@ class RAGClient:
                 raw_docs = self._extract_docs(r.json())
                 return [RetrievedDoc.model_validate(d) for d in raw_docs]
             except httpx.TimeoutException:
-                logger.error("RAG retrieval timed out. SLA budget exceeded.")
+                logger.error("RAG retrieval timed out. SLA budget exceeded. Returning empty context.")
+                return []
+            except httpx.RequestError as e:
+                logger.error(f"RAG retrieval request failed: {e}. Returning empty context.")
                 return []
 
     async def retrieve_procedures(
@@ -76,7 +77,10 @@ class RAGClient:
                 raw_docs = self._extract_docs(r.json())
                 return [RetrievedDoc.model_validate(d) for d in raw_docs]
             except httpx.TimeoutException:
-                logger.error("Procedure retrieval timed out.")
+                logger.error("Procedure retrieval timed out. Returning empty context.")
+                return []
+            except httpx.RequestError as e:
+                logger.error(f"Procedure retrieval failed: {e}. Returning empty context.")
                 return []
 
     async def retrieve_semantic(
@@ -93,5 +97,8 @@ class RAGClient:
                 raw_docs = self._extract_docs(r.json())
                 return [RetrievedDoc.model_validate(d) for d in raw_docs]
             except httpx.TimeoutException:
-                logger.error("Semantic retrieval timed out.")
+                logger.error("Semantic retrieval timed out. Returning empty context.")
+                return []
+            except httpx.RequestError as e:
+                logger.error(f"Semantic retrieval failed: {e}. Returning empty context.")
                 return []

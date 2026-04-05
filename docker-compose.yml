@@ -95,6 +95,8 @@ services:
     build:
       context: .
       dockerfile: src/rag_service/Dockerfile
+    env_file:
+      - .env  # PRODUCTION FIX: Inject API keys into the RAG container
     environment:
       QDRANT_URL: http://qdrant:6333
       POSTGRES_DSN: postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance
@@ -102,9 +104,9 @@ services:
       HOST: 0.0.0.0
       PORT: "8002"
       PYTHONPATH: /app/src
-      EMBEDDING_PROVIDER: bge
-      BGE_MODEL_NAME: BAAI/bge-large-en-v1.5
-      EMBEDDING_MODEL_NAME: BAAI/bge-large-en-v1.5
+      # PRODUCTION FIX: Switch from CPU embeddings to fast API embeddings
+      EMBEDDING_PROVIDER: openai
+      OPENAI_EMBEDDING_MODEL: text-embedding-3-small
       EMBEDDING_NORMALIZE: "true"
       HF_HOME: /app/data/hf_cache
     ports:
@@ -161,7 +163,7 @@ services:
       - |
         echo "Waiting for Ollama API to settle..."
         sleep 5
-        echo "Pulling llama3.1:8b for production-grade local reasoning..."
+        echo "Pulling llama3.1:8b for local background tasks..."
         ollama pull llama3.1:8b
         echo "Model successfully pulled into the volume!"
     depends_on:
@@ -196,6 +198,8 @@ services:
     build:
       context: .
       dockerfile: src/llm_orchestrator/Dockerfile
+    env_file:
+      - .env  
     ports:
       - "127.0.0.1:8080:8000"
     environment:
@@ -205,11 +209,7 @@ services:
       - RAG_SERVICE_URL=http://rag-service:8002
       - ANOMALY_SERVICE_URL=http://anomaly-service:8001
       - INCIDENTS_DB_DSN=postgresql+psycopg://irc:irc_password@postgres:5432/industrial_maintenance
-      - LLM_PRIMARY_PROVIDER=ollama
-      - LLM_FALLBACK_PROVIDER=ollama
       - LLM_OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_OLLAMA_MODEL=llama3.1:8b
-      - LLM_REQUEST_TIMEOUT_S=600.0
     networks:
       - irc_network
     logging:

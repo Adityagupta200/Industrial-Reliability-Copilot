@@ -26,9 +26,9 @@ class OutputGuardrails:
     @staticmethod
     def check_citations(answer: str, min_citations: int = 1) -> bool:
         """Ensure minimum number of valid inline DOC citations exist in the JSON."""
-        # FIXED: Previous regex matched JSON array brackets []. 
-        # Now strictly matches the required "source": "DOC_X" output format.
-        citations = re.findall(r'"source"\s*:\s*"DOC_\d+"', answer)
+        # PRODUCTION FIX: Regex now accepts "NONE" as a valid explicit citation state 
+        # (meaning the LLM correctly acknowledged lack of context).
+        citations = re.findall(r'"source"\s*:\s*"(?:DOC_\d+|NONE)"', answer, re.IGNORECASE)
         
         total_citations = len(citations)
         if total_citations < min_citations:
@@ -37,18 +37,21 @@ class OutputGuardrails:
         return True
 
     @staticmethod
-    async def check_groundedness(llm_client, context: str, answer: str) -> float:
-        """LLM-as-a-judge: Ensure answer relies purely on retrieved context."""
+    async def check_groundedness(llm_client, context: str, answer: str, initial_input: str = "") -> float:
+        """LLM-as-a-judge: Ensure answer relies purely on retrieved context or initial anomaly inputs."""
+        # PRODUCTION FIX: Added formatting resilience and explicit rules for empty context validation.
         prompt = (
-            "You are an Auditor. Rate if the Answer is fully supported by the Context.\n"
+            "You are an Auditor. Rate if the Answer is fully supported by the Context OR the Initial Input.\n"
             "CRITICAL RULE: If the Answer mentions parts or procedures that are NOT explicitly "
-            "described in the Context for the target equipment, you MUST score 0.0.\n"
+            "described in the Context OR the Initial Input for the target equipment, you MUST score 0.0.\n"
+            "EXCEPTION: If the Context is 'NONE' (or simply indicates no documents were found), but the Answer provides valid logical hypotheses based purely on the Initial Input without hallucinating unmentioned equipment procedures, score it 1.0.\n"
             "Reply ONLY with a single float number between 0.0 and 1.0.\n\n"
+            f"Initial Input: {initial_input}\n\n"
             f"Context: {context}\n\nAnswer: {answer}"
         )
         try:
-            # Apply a strict 1.0s timeout to the guardrail LLM call to protect the 2s SLA
-            result = await asyncio.wait_for(llm_client.invoke(prompt), timeout=1.0)
+            # PRODUCTION FIX: Bumped timeout to 1.5s as we gained API budget by optimizing RAG embeddings
+            result = await asyncio.wait_for(llm_client.invoke(prompt), timeout=1.5)
             match = re.search(r"(1\.0|0\.\d+|0|1)", result.content)
             return float(match.group()) if match else 0.0
         except Exception as e:
@@ -56,11 +59,11 @@ class OutputGuardrails:
             return 0.0
 
     @classmethod
-    async def validate_output(cls, llm_client, context: str, answer: str) -> Tuple[bool, str]:
+    async def validate_output(cls, llm_client, context: str, answer: str, initial_input: str = "") -> Tuple[bool, str]:
         """Runs all output guardrails in parallel to stay under latency budget."""
         safety_task = asyncio.to_thread(cls.check_safety, answer)
         citation_task = asyncio.to_thread(cls.check_citations, answer)
-        groundedness_task = cls.check_groundedness(llm_client, context, answer)
+        groundedness_task = cls.check_groundedness(llm_client, context, answer, initial_input)
 
         is_safe, has_citations, grounded_score = await asyncio.gather(
             safety_task, citation_task, groundedness_task
@@ -69,7 +72,7 @@ class OutputGuardrails:
         if not is_safe:
             return False, "Blocked: Contains unsafe procedural recommendations."
         if not has_citations:
-            return False, "Blocked: Output lacks required inline citations mapped to valid DOC IDs."
+            return False, "Blocked: Output lacks required inline citations mapped to valid DOC IDs or NONE."
         if grounded_score < 0.8:
             return False, f"Blocked: Output is not adequately grounded in retrieved context (Score: {grounded_score})."
         

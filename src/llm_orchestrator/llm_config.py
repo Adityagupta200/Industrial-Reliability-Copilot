@@ -8,32 +8,25 @@ import os
 class LLMSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="LLM_", extra="ignore")
 
-    # Provider routing - Path 1 (Strategic API Compromise)
     primary_provider: Literal["openai", "ollama"] = "openai"
     fallback_provider: Literal["openai", "ollama"] = "ollama"
 
-    # OpenAI (Production Intelligence - Required for complex chains to hit <2s SLA)
     openai_api_key: Optional[SecretStr] = None
-    openai_model: str = "gpt-4o" 
+    # PRODUCTION FIX: Upgraded to gpt-5.4-mini for ultra-fast latency & zero-cost free tier
+    openai_model: str = "gpt-5.4-mini" 
     openai_base_url: Optional[str] = None
 
-    # Ollama (Local Fallback for simple/background tasks)
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b-instruct"
 
-    # Generation controls
-    temperature: float = 0.0  # Dropped to 0.0 for maximum determinism in RAG citations
+    temperature: float = 0.0  
     max_tokens: int = 1000
-
-    # STRICT SLA: Max time allowed for LLM inference to meet 2s end-to-end target
     request_timeout_s: float = 2.5
 
-    # Reliability
     max_retries: int = 2
     retry_min_wait_s: float = 0.2
     retry_max_wait_s: float = 1.0
 
-    # Observability
     enable_langchain_tracing: bool = True
     langsmith_api_key: Optional[SecretStr] = None
     langsmith_project: str = "industrial-reliability-copilot-prod"
@@ -63,8 +56,6 @@ def load_settings() -> Settings:
     llm = LLMSettings()
     services = ServiceSettings()
     
-    # Path 1 Enforcement: Fail fast if the API key is missing rather than falling back 
-    # to the 8B model which will violate the latency and quality SLAs.
     if llm.primary_provider == "openai" and not llm.openai_api_key:
         raise ValueError("CRITICAL: LLM_OPENAI_API_KEY environment variable is required to meet production SLA targets.")
         

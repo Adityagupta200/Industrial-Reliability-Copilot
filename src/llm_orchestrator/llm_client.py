@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from typing import Optional
+import logging
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -10,6 +11,7 @@ from .providers.base import LLMProvider, LLMResult, LLMTransientError, LLMFatalE
 from .providers.openai_provider import OpenAIProvider
 from .providers.ollama_provider import OllamaProvider
 
+logger = logging.getLogger(__name__)
 
 class LLMClient:
     def __init__(self, settings: LLMSettings) -> None:
@@ -21,7 +23,6 @@ class LLMClient:
             if settings.langsmith_api_key is not None:
                 os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key.get_secret_value()
 
-        # Empty dictionary for lazy loading
         self._providers = {}
 
     def _build_openai(self, s: LLMSettings) -> LLMProvider:
@@ -45,7 +46,6 @@ class LLMClient:
         )
 
     def _get_provider(self, name: str) -> LLMProvider:
-        """Lazy-loads the requested LLM provider."""
         if name not in self._providers:
             if name == "openai":
                 self._providers["openai"] = self._build_openai(self._settings)
@@ -58,26 +58,13 @@ class LLMClient:
     @retry(
         retry=retry_if_exception_type(LLMTransientError),
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=0.5, min=0.5, max=4.0),
+        wait=wait_exponential(multiplier=0.5, min=0.5, max=2.0), # Tightened retry wait times
         reraise=True,
     )
     async def _invoke_with_retry(self, provider: LLMProvider, prompt: str, json_mode: bool = False) -> LLMResult:
-        # PRODUCTION FIX: Safely attempt to pass json_mode down to the provider. 
-        # If the specific provider implementation hasn't been updated to accept kwargs, fallback to prompt injection.
-        try:
-            return await provider.invoke(prompt, json_mode=json_mode)
-        except TypeError:
-            if json_mode:
-                prompt += "\n\n[SYSTEM]: You MUST output strictly valid JSON format. No markdown, no conversational text."
-            return await provider.invoke(prompt)
+        return await provider.invoke(prompt, json_mode=json_mode)
 
     async def invoke(self, prompt: str, *, force_provider: Optional[str] = None, json_mode: bool = False) -> LLMResult:
-        """
-        Invokes the configured LLM.
-        Note for MLOps: While json_mode=True handles formatting limits, we explicitly rely 
-        on strict Token-to-Source Mapping in our LLM Chains to prevent hallucinated citations 
-        irrespective of the provider's native JSON enforcement capabilities.
-        """
         if force_provider:
             provider = self._get_provider(force_provider)
             return await self._invoke_with_retry(provider, prompt, json_mode=json_mode)
@@ -86,7 +73,12 @@ class LLMClient:
 
         try:
             return await self._invoke_with_retry(primary, prompt, json_mode=json_mode)
-        except LLMTransientError:
-            # Fallback only on transient failures (timeouts/rate limits/etc.)
+        except LLMTransientError as e:
+            # PRODUCTION FIX: Prevent silent fallback to 8B model if API goes down.
+            # Enforce SLA hard failures. 
+            if self._settings.primary_provider == "openai":
+                logger.error("Primary API unreachable. Blocking fallback to prevent SLA violation.")
+                raise LLMFatalError(f"Production API Failed: {e}") from e
+                
             fallback = self._get_provider(self._settings.fallback_provider)
             return await self._invoke_with_retry(fallback, prompt, json_mode=json_mode)

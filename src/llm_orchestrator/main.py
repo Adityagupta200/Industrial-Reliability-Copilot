@@ -27,11 +27,11 @@ from .chains.historical_chain import HistoricalSearchChain
 from .router import ChainOrchestrator
 from .schemas import QueryRequest, QueryResponse
 from .guardrails.input_filters import InputGuardrails
+from .guardrails.output_filters import OutputGuardrails  
+from .providers.base import LLMFatalError, LLMTransientError
 
-# Phase 6: Online Logging and Evaluation
 from evaluation.online.logger import log_interaction_sync, SessionLocal, QueryLog
 
-# --- Production Logging Setup ---
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -39,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address)
 
-# --- Phase 7: Prometheus Metrics ---
 REQUEST_COUNT = Counter(
     "orchestrator_requests_total",
     "Total queries routed through the orchestrator",
@@ -50,7 +49,6 @@ REQUEST_LATENCY = Histogram(
     "Latency of requests through the orchestrator",
     ["endpoint"],
 )
-
 QUERY_LATENCY = Histogram(
     "orchestrator_query_latency_seconds", 
     "End-to-End Latency of query processing by specific chain", 
@@ -63,13 +61,11 @@ GUARDRAIL_FAILURES = Counter(
 )
 
 health_check_client: httpx.AsyncClient | None = None
-
-# PRODUCTION FIX: In-memory store for async polling (Use Redis for multi-pod production)
 JOB_STORE: dict[str, dict] = {}
 
 class FeedbackRequest(BaseModel):
     query_id: str
-    score: int  # 1 for thumbs up, -1 for thumbs down
+    score: int  
 
 def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
     try:
@@ -110,7 +106,7 @@ def create_app() -> FastAPI:
         base_url=settings.services.anomaly_service_url,
         predict_anomaly_path=settings.services.anomaly_predict_anomaly_path,
         predict_rul_path=settings.services.anomaly_predict_rul_path,
-        timeout_s=60.0,
+        timeout_s=0.5,
     )
 
     rag_client = RAGClient(
@@ -118,7 +114,7 @@ def create_app() -> FastAPI:
         hybrid_path=settings.services.rag_retrieve_hybrid_path,
         procedures_path=settings.services.rag_retrieve_procedures_path,
         semantic_path=settings.services.rag_retrieve_semantic_path,
-        timeout_s=300.0,
+        timeout_s=1.2,
     )
 
     incident_repo = IncidentRepo(settings.services.incidents_db_dsn)
@@ -203,7 +199,6 @@ def create_app() -> FastAPI:
     def get_metrics():
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-    # PRODUCTION FIX: Background task processor to handle high LLM latency
     async def process_query_bg(job_id: str, req: QueryRequest, trace_id: str):
         start_time = time.time()
         applied_guardrails = []
@@ -228,19 +223,44 @@ def create_app() -> FastAPI:
                     req.historical.user_query = safe_text
 
             pipeline_response = await orchestrator.handle(req)
+            answer_text, contexts = extract_log_data(pipeline_response)
+            
+            raw_json_payload = pipeline_response.result.json()
+            
+            # PRODUCTION FIX: Normalize the context array so multiple "NONE" tags collapse into one
+            cleaned_contexts = [c.strip() for c in contexts if c.strip()]
+            unique_upper = set(c.upper() for c in cleaned_contexts)
+            if not unique_upper or (len(unique_upper) == 1 and "NONE" in unique_upper):
+                contexts_str = "NONE"
+            else:
+                contexts_str = "\n".join(cleaned_contexts)
+            
+            # PRODUCTION FIX: Compile the initial context state so the Auditor 
+            # does not falsely flag valid logic derived from anomaly data.
+            initial_input_str = f"User Query: {query_text}"
+            if req.root_cause:
+                initial_input_str += f" | Anomaly Description: {req.root_cause.anomaly_description} | Sensor Data: {req.root_cause.sensor_data}"
+            elif req.remediation:
+                initial_input_str += f" | Failure Mode: {req.remediation.failure_mode}"
+            
+            is_valid, error_msg = await OutputGuardrails.validate_output(
+                llm, contexts_str, raw_json_payload, initial_input=initial_input_str
+            )
+            
+            if not is_valid:
+                raise ValueError(error_msg)
+
             applied_guardrails.extend(["output_citations", "output_groundedness"])
 
             latency_sec = time.time() - start_time
             QUERY_LATENCY.labels(chain=pipeline_response.chain).observe(latency_sec)
 
             latency_ms = round(latency_sec * 1000.0, 2)
-            answer_text, contexts = extract_log_data(pipeline_response)
             
             pipeline_response.trace_id = trace_id
             pipeline_response.latency_ms = latency_ms
             pipeline_response.guardrails_applied = applied_guardrails
 
-            # Run synchronous SQLAlchemy logging in a separate thread so it doesn't block the Asyncio event loop
             await asyncio.to_thread(
                 log_interaction_sync,
                 query_id=trace_id, 
@@ -258,7 +278,7 @@ def create_app() -> FastAPI:
 
         except ValueError as ve:
             error_msg = str(ve).lower()
-            if "output guardrail" in error_msg or "hallucination" in error_msg:
+            if "output guardrail" in error_msg or "hallucination" in error_msg or "blocked" in error_msg:
                 GUARDRAIL_FAILURES.labels(type="output_hallucination").inc()
             else:
                 GUARDRAIL_FAILURES.labels(type="input_validation").inc()
@@ -266,11 +286,18 @@ def create_app() -> FastAPI:
             logger.warning(f"Guardrail/Validation Blocked: {ve}")
             JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": str(ve)}
             
+        except LLMFatalError as e:
+            logger.error(f"Fatal LLM Error: {e}")
+            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": f"API Configuration Error: {str(e)}"}
+            
+        except LLMTransientError as e:
+            logger.error(f"Transient LLM Error: {e}")
+            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": "LLM Provider Unavailable. SLA missed."}
+            
         except Exception as e:
             logger.exception("Fatal LLM Orchestrator Background Crash")
             JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": "Internal Server Error"}
 
-    # PRODUCTION FIX: Accept request, generate ID, and immediately return 202 Accepted
     @app.post("/query", status_code=202, tags=["Inference"])
     @limiter.limit("10/minute")
     async def query(
@@ -285,7 +312,6 @@ def create_app() -> FastAPI:
         response.headers["X-Trace-ID"] = trace_id
         return JOB_STORE[job_id]
 
-    # PRODUCTION FIX: Polling endpoint for clients to fetch data when ready
     @app.get("/query/{job_id}", tags=["Inference"])
     async def get_query_status(job_id: str):
         if job_id not in JOB_STORE:

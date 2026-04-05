@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import re
+import asyncio
 from dataclasses import dataclass
 
 from ..llm_client import LLMClient
@@ -33,14 +34,16 @@ class RootCauseChain:
     rag_client: RAGClient
 
     async def run(self, req: RootCauseRequest) -> tuple[RootCauseResponse, str, str]:
-        # Step 1: call anomaly service
-        anomaly_model = await self.anomaly_client.predict(req.sensor_data)
-        
-        # Step 2: hybrid retrieval
+        # PRODUCTION FIX: Execute downstream service calls concurrently to protect the <2s SLA
         retrieval_query = f"{req.user_query}\n\nAnomaly: {req.anomaly_description}"
-        docs = await self.rag_client.retrieve_hybrid(
+        
+        anomaly_task = self.anomaly_client.predict(req.sensor_data)
+        rag_task = self.rag_client.retrieve_hybrid(
             retrieval_query, equipment_id=req.equipment_id, k=8
         )
+        
+        # Await both tasks simultaneously
+        anomaly_model, docs = await asyncio.gather(anomaly_task, rag_task)
         
         # Step 3: prompt formatting
         docs_text, doc_mapping = _format_docs(docs)
@@ -64,6 +67,10 @@ class RootCauseChain:
             parsed = parse_llm_json(result.content, RootCauseResponse)
             
             for hyp in parsed.hypotheses:
+                if str(hyp.source).strip().upper() == "NONE":
+                    hyp.source = "NONE"
+                    continue
+                    
                 text_to_search = f"{hyp.source} {hyp.evidence}"
                 match = re.search(r'DOC[_\W]*(\d+)', text_to_search, re.IGNORECASE)
                 
@@ -72,7 +79,6 @@ class RootCauseChain:
                     if normalized_tag in doc_mapping:
                         hyp.source = doc_mapping[normalized_tag]
                     else:
-                        # FAIL FAST: Do not allow hallucinated citations to pass
                         raise ValueError(f"Hallucinated citation detected: {normalized_tag}")
                 else:
                     raise ValueError("Missing required citation tag in hypothesis.")

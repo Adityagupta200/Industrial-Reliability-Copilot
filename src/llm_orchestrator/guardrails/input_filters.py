@@ -1,5 +1,6 @@
 import re
 import logging
+import threading
 from typing import Optional
 from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
@@ -17,18 +18,19 @@ PROMPT_INJECTION_PATTERNS = [
 
 
 class InputGuardrails:
-    # Class-level variables for the Singleton pattern
     _analyzer: Optional[AnalyzerEngine] = None
     _anonymizer: Optional[AnonymizerEngine] = None
+    _is_loading: bool = False
 
     @classmethod
-    def _get_engines(cls) -> tuple[AnalyzerEngine, AnonymizerEngine]:
-        """Lazy-loads the heavy NLP models only when an actual safe request arrives."""
-        if cls._analyzer is None or cls._anonymizer is None:
-            logger.info("Initializing Presidio NLP engines lazily...")
-
-            # --- PHASE 5 Production Optimization: Constrained Edge Deployment ---
-            # Configure Presidio to use the lightweight 'sm' model to prevent OOM crashes
+    def preload_engines(cls) -> None:
+        """PRODUCTION FIX: Eagerly loads NLP models in the background at startup to prevent mid-request SLA spikes."""
+        if cls._analyzer is not None or cls._is_loading:
+            return
+            
+        cls._is_loading = True
+        logger.info("Eagerly loading Presidio NLP engines to prevent latency spikes...")
+        try:
             configuration = {
                 "nlp_engine_name": "spacy",
                 "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
@@ -38,8 +40,11 @@ class InputGuardrails:
 
             cls._analyzer = AnalyzerEngine(nlp_engine=nlp_engine, supported_languages=["en"])
             cls._anonymizer = AnonymizerEngine()
-
-        return cls._analyzer, cls._anonymizer
+            logger.info("Presidio NLP engines successfully loaded into memory.")
+        except Exception as e:
+            logger.error(f"Failed to preload Presidio NLP engines: {e}")
+        finally:
+            cls._is_loading = False
 
     @staticmethod
     def detect_prompt_injection(text: str, threshold: int = 1) -> bool:
@@ -53,12 +58,16 @@ class InputGuardrails:
 
     @classmethod
     def redact_pii(cls, text: str) -> str:
-        """Triggers lazy loading and redacts sensitive PII using Microsoft Presidio."""
-        analyzer, anonymizer = cls._get_engines()
-        results = analyzer.analyze(
+        """Redacts sensitive PII using Microsoft Presidio."""
+        # Fallback in case the background thread hasn't finished loading yet during the very first millisecond of boot
+        if cls._analyzer is None or cls._anonymizer is None:
+            logger.warning("PII Guardrail skipped: NLP models are still loading in the background.")
+            return text
+            
+        results = cls._analyzer.analyze(
             text=text, entities=["EMAIL_ADDRESS", "PHONE_NUMBER", "US_SSN"], language="en"
         )
-        anonymized_result = anonymizer.anonymize(text=text, analyzer_results=results)
+        anonymized_result = cls._anonymizer.anonymize(text=text, analyzer_results=results)
         return anonymized_result.text
 
     @staticmethod
@@ -71,8 +80,6 @@ class InputGuardrails:
     def process(cls, query: str) -> str:
         """
         Runs guardrails in optimized order.
-        O(1) Regex checks run first. If blocked, it safely raises an exception
-        without ever utilizing the heavy O(N) NLP PII scanner.
         """
         if cls.detect_prompt_injection(query):
             raise ValueError("Blocked: Potential prompt injection detected.")
@@ -81,3 +88,6 @@ class InputGuardrails:
             raise ValueError("Blocked: Query violates toxicity policies.")
 
         return cls.redact_pii(query)
+
+# Trigger the background loading immediately upon module import
+threading.Thread(target=InputGuardrails.preload_engines, daemon=True).start()
