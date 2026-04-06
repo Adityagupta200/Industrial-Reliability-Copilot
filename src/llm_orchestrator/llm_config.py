@@ -21,7 +21,10 @@ class LLMSettings(BaseSettings):
 
     temperature: float = 0.0  
     max_tokens: int = 1000
-    request_timeout_s: float = 2.5
+    
+    # PRODUCTION FIX: Increased from 2.5s to 30.0s to allow proper generation 
+    # of complex structured JSON payloads without early termination.
+    request_timeout_s: float = 30.0
 
     max_retries: int = 2
     retry_min_wait_s: float = 0.2

@@ -39,7 +39,6 @@ class OutputGuardrails:
     @staticmethod
     async def check_groundedness(llm_client, context: str, answer: str, initial_input: str = "") -> float:
         """LLM-as-a-judge: Ensure answer relies purely on retrieved context or initial anomaly inputs."""
-        # PRODUCTION FIX: Added formatting resilience and explicit rules for empty context validation.
         prompt = (
             "You are an Auditor. Rate if the Answer is fully supported by the Context OR the Initial Input.\n"
             "CRITICAL RULE: If the Answer mentions parts or procedures that are NOT explicitly "
@@ -50,12 +49,21 @@ class OutputGuardrails:
             f"Context: {context}\n\nAnswer: {answer}"
         )
         try:
-            # PRODUCTION FIX: Bumped timeout to 1.5s as we gained API budget by optimizing RAG embeddings
-            result = await asyncio.wait_for(llm_client.invoke(prompt), timeout=1.5)
+            # PRODUCTION FIX: Increased timeout to 120.0s. 
+            # Local Ollama (Llama 3) running concurrently requires massive latency buffers compared to OpenAI.
+            result = await asyncio.wait_for(llm_client.invoke(prompt), timeout=120.0)
             match = re.search(r"(1\.0|0\.\d+|0|1)", result.content)
-            return float(match.group()) if match else 0.0
+            
+            score = float(match.group()) if match else 0.0
+            if score < 0.8:
+                logger.warning(f"Groundedness failed (Score: {score}). Context provided: {context[:200]}...")
+            return score
+            
+        except asyncio.TimeoutError:
+            logger.error("Groundedness LLM-as-a-judge timed out after 120.0s. Defaulting to 0.0")
+            return 0.0
         except Exception as e:
-            logger.error(f"Groundedness check failed or timed out: {e}")
+            logger.error(f"Groundedness check failed: {e}")
             return 0.0
 
     @classmethod

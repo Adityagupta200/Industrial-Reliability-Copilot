@@ -14,7 +14,10 @@ class RAGClient:
     hybrid_path: str
     procedures_path: str
     semantic_path: str
-    timeout_s: float = 1.2  # PRODUCTION FIX: 1.2s SLA budget
+    
+    # PRODUCTION FIX: Expanded timeout from 1.2s to 10.0s. 
+    # Network vector search and embedding generation require more breathing room.
+    timeout_s: float = 10.0  
 
     def _extract_docs(self, response_data: Any) -> list[dict[str, Any]]:
         if isinstance(response_data, dict):
@@ -38,7 +41,7 @@ class RAGClient:
         """Returns a strict timeout configuration for production SLA."""
         return httpx.Timeout(
             self.timeout_s,
-            connect=0.2, # Extremely fast connection drop to prevent deadlocks
+            connect=2.0, # Increased connection buffer
             read=self.timeout_s,
             write=self.timeout_s
         )
