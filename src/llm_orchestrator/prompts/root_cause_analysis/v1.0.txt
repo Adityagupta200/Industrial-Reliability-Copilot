@@ -10,12 +10,12 @@ Retrieved documentation:
 
 TASK:
 Analyze the root cause of this anomaly. Provide:
-1) Top 3 most likely root cause hypotheses.
+1) Top 3 most likely root cause hypotheses based ONLY on the provided Context.
 2) Confidence score (0.0-1.0) for each.
 3) Evidence supporting the claim.
 4) Source ID: You MUST cite specific sources using ONLY the exact string from this allowed list: [{valid_doc_ids}].
 
---- FEW-SHOT EXAMPLE ---
+--- DUMMY FEW-SHOT EXAMPLE (DO NOT COPY) ---
 If retrieved documentation contains:
 [DOC_1] Bearing Installation Manual...
 [DOC_2] Pump Troubleshooting Guide...
@@ -41,7 +41,8 @@ Valid JSON Output:
 
 CRITICAL INSTRUCTIONS: 
 - You MUST format your response exactly like the JSON Few-Shot Example above. 
+- DO NOT copy the exact causes from the Dummy Few-Shot Example. You MUST generate NOVEL hypotheses based strictly on the provided Sensor readings and Anomaly model outputs.
 - You MUST extract the exact ID from the allowed list: [{valid_doc_ids}] for the "source" field.
 - If no retrieved documents support a hypothesis, you MUST set the "source" to "NONE". 
 - Do NOT hallucinate, invent, or sequentially number citations if they are not in the allowed list.
-- Return ONLY valid JSON.
+- Return ONLY valid JSON. Do NOT wrap the output in markdown code blocks like ```json.

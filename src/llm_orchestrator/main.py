@@ -227,16 +227,11 @@ def create_app() -> FastAPI:
             
             raw_json_payload = pipeline_response.result.json()
             
-            # PRODUCTION FIX: Normalize the context array so multiple "NONE" tags collapse into one
-            cleaned_contexts = [c.strip() for c in contexts if c.strip()]
-            unique_upper = set(c.upper() for c in cleaned_contexts)
-            if not unique_upper or (len(unique_upper) == 1 and "NONE" in unique_upper):
+            # PRODUCTION FIX: Evaluate guardrails using the actual retrieved document text.
+            contexts_str = pipeline_response.raw_context
+            if not contexts_str or contexts_str.strip() == "":
                 contexts_str = "NONE"
-            else:
-                contexts_str = "\n".join(cleaned_contexts)
             
-            # PRODUCTION FIX: Compile the initial context state so the Auditor 
-            # does not falsely flag valid logic derived from anomaly data.
             initial_input_str = f"User Query: {query_text}"
             if req.root_cause:
                 initial_input_str += f" | Anomaly Description: {req.root_cause.anomaly_description} | Sensor Data: {req.root_cause.sensor_data}"
@@ -260,6 +255,9 @@ def create_app() -> FastAPI:
             pipeline_response.trace_id = trace_id
             pipeline_response.latency_ms = latency_ms
             pipeline_response.guardrails_applied = applied_guardrails
+
+            # Blank out the raw_context payload after passing validation to save response bandwidth
+            pipeline_response.raw_context = "OMITTED_FROM_RESPONSE"
 
             await asyncio.to_thread(
                 log_interaction_sync,

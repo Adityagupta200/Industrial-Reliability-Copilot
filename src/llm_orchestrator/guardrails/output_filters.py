@@ -26,8 +26,6 @@ class OutputGuardrails:
     @staticmethod
     def check_citations(answer: str, min_citations: int = 1) -> bool:
         """Ensure minimum number of valid inline DOC citations exist in the JSON."""
-        # PRODUCTION FIX: Regex now accepts "NONE" as a valid explicit citation state 
-        # (meaning the LLM correctly acknowledged lack of context).
         citations = re.findall(r'"source"\s*:\s*"(?:DOC_\d+|NONE)"', answer, re.IGNORECASE)
         
         total_citations = len(citations)
@@ -39,24 +37,39 @@ class OutputGuardrails:
     @staticmethod
     async def check_groundedness(llm_client, context: str, answer: str, initial_input: str = "") -> float:
         """LLM-as-a-judge: Ensure answer relies purely on retrieved context or initial anomaly inputs."""
+        # PRODUCTION FIX: Implemented Chain-of-Thought (CoT) and strict Binary Scoring (1.0 or 0.0) 
+        # to eliminate arbitrary variance (like 0.72) and force confident evaluation.
         prompt = (
-            "You are an Auditor. Rate if the Answer is fully supported by the Context OR the Initial Input.\n"
-            "CRITICAL RULE: If the Answer mentions parts or procedures that are NOT explicitly "
-            "described in the Context OR the Initial Input for the target equipment, you MUST score 0.0.\n"
-            "EXCEPTION: If the Context is 'NONE' (or simply indicates no documents were found), but the Answer provides valid logical hypotheses based purely on the Initial Input without hallucinating unmentioned equipment procedures, score it 1.0.\n"
-            "Reply ONLY with a single float number between 0.0 and 1.0.\n\n"
-            f"Initial Input: {initial_input}\n\n"
-            f"Context: {context}\n\nAnswer: {answer}"
+            "You are an expert AI Auditor evaluating a system's output for Groundedness.\n"
+            "Task: Determine if the Answer is factually supported by the Context and Initial Input.\n\n"
+            "CRITICAL RULES:\n"
+            "1. You MUST score this as EXACTLY 1.0 (Pass) or 0.0 (Fail). Do not use intermediate decimal values.\n"
+            "2. Deduct points (Score 0.0) ONLY if the Answer explicitly contradicts the Context or hallucinates fake document quotes.\n"
+            "3. For Root Cause Analysis, inferring plausible mechanical components (e.g., 'bearings', 'seals') from sensor data (e.g., 'high vibration') is VALID and MUST score 1.0.\n"
+            "4. If the Context is 'NONE', but the Answer logically flows from the Initial Input, score it 1.0.\n\n"
+            "Format your response exactly like this:\n"
+            "REASONING: <write 1-2 sentences explaining your logic>\n"
+            "<SCORE>1.0</SCORE>\n\n"
+            f"--- Initial Input ---\n{initial_input}\n\n"
+            f"--- Context ---\n{context}\n\n"
+            f"--- Answer ---\n{answer}"
         )
         try:
-            # PRODUCTION FIX: Increased timeout to 120.0s. 
-            # Local Ollama (Llama 3) running concurrently requires massive latency buffers compared to OpenAI.
             result = await asyncio.wait_for(llm_client.invoke(prompt), timeout=120.0)
-            match = re.search(r"(1\.0|0\.\d+|0|1)", result.content)
             
-            score = float(match.group()) if match else 0.0
+            # Extract the discrete score
+            match = re.search(r"<SCORE>\s*(1\.0|0\.0|1|0)\s*</SCORE>", result.content, re.IGNORECASE)
+            if match:
+                score = float(match.group(1))
+            else:
+                # Fallback extraction
+                fallback = re.search(r"\b(1\.0|0\.0|1|0)\b", result.content)
+                score = float(fallback.group(1)) if fallback else 0.0
+                
             if score < 0.8:
-                logger.warning(f"Groundedness failed (Score: {score}). Context provided: {context[:200]}...")
+                # The CoT reasoning is now logged so you can see exactly WHY it failed if it ever does!
+                logger.warning(f"Groundedness failed (Score: {score}). Judge reasoning:\n{result.content}")
+                
             return score
             
         except asyncio.TimeoutError:

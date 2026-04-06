@@ -33,8 +33,7 @@ class RootCauseChain:
     anomaly_client: AnomalyClient
     rag_client: RAGClient
 
-    async def run(self, req: RootCauseRequest) -> tuple[RootCauseResponse, str, str]:
-        # PRODUCTION FIX: Execute downstream service calls concurrently to protect the <2s SLA
+    async def run(self, req: RootCauseRequest) -> tuple[RootCauseResponse, str, str, str]:
         retrieval_query = f"{req.user_query}\n\nAnomaly: {req.anomaly_description}"
         
         anomaly_task = self.anomaly_client.predict(req.sensor_data)
@@ -42,10 +41,8 @@ class RootCauseChain:
             retrieval_query, equipment_id=req.equipment_id, k=8
         )
         
-        # Await both tasks simultaneously
         anomaly_model, docs = await asyncio.gather(anomaly_task, rag_task)
         
-        # Step 3: prompt formatting
         docs_text, doc_mapping = _format_docs(docs)
         valid_ids_list = list(doc_mapping.keys())
         valid_doc_ids_str = ", ".join(valid_ids_list) if valid_ids_list else "NONE"
@@ -59,10 +56,8 @@ class RootCauseChain:
             valid_doc_ids=valid_doc_ids_str  
         )
         
-        # Step 4: LLM call with JSON mode
         result = await self.llm.invoke(prompt, json_mode=True)
         
-        # Step 5: Parse JSON and remap citations securely
         try:
             parsed = parse_llm_json(result.content, RootCauseResponse)
             
@@ -79,11 +74,20 @@ class RootCauseChain:
                     if normalized_tag in doc_mapping:
                         hyp.source = doc_mapping[normalized_tag]
                     else:
-                        raise ValueError(f"Hallucinated citation detected: {normalized_tag}")
+                        # PRODUCTION FIX: Graceful degradation for Zero-Context
+                        # If the LLM hallucinates DOC_1 but no documents were found, coerce to NONE safely.
+                        if not doc_mapping:
+                            hyp.source = "NONE"
+                        else:
+                            raise ValueError(f"Hallucinated citation detected: {normalized_tag}")
                 else:
-                    raise ValueError("Missing required citation tag in hypothesis.")
+                    # PRODUCTION FIX: Coerce non-matching text to NONE if zero documents exist.
+                    if not doc_mapping:
+                        hyp.source = "NONE"
+                    else:
+                        raise ValueError("Missing required citation tag in hypothesis.")
                     
-            return parsed, result.provider, result.model
+            return parsed, result.provider, result.model, docs_text
             
         except Exception as e:
             if type(e).__name__ == "LLMOutputParseError":

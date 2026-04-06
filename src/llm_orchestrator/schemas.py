@@ -80,6 +80,10 @@ class QueryResponse(BaseModel):
     latency_ms: Optional[float] = None
     guardrails_applied: list[str] = Field(default_factory=list)
     
+    # PRODUCTION FIX: Bubbled up raw context text for global guardrail evaluation
+    # This prevents the LLM judge from hallucinating a 0.0 score due to missing context.
+    raw_context: str = "" 
+    
     chain: Literal["root_cause", "remediation", "historical"]
     result: RootCauseResponse | RemediationResponse | HistoricalSearchResponse
     model_provider: str

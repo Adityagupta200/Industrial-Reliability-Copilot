@@ -45,8 +45,8 @@ class HistoricalSearchChain:
     incident_repo: IncidentRepo
     incidents_table: str
 
-    async def run(self, req: HistoricalSearchRequest) -> tuple[HistoricalSearchResponse, str, str]:
-        # Step 1: text-to-SQL
+    # PRODUCTION FIX: Signature updated
+    async def run(self, req: HistoricalSearchRequest) -> tuple[HistoricalSearchResponse, str, str, str]:
         sql_prompt = _TEXT2SQL_PROMPT.format(
             table=self.incidents_table,
             limit=req.limit,
@@ -59,22 +59,21 @@ class HistoricalSearchChain:
         policy = SQLPolicy(allowed_tables={self.incidents_table}, max_limit=max(req.limit, 50))
         safe_sql = validate_readonly_sql(sql_result.content.strip(), policy)
 
-        # Step 2: execute SQL
         rows = await self.incident_repo.run_query(safe_sql)
 
-        # Step 3: semantic search in docs (parallelization could be added; kept simple)
         docs = await self.rag_client.retrieve_semantic(
             req.user_query, equipment_id=req.equipment_id, k=6
         )
 
-        # Step 4: synthesize using LLM
+        formatted_context = _format_docs(docs)
+        
         bundle = self.prompts.load("historical_search", req.prompt_version)
         prompt = bundle.template.format(
             user_query=req.user_query,
             sql_rows_json=json.dumps(rows, ensure_ascii=False),
-            retrieved_docs=_format_docs(docs),
+            retrieved_docs=formatted_context,
         )
 
         final = await self.llm.invoke(prompt)
         parsed = parse_llm_json(final.content, HistoricalSearchResponse)
-        return parsed, final.provider, final.model
+        return parsed, final.provider, final.model, formatted_context
