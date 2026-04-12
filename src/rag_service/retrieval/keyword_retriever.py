@@ -28,16 +28,8 @@ class _BM25Index:
 
 
 class BM25KeywordRetriever:
-    """
-    Builds an in-memory BM25 index over Qdrant payload text.
-
-    Note: for production, you typically build this once in a startup job and
-    persist to disk/object storage. This implementation supports optional local persistence.
-    """
-
     def __init__(self, *, qdrant: Optional[QdrantBackend] = None, index_path: Optional[str] = None):
         self.qdrant = qdrant or QdrantBackend()
-        # FIX 4: Cloud-Native compliance. Stateless containers must write temporary caches to /tmp
         self.index_path = index_path or os.getenv(
             "BM25_INDEX_PATH", "/tmp/bm25_index.pkl"
         )
@@ -47,7 +39,6 @@ class BM25KeywordRetriever:
     def _load(self) -> Optional[_BM25Index]:
         try:
             import pickle
-
             with open(self.index_path, "rb") as f:
                 return pickle.load(f)
         except Exception:
@@ -56,7 +47,6 @@ class BM25KeywordRetriever:
     def _save(self, idx: _BM25Index) -> None:
         os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
         import pickle
-
         with open(self.index_path, "wb") as f:
             pickle.dump(idx, f)
 
@@ -81,26 +71,26 @@ class BM25KeywordRetriever:
             equipment_to_indices: dict[str, list[int]] = {}
 
             for p in points:
-                # FIX 1: Access Qdrant Record attributes via dot notation, not dict subscripting
-                payload = dict(p.payload or {}) if hasattr(p, "payload") else {}
+                # PRODUCTION FIX: Safely extract payload whether Qdrant returns a dict or an object
+                payload = p.get("payload", {}) if isinstance(p, dict) else getattr(p, "payload", {}) or {}
                 text = str(payload.get(text_key, ""))
                 if not text.strip():
                     continue
 
-                # FIX 2: Compute current index safely to prevent index drift
                 current_idx = len(doc_ids)
-
-                doc_id = str(p.id) if hasattr(p, "id") else ""
+                doc_id = str(p.get("id", "")) if isinstance(p, dict) else str(getattr(p, "id", ""))
                 doc_ids.append(doc_id)
                 texts.append(text)
                 metadatas.append(payload)
                 tokenized.append(_tokenize(text))
 
                 eq = payload.get(self.qdrant.settings.payload_equipment_id_key)
-                if isinstance(eq, str) and eq:
+                # PRODUCTION FIX: Mirror `filters.py` and `pipeline.py` exactly by tracking "all"
+                if isinstance(eq, str) and eq.strip():
                     equipment_to_indices.setdefault(eq, []).append(current_idx)
+                else:
+                    equipment_to_indices.setdefault("all", []).append(current_idx)
 
-            # FIX 3: Prevent rank_bm25 from crashing with ZeroDivisionError if DB is empty
             if not tokenized:
                 tokenized = [[""]]
                 doc_ids = ["empty_db_dummy"]
@@ -134,9 +124,12 @@ class BM25KeywordRetriever:
         q_tokens = _tokenize(query)
         scores = idx.bm25.get_scores(q_tokens)
 
-        candidate_indices = range(len(idx.doc_ids))
+        candidate_indices = set(range(len(idx.doc_ids)))
         if filters and filters.equipment_id:
-            candidate_indices = idx.equipment_to_indices.get(filters.equipment_id, [])
+            specific_indices = set(idx.equipment_to_indices.get(filters.equipment_id, []))
+            # PRODUCTION FIX: Union specific equipment indices with explicitly tagged "all" generic documents
+            generic_indices = set(idx.equipment_to_indices.get("all", []))
+            candidate_indices = specific_indices.union(generic_indices)
 
         results: list[tuple[int, float]] = []
         for i in candidate_indices:
@@ -149,7 +142,6 @@ class BM25KeywordRetriever:
 
         docs: list[Document] = []
         for i, s in results:
-            # Ignore the safety dummy document if the DB was empty
             if idx.doc_ids[i] == "empty_db_dummy":
                 continue
 

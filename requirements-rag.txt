@@ -24,16 +24,16 @@ rank-bm25>=0.2.2
 # Chunking / text split
 langchain-text-splitters>=0.2.2
 
-# If you use OpenAI embeddings (recommended to avoid torch in the container)
-openai>=1.40.0
-tiktoken>=0.7.0
+# Local Embeddings/Reranker core dependencies
+# PRODUCTION FIX: Removed <3.0.0 and <4.40 bounds to resolve tokenizers conflict
+sentence-transformers>=2.5.0
+transformers>=4.38.0
+tokenizers>=0.15.0
 
-# If you use local embeddings/reranker, keep sentence-transformers
-# BUT do NOT put torch in this file; install CPU-only torch via Dockerfile/index-url,
-# otherwise Linux builds can pull huge CUDA-related wheels and time out.
-# FIXED: Pinned <3.0.0 and transformers <4.40 to prevent demands for torch>=2.4.0
-sentence-transformers>=2.5.0,<3.0.0
-transformers>=4.38.0,<4.40.0
+# PRODUCTION FIX: Inject explicitly requested LangChain integration packages 
+# into the RAG container boundary to support local HuggingFace routing
+langchain-core>=0.2.34
+langchain-huggingface>=0.0.3
 
 # Postgres + text-to-SQL safety (needed by your safe_sql / historical chain)
 sqlalchemy>=2.0.30

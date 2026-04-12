@@ -14,6 +14,7 @@ from prometheus_client import Counter, Histogram, CONTENT_TYPE_LATEST, generate_
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import select  
 
 from .llm_config import load_settings
 from .llm_client import LLMClient
@@ -30,7 +31,7 @@ from .guardrails.input_filters import InputGuardrails
 from .guardrails.output_filters import OutputGuardrails  
 from .providers.base import LLMFatalError, LLMTransientError
 
-from evaluation.online.logger import log_interaction_sync, SessionLocal, QueryLog
+from evaluation.online.logger import log_interaction_async, AsyncSessionLocal, QueryLog, init_telemetry_db
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -91,6 +92,9 @@ def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
 async def lifespan(app: FastAPI):
     global health_check_client
     health_check_client = httpx.AsyncClient(timeout=1.0)
+    
+    await init_telemetry_db()
+    
     logger.info("Orchestrator background resources initialized.")
     yield
     if health_check_client:
@@ -114,7 +118,7 @@ def create_app() -> FastAPI:
         hybrid_path=settings.services.rag_retrieve_hybrid_path,
         procedures_path=settings.services.rag_retrieve_procedures_path,
         semantic_path=settings.services.rag_retrieve_semantic_path,
-        timeout_s=1.2,
+        timeout_s=5.0,  # PRODUCTION FIX: Increased to 5.0s to allow embedding creation without timeouts
     )
 
     incident_repo = IncidentRepo(settings.services.incidents_db_dsn)
@@ -227,7 +231,6 @@ def create_app() -> FastAPI:
             
             raw_json_payload = pipeline_response.result.json()
             
-            # PRODUCTION FIX: Evaluate guardrails using the actual retrieved document text.
             contexts_str = pipeline_response.raw_context
             if not contexts_str or contexts_str.strip() == "":
                 contexts_str = "NONE"
@@ -256,11 +259,9 @@ def create_app() -> FastAPI:
             pipeline_response.latency_ms = latency_ms
             pipeline_response.guardrails_applied = applied_guardrails
 
-            # Blank out the raw_context payload after passing validation to save response bandwidth
             pipeline_response.raw_context = "OMITTED_FROM_RESPONSE"
 
-            await asyncio.to_thread(
-                log_interaction_sync,
+            await log_interaction_async(
                 query_id=trace_id, 
                 query=query_text,
                 answer=answer_text,
@@ -319,20 +320,21 @@ def create_app() -> FastAPI:
     @app.post("/feedback", tags=["Evaluation"])
     @limiter.limit("20/minute")
     async def submit_feedback(request: Request, feedback: FeedbackRequest):
-        db = SessionLocal()
-        try:
-            log_entry = db.query(QueryLog).filter(QueryLog.query_id == feedback.query_id).first()
-            if not log_entry:
-                raise HTTPException(status_code=404, detail="Query ID not found")
+        async with AsyncSessionLocal() as db:
+            try:
+                result = await db.execute(select(QueryLog).filter(QueryLog.query_id == feedback.query_id))
+                log_entry = result.scalars().first()
+                if not log_entry:
+                    raise HTTPException(status_code=404, detail="Query ID not found")
 
-            log_entry.user_feedback_score = feedback.score
-            db.commit()
-            return {"status": "success", "message": "Feedback recorded"}
-        except Exception as e:
-            logger.error(f"Failed to record feedback: {e}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
-        finally:
-            db.close()
+                log_entry.user_feedback_score = feedback.score
+                await db.commit()
+                return {"status": "success", "message": "Feedback recorded"}
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Failed to record feedback: {e}")
+                raise HTTPException(status_code=500, detail="Internal Server Error")
 
     return app
 

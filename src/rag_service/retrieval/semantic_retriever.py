@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import os
 import time
 from dataclasses import dataclass
@@ -10,55 +9,8 @@ from .filters import build_qdrant_filter
 from .qdrant_backend import QdrantBackend, QdrantSettings
 from .types import Document, RetrievalFilters
 
-
-CPU_DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-GPU_DEFAULT_MODEL = "BAAI/bge-large-en-v1.5"
-BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
-
-
-@dataclass(frozen=True)
-class EmbeddingSettings:
-    model_name: str
-    device: str
-    normalize: bool
-    query_prefix: str
-
-    @staticmethod
-    def from_env() -> "EmbeddingSettings":
-        device = os.getenv("EMBEDDING_DEVICE", "cpu").strip().lower()
-        default_model = CPU_DEFAULT_MODEL if device == "cpu" else GPU_DEFAULT_MODEL
-        model_name = os.getenv("EMBEDDING_MODEL_NAME", default_model).strip()
-        normalize = os.getenv("EMBEDDING_NORMALIZE", "true").strip().lower() == "true"
-
-        query_prefix = os.getenv("EMBEDDING_QUERY_PREFIX", "").strip()
-        if not query_prefix and model_name.lower().startswith("baai/bge"):
-            query_prefix = BGE_QUERY_PREFIX
-
-        return EmbeddingSettings(
-            model_name=model_name,
-            device=device,
-            normalize=normalize,
-            query_prefix=query_prefix,
-        )
-
-
-class _SentenceTransformerEmbedder:
-    def __init__(self, settings: EmbeddingSettings):
-        from rag_service.core.model_cache import get_sentence_transformer
-
-        self.model = get_sentence_transformer(settings.model_name, device=settings.device)
-        self.normalize = settings.normalize
-        self.query_prefix = settings.query_prefix
-
-    def embed_query(self, text: str) -> list[float]:
-        query_text = f"{self.query_prefix}{text}" if self.query_prefix else text
-        vec = self.model.encode(
-            [query_text],
-            normalize_embeddings=self.normalize,
-            show_progress_bar=False,
-        )[0]
-        return [float(x) for x in vec]
-
+# PRODUCTION FIX: Import the centralized provider instead of local hardcodes
+from rag_service.embeddings import get_embedding_provider
 
 class SemanticRetriever:
     def __init__(
@@ -66,13 +18,12 @@ class SemanticRetriever:
         *,
         qdrant: Optional[QdrantBackend] = None,
         qdrant_settings: Optional[QdrantSettings] = None,
-        embedding_settings: Optional[EmbeddingSettings] = None,
         cache: Optional[QueryEmbeddingCache] = None,
     ):
         self.qdrant = qdrant or QdrantBackend(qdrant_settings)
-        self.embedder = _SentenceTransformerEmbedder(
-            embedding_settings or EmbeddingSettings.from_env()
-        )
+        # PRODUCTION FIX: Use the configured embedding provider (OpenAI) 
+        # to guarantee the query vector dimensions match the ingestion vectors.
+        self.embedder = get_embedding_provider()
         self.cache = cache or QueryEmbeddingCache(
             ttl_seconds=int(os.getenv("QUERY_EMBED_CACHE_TTL_SECONDS", "3600"))
         )
@@ -88,7 +39,8 @@ class SemanticRetriever:
 
         vec = self.cache.get(query)
         if vec is None:
-            vec = self.embedder.embed_query(query)
+            # Use the interface standard embed_texts method
+            vec = self.embedder.embed_texts([query])[0]
             self.cache.set(query, vec)
 
         qfilter = build_qdrant_filter(
@@ -103,13 +55,14 @@ class SemanticRetriever:
         docs: list[Document] = []
         text_key = self.qdrant.settings.payload_text_key
         for p in points:
-            payload = dict(p.payload or {})
+            # Safe parsing regardless of Qdrant client object type returns
+            payload = p.get("payload", {}) if isinstance(p, dict) else getattr(p, "payload", {}) or {}
             docs.append(
                 Document(
-                    id=str(p.id),
+                    id=str(p.get("id", "")) if isinstance(p, dict) else str(getattr(p, "id", "")),
                     text=str(payload.get(text_key, "")),
                     metadata=payload,
-                    score=float(p.score),
+                    score=float(p.get("score", 0.0)) if isinstance(p, dict) else float(getattr(p, "score", 0.0)),
                     source="semantic",
                 )
             )

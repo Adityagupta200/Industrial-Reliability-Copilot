@@ -127,7 +127,6 @@ async def prometheus_mw(request: Request, call_next):
 
 # --- Phase 7: Kubernetes Probes ---
 
-
 @app.get("/health/live", tags=["Health"])
 def liveness_probe() -> dict[str, str]:
     """
@@ -144,7 +143,6 @@ def readiness_probe(response: Response):
     Ensures traffic is only routed when ALL ML models and their associated artifacts
     are successfully loaded into memory.
     """
-    # Fix: A true production readiness check ensures EVERYTHING needed for prediction is loaded.
     ok_anom = bool(
         MODELS is not None
         and MODELS.anomaly_model is not None
@@ -186,7 +184,8 @@ def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-@app.post("/v1/predict/anomaly", response_model=AnomalyResponse, tags=["Inference"])
+# PRODUCTION FIX: Removed /v1 prefix to map to the LLM Orchestrator's internal URL route
+@app.post("/predict/anomaly", response_model=AnomalyResponse, tags=["Inference"])
 def predict_anomaly(req: SensorRequest):
     """Inference endpoint for real-time sensor anomaly detection."""
     if (
@@ -222,7 +221,8 @@ def predict_anomaly(req: SensorRequest):
     )
 
 
-@app.post("/v1/predict/rul", response_model=RULResponse, tags=["Inference"])
+# PRODUCTION FIX: Removed /v1 prefix to map to the LLM Orchestrator's internal URL route
+@app.post("/predict/rul", response_model=RULResponse, tags=["Inference"])
 def predict_rul(req: SensorRequest):
     """Inference endpoint for Remaining Useful Life (RUL) prediction."""
     if MODELS is None or MODELS.rul_model is None or RUL_SCHEMA is None:

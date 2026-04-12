@@ -4,12 +4,10 @@ from typing import Optional
 from qdrant_client.http import models as qmodels
 from .types import RetrievalFilters
 
-
 def _dt_to_rfc3339(dt: datetime) -> str:
     if dt.tzinfo is None:
         return dt.isoformat() + "Z"
     return dt.isoformat()
-
 
 def build_qdrant_filter(
     filters: Optional[RetrievalFilters],
@@ -17,18 +15,21 @@ def build_qdrant_filter(
     equipment_id_key: str = "equipment_id",
     severity_key: str = "severity",
     date_key: str = "date",
-    plant_id_key: str = "plant_id",  # Added for multi-tenancy
-    roles_key: str = "allowed_roles",  # Added for RBAC
+    plant_id_key: str = "plant_id", 
+    roles_key: str = "allowed_roles",
 ) -> Optional[qmodels.Filter]:
     if not filters:
         return None
 
     must: list[qmodels.Condition] = []
 
+    # PRODUCTION FIX: Match specific equipment OR explicitly tagged "all" generic documents.
+    # Completely replaces buggy IsNull/IsEmpty conditions.
     if getattr(filters, "equipment_id", None):
         must.append(
             qmodels.FieldCondition(
-                key=equipment_id_key, match=qmodels.MatchValue(value=filters.equipment_id)
+                key=equipment_id_key,
+                match=qmodels.MatchAny(any=[filters.equipment_id, "all"])
             )
         )
 
@@ -39,7 +40,6 @@ def build_qdrant_filter(
             )
         )
 
-    # Multi-tenant isolation: strict match on plant_id
     if getattr(filters, "plant_id", None):
         must.append(
             qmodels.FieldCondition(
@@ -47,7 +47,6 @@ def build_qdrant_filter(
             )
         )
 
-    # Access control: ensure user_role intersects with allowed_roles array in metadata
     if getattr(filters, "user_role", None):
         must.append(
             qmodels.FieldCondition(key=roles_key, match=qmodels.MatchAny(any=[filters.user_role]))

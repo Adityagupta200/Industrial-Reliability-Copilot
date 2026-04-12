@@ -3,17 +3,19 @@ from dataclasses import dataclass
 from typing import Literal, Optional
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import os
 
 class LLMSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="LLM_", extra="ignore")
 
-    primary_provider: Literal["openai", "ollama"] = "openai"
-    fallback_provider: Literal["openai", "ollama"] = "ollama"
+    # PRODUCTION FIX: Enforce local Ollama orchestration by default
+    primary_provider: Literal["openai", "ollama"] = "ollama"
+    fallback_provider: Literal["openai", "ollama"] = "openai"
 
     openai_api_key: Optional[SecretStr] = None
-    # PRODUCTION FIX: Upgraded to gpt-5.4-mini for ultra-fast latency & zero-cost free tier
     openai_model: str = "gpt-5.4-mini" 
+    
+    openai_judge_model: str = "gpt-5.4-nano"
+    
     openai_base_url: Optional[str] = None
 
     ollama_base_url: str = "http://localhost:11434"
@@ -22,9 +24,7 @@ class LLMSettings(BaseSettings):
     temperature: float = 0.0  
     max_tokens: int = 1000
     
-    # PRODUCTION FIX: Increased from 2.5s to 30.0s to allow proper generation 
-    # of complex structured JSON payloads without early termination.
-    request_timeout_s: float = 30.0
+    request_timeout_s: float = 5.0
 
     max_retries: int = 2
     retry_min_wait_s: float = 0.2
@@ -59,7 +59,8 @@ def load_settings() -> Settings:
     llm = LLMSettings()
     services = ServiceSettings()
     
-    if llm.primary_provider == "openai" and not llm.openai_api_key:
-        raise ValueError("CRITICAL: LLM_OPENAI_API_KEY environment variable is required to meet production SLA targets.")
+    # Validation remains for fallback SLA targets
+    if llm.fallback_provider == "openai" and not llm.openai_api_key:
+        raise ValueError("CRITICAL: LLM_OPENAI_API_KEY environment variable is required for the fallback provider.")
         
     return Settings(llm=llm, services=services)

@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, JSON
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 
 # Aligned with Docker's internal PYTHONPATH namespace
 from llm_orchestrator.llm_config import load_settings
@@ -33,33 +34,35 @@ class EvalScore(Base):
     answer_relevancy = Column(Float)
 
 
-# Initialize engine synchronously for logging utility
-# Note: In a true enterprise environment, tables are created via Alembic migrations,
-# but for local microservice booting, create_all() is an acceptable standard.
-engine = create_engine(settings.services.incidents_db_dsn)
-Base.metadata.create_all(bind=engine)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# PRODUCTION FIX: Fully asynchronous database engine and session maker
+engine = create_async_engine(settings.services.incidents_db_dsn, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
 
 
-def log_interaction_sync(query_id: str, query: str, answer: str, contexts: list, latency: float):
+async def init_telemetry_db() -> None:
     """
-    Synchronous logging utility.
-    Designed to be executed safely via FastAPI's BackgroundTasks so it
-    never blocks the HTTP response returning to the user.
+    Asynchronously initialize telemetry tables.
+    Called during FastAPI lifespan to prevent blocking the event loop on startup.
     """
-    db = SessionLocal()
-    try:
-        log_entry = QueryLog(
-            query_id=query_id,
-            user_query=query,
-            answer=answer,
-            retrieved_contexts=contexts,
-            latency_ms=latency,
-        )
-        db.add(log_entry)
-        db.commit()
-    except Exception as e:
-        logger.error(f"Failed to log query {query_id}: {e}")
-    finally:
-        db.close()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+async def log_interaction_async(query_id: str, query: str, answer: str, contexts: list, latency: float) -> None:
+    """
+    Asynchronous logging utility.
+    Safely executes via FastAPI's BackgroundTasks without blocking HTTP responses.
+    """
+    async with AsyncSessionLocal() as db:
+        try:
+            log_entry = QueryLog(
+                query_id=query_id,
+                user_query=query,
+                answer=answer,
+                retrieved_contexts=contexts,
+                latency_ms=latency,
+            )
+            db.add(log_entry)
+            await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log query {query_id}: {e}")

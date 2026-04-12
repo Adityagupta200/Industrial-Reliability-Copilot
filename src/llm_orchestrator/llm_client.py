@@ -25,60 +25,62 @@ class LLMClient:
 
         self._providers = {}
 
-    def _build_openai(self, s: LLMSettings) -> LLMProvider:
+    def _build_openai(self, s: LLMSettings, is_judge: bool = False) -> LLMProvider:
         api_key = s.openai_api_key.get_secret_value() if s.openai_api_key else None
+        model_name = s.openai_judge_model if is_judge else s.openai_model
+        
         return OpenAIProvider(
             api_key=api_key,
-            model=s.openai_model,
+            model=model_name,
             temperature=s.temperature,
             max_tokens=s.max_tokens,
             timeout_s=s.request_timeout_s,
             base_url=s.openai_base_url,
         )
 
-    def _build_ollama(self, s: LLMSettings) -> LLMProvider:
+    def _build_ollama(self, s: LLMSettings, is_judge: bool = False) -> LLMProvider:
+        # PRODUCTION FIX: Override aggressive 5s default timeout to 120s for local inference stability
         return OllamaProvider(
             base_url=s.ollama_base_url,
             model=s.ollama_model,
             temperature=s.temperature,
             max_tokens=s.max_tokens,
-            timeout_s=s.request_timeout_s,
+            timeout_s=120.0, 
         )
 
-    def _get_provider(self, name: str) -> LLMProvider:
-        if name not in self._providers:
+    def _get_provider(self, name: str, is_judge: bool = False) -> LLMProvider:
+        cache_key = f"{name}_judge" if is_judge else name
+        if cache_key not in self._providers:
             if name == "openai":
-                self._providers["openai"] = self._build_openai(self._settings)
+                self._providers[cache_key] = self._build_openai(self._settings, is_judge)
             elif name == "ollama":
-                self._providers["ollama"] = self._build_ollama(self._settings)
+                self._providers[cache_key] = self._build_ollama(self._settings, is_judge)
             else:
                 raise LLMFatalError(f"Unknown provider '{name}'.")
-        return self._providers[name]
+        return self._providers[cache_key]
 
     @retry(
         retry=retry_if_exception_type(LLMTransientError),
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=0.5, min=0.5, max=2.0), # Tightened retry wait times
+        wait=wait_exponential(multiplier=0.5, min=0.5, max=2.0),
         reraise=True,
     )
     async def _invoke_with_retry(self, provider: LLMProvider, prompt: str, json_mode: bool = False) -> LLMResult:
         return await provider.invoke(prompt, json_mode=json_mode)
 
-    async def invoke(self, prompt: str, *, force_provider: Optional[str] = None, json_mode: bool = False) -> LLMResult:
+    async def invoke(self, prompt: str, *, force_provider: Optional[str] = None, json_mode: bool = False, is_judge: bool = False) -> LLMResult:
         if force_provider:
-            provider = self._get_provider(force_provider)
+            provider = self._get_provider(force_provider, is_judge)
             return await self._invoke_with_retry(provider, prompt, json_mode=json_mode)
 
-        primary = self._get_provider(self._settings.primary_provider)
+        primary = self._get_provider(self._settings.primary_provider, is_judge)
 
         try:
             return await self._invoke_with_retry(primary, prompt, json_mode=json_mode)
         except LLMTransientError as e:
-            # PRODUCTION FIX: Prevent silent fallback to 8B model if API goes down.
-            # Enforce SLA hard failures. 
             if self._settings.primary_provider == "openai":
                 logger.error("Primary API unreachable. Blocking fallback to prevent SLA violation.")
                 raise LLMFatalError(f"Production API Failed: {e}") from e
                 
-            fallback = self._get_provider(self._settings.fallback_provider)
+            fallback = self._get_provider(self._settings.fallback_provider, is_judge)
             return await self._invoke_with_retry(fallback, prompt, json_mode=json_mode)

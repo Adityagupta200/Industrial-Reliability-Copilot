@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 from datetime import datetime, timezone
@@ -15,10 +16,8 @@ from rag_service.ingestion.markdown_loader import load_markdown
 from rag_service.ingestion.cleaning import clean_text
 from rag_service.ingestion.chunking import chunk_text
 
-
 def _log(msg: str) -> None:
     print(msg, flush=True)
-
 
 def _write_processed_text(source_id: str, obj: dict[str, Any]) -> None:
     out_dir = Path(settings.processed_texts_dir)
@@ -26,6 +25,11 @@ def _write_processed_text(source_id: str, obj: dict[str, Any]) -> None:
     out_path = out_dir / f"{source_id}.json"
     out_path.write_text(json.dumps(obj, indent=2, ensure_ascii=False), encoding="utf-8")
 
+def _extract_equipment_id(filename: str) -> str | None:
+    match = re.search(r'(pump_P-\d+|motor_M-\d+|compressor_C-\d+|turbofan_TF-\d+)', filename, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return None
 
 def ingest_all() -> dict[str, Any]:
     manifest = Manifest.load()
@@ -49,9 +53,6 @@ def ingest_all() -> dict[str, Any]:
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    # ----------------
-    # Manuals (PDF)
-    # ----------------
     manuals_dir = Path(settings.raw_manuals_dir)
     pdfs = sorted(manuals_dir.glob("**/*.pdf"))
     _log(f"Manuals dir: {manuals_dir} (exists={manuals_dir.exists()}); PDFs found={len(pdfs)}")
@@ -79,14 +80,19 @@ def ingest_all() -> dict[str, Any]:
                 },
             )
 
+            eq_id = _extract_equipment_id(pdf.name)
+            extra_meta = {
+                "source_file": pdf.name,
+                "path": pdf.as_posix(),
+                # PRODUCTION FIX: Explicitly tag generic documents with "all" to bypass Qdrant null bugs
+                "equipment_id": eq_id if eq_id else "all"
+            }
+
             chunks = chunk_text(
                 full_text,
                 source_id=source_id,
                 doc_type="manual",
-                extra_meta={
-                    "source_file": pdf.name,
-                    "path": pdf.as_posix(),
-                },
+                extra_meta=extra_meta,
             )
 
             stats["chunks_created"] += len(chunks)
@@ -115,9 +121,6 @@ def ingest_all() -> dict[str, Any]:
             manifest.mark(key, sha, status="failed", detail=str(e))
             _log(f"[manual {n}/{len(pdfs)}] FAILED: {e!r}")
 
-    # ----------------
-    # Procedures (Markdown)
-    # ----------------
     proc_dir = Path(settings.raw_procedures_dir)
     mds = sorted([*proc_dir.glob("**/*.md"), *proc_dir.glob("**/*.markdown")])
     _log(f"Procedures dir: {proc_dir} (exists={proc_dir.exists()}); MD files found={len(mds)}")
@@ -150,14 +153,19 @@ def ingest_all() -> dict[str, Any]:
                 },
             )
 
+            eq_id = _extract_equipment_id(md.name)
+            extra_meta = {
+                "source_file": md.name,
+                "path": md.as_posix(),
+                # PRODUCTION FIX: Explicitly tag generic documents with "all"
+                "equipment_id": eq_id if eq_id else "all"
+            }
+
             chunks = chunk_text(
                 text,
                 source_id=source_id,
                 doc_type="procedure",
-                extra_meta={
-                    "source_file": md.name,
-                    "path": md.as_posix(),
-                },
+                extra_meta=extra_meta,
             )
 
             stats["chunks_created"] += len(chunks)
@@ -195,7 +203,6 @@ def ingest_all() -> dict[str, Any]:
     }
     _log(f"Finished. Qdrant counts: {stats['qdrant_counts']}")
     return stats
-
 
 if __name__ == "__main__":
     out = ingest_all()

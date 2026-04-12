@@ -3,7 +3,6 @@ from __future__ import annotations
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -24,11 +23,17 @@ class Settings(BaseSettings):
     qdrant_collection_docs: str = Field(default="maintenance_docs")
     qdrant_collection_procedures: str = Field(default="procedures")
 
-    embedding_provider: str = Field(default="bge")
+    # PRODUCTION FIX: Default to huggingface to match local orchestration parameters
+    embedding_provider: str = Field(default="huggingface")
+    
+    # PRODUCTION FIX: Direct mapping for the Docker Compose environment variable
+    huggingface_embedding_model: str = Field(default="BAAI/bge-large-en-v1.5")
+    
     openai_api_key: str | None = Field(default=None)
-    # PRODUCTION FIX: Default to the 'small' model for ultra-low latency & cost
     openai_embedding_model: str = Field(default="text-embedding-3-small")
-    bge_model_name: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
+    
+    openai_timeout_s: float = Field(default=30.0)
+    openai_max_retries: int = Field(default=3)
 
     chunk_size_tokens: int = Field(default=700)
     chunk_overlap_tokens: int = Field(default=80)

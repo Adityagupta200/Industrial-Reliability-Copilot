@@ -18,10 +18,14 @@ ENV PATH="${VENV_PATH}/bin:${PATH}"
 
 RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
-# Write a minimal requirements file directly if one doesn't exist, 
-# or copy your specific gateway requirements here.
 COPY requirements.txt /app/requirements.txt
-RUN python -m pip install --no-cache-dir -r /app/requirements.txt
+
+# PRODUCTION FIX: Added index-url and extra-index-url to allow the gateway 
+# to securely resolve the CPU-only PyTorch wheel and prevent ResolutionImpossible errors.
+RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
+    --index-url https://pypi.org/simple \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    -r /app/requirements.txt
 
 ########################
 # Runtime Stage
