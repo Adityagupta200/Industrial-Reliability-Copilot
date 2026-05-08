@@ -2,8 +2,8 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Any, Dict, Literal, Optional
 
-
-SchemaId = Literal["uah", "hai", "swat", "modbus", "edgeiiot", "nasa_rul"]
+# PRODUCTION FIX: Added 'generic' to support heuristic fallback for sparse natural language telemetry
+SchemaId = Literal["uah", "hai", "swat", "modbus", "edgeiiot", "nasa_rul", "generic"]
 
 
 class SensorRequest(BaseModel):

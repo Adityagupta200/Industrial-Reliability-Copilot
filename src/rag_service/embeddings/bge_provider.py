@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 import os
+import logging
+import torch
+
+# PRODUCTION FIX: Silence the benign HuggingFace 'UNEXPECTED' architecture warnings for clean logs
+logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
 
 from rag_service.core.config import settings
 from rag_service.embeddings.base import EmbeddingProvider
@@ -9,6 +14,11 @@ from langchain_huggingface import HuggingFaceEmbeddings
 class BGEEmbeddingProvider(EmbeddingProvider):
     def __init__(self) -> None:
         device = getattr(settings, "bge_device", None) or os.getenv("EMBEDDING_DEVICE", "cpu")
+        
+        # PRODUCTION FIX: CPU Thread Clamping
+        # Prevents thread thrashing inside compute-constrained environments.
+        if device == "cpu":
+            torch.set_num_threads(2)
         
         # PRODUCTION FIX: Implemented requested langchain-huggingface provider
         self.model = HuggingFaceEmbeddings(

@@ -1,0 +1,92 @@
+{
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/Gas_Turbine_Engines_maintenance_documentation.pdf": {
+    "detail": null,
+    "sha256": "428e2e21dae1e27a4c83d2137fddf75ec05011233281fbbb71703c0f36146250",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:48:12.420259+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/Industrial_pump_handbook_GB.pdf": {
+    "detail": null,
+    "sha256": "a1c26d28ae874cf99571fee19b214110c3524cbde8f0d08294e36f9b696241e6",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:55:36.345346+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/bearing_installation_manuals.pdf": {
+    "detail": null,
+    "sha256": "14a6679f24105032acc8b616e2ec62147d4dfdece4591e959a63edf5570b6448",
+    "status": "ok",
+    "updated_at": "2026-05-05T14:49:51.371964+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/bearing_installation_manuals2.pdf": {
+    "detail": null,
+    "sha256": "6bea21bb32d2cc84201e72d60e415904bebb097dbdfe89bf7cc257ede7be4157",
+    "status": "ok",
+    "updated_at": "2026-05-05T14:55:04.938036+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/compressor_maintenance_documentation.pdf": {
+    "detail": null,
+    "sha256": "b2d0be18cf7d67c2ce904e0f32ff4c40efc6c54bc0d14a8a51a4f72de8ce2911",
+    "status": "ok",
+    "updated_at": "2026-05-05T14:58:41.590487+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/datasheet.pdf": {
+    "detail": null,
+    "sha256": "ad94bc28c6ba686e15cbcb1e820704b061a14971aaf456c5b86e5976a5b1251e",
+    "status": "ok",
+    "updated_at": "2026-05-05T14:59:29.974440+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/datasheet2.pdf": {
+    "detail": null,
+    "sha256": "54bc576ae2ab13c98f7282cde6023eef85e069a9bc48076f932cc56f5a70c13e",
+    "status": "ok",
+    "updated_at": "2026-05-05T14:59:51.503233+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/engine_maintenance_documentation.pdf": {
+    "detail": null,
+    "sha256": "38f30a4853392db845cc97d5e2ae5cf1b618a0eba4952722d22d616376b1e11d",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:26:35.477930+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/engine_maintenance_documentation2.pdf": {
+    "detail": null,
+    "sha256": "55964e589d96f657812938d932280d0502d9055c387ea07707cbc9777d3cfec8",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:32:38.630713+00:00"
+  },
+  "manual::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/manuals/pump_manual2.pdf": {
+    "detail": null,
+    "sha256": "c89d022e7122a517806f745d8febaab136f49418603ae2e4c1f245d453eb5c21",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:57:26.029537+00:00"
+  },
+  "procedure::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/procedures/bearing_replacement_pump_P-23.md": {
+    "detail": null,
+    "sha256": "303e6a2617bef79ef4d4252ef9dcf16ec218e6ed72ade8f3c7e629a79332aa39",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:57:27.298168+00:00"
+  },
+  "procedure::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/procedures/cavitation_triage_pump.md": {
+    "detail": null,
+    "sha256": "ad6179f191fb665cfb0a6429a6131d55b9f605cd5030c94c5255927a2456e60a",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:57:28.149302+00:00"
+  },
+  "procedure::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/procedures/overheating_motor_basic_checks.md": {
+    "detail": null,
+    "sha256": "28916297589233c1b866eeac3ecdc17f818b8d737b00ef11f80454a4ed954738",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:57:28.817455+00:00"
+  },
+  "procedure::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/procedures/scheduled_maintenance_template.md": {
+    "detail": null,
+    "sha256": "30c2020f35172212c1a97fc766299457036f2f2cf4ae7af98c9a8f1f2adb9d1d",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:57:29.552832+00:00"
+  },
+  "procedure::C:/Users/abc/Industrial-Reliability-Copilot/data/raw/procedures/sensor_recalibration_pressure_transducer.md": {
+    "detail": null,
+    "sha256": "3b57ba2670e09f2f7eb9e7e16e7b3fcdca148988396cb271f65cb6ac692ebfdb",
+    "status": "ok",
+    "updated_at": "2026-05-05T15:57:30.359131+00:00"
+  }
+}

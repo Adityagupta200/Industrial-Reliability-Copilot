@@ -1,53 +1,15 @@
-# PostgreSQL
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-  namespace: industrial-copilot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:16-alpine
-        env:
-        - name: POSTGRES_DB
-          valueFrom:
-            configMapKeyRef:
-              name: copilot-config
-              key: POSTGRES_DB
-        - name: POSTGRES_USER
-          valueFrom:
-            configMapKeyRef:
-              name: copilot-config
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: copilot-secrets
-              key: POSTGRES_PASSWORD
-        ports:
-        - containerPort: 5432
----
+# PRODUCTION FIX: Added Persistent Volume Claim for Vector DB statefulness
 apiVersion: v1
-kind: Service
+kind: PersistentVolumeClaim
 metadata:
-  name: postgres
+  name: qdrant-storage
   namespace: industrial-copilot
 spec:
-  selector:
-    app: postgres
-  ports:
-  - port: 5432
-    targetPort: 5432
-
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
 ---
 # Qdrant Vector DB
 apiVersion: apps/v1
@@ -71,6 +33,14 @@ spec:
         ports:
         - containerPort: 6333
         - containerPort: 6334
+        # Attach the persistent volume to the container
+        volumeMounts:
+        - name: qdrant-storage-volume
+          mountPath: /qdrant/storage
+      volumes:
+      - name: qdrant-storage-volume
+        persistentVolumeClaim:
+          claimName: qdrant-storage
 ---
 apiVersion: v1
 kind: Service
@@ -106,7 +76,6 @@ spec:
         image: ollama/ollama:latest
         ports:
         - containerPort: 11434
-        # Forces container to download the updated reasoning model
         lifecycle:
           postStart:
             exec:
@@ -119,7 +88,7 @@ spec:
             memory: "3Gi"
             cpu: "1000m"
           limits:
-            memory: "6Gi" # Limits Ollama to leave room for BGE-Large in RAG pod
+            memory: "6Gi" 
             cpu: "4000m"
 ---
 apiVersion: v1

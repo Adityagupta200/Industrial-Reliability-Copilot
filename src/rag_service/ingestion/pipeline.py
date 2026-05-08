@@ -31,7 +31,8 @@ def _extract_equipment_id(filename: str) -> str | None:
         return match.group(1)
     return None
 
-def ingest_all() -> dict[str, Any]:
+# PRODUCTION FIX: Added 'force' parameter to bypass manifest checks
+def ingest_all(force: bool = False) -> dict[str, Any]:
     manifest = Manifest.load()
 
     _log("Initializing embedding provider...")
@@ -60,7 +61,9 @@ def ingest_all() -> dict[str, Any]:
     for n, pdf in enumerate(pdfs, start=1):
         key = f"manual::{pdf.as_posix()}"
         sha = sha256_file(pdf)
-        if manifest.is_unchanged(key, sha):
+        
+        # PRODUCTION FIX: Check if force is True before skipping
+        if not force and manifest.is_unchanged(key, sha):
             stats["skipped_files"] += 1
             continue
 
@@ -84,7 +87,6 @@ def ingest_all() -> dict[str, Any]:
             extra_meta = {
                 "source_file": pdf.name,
                 "path": pdf.as_posix(),
-                # PRODUCTION FIX: Explicitly tag generic documents with "all" to bypass Qdrant null bugs
                 "equipment_id": eq_id if eq_id else "all"
             }
 
@@ -128,7 +130,9 @@ def ingest_all() -> dict[str, Any]:
     for n, md in enumerate(mds, start=1):
         key = f"procedure::{md.as_posix()}"
         sha = sha256_file(md)
-        if manifest.is_unchanged(key, sha):
+        
+        # PRODUCTION FIX: Check if force is True before skipping
+        if not force and manifest.is_unchanged(key, sha):
             stats["skipped_files"] += 1
             continue
 
@@ -157,7 +161,6 @@ def ingest_all() -> dict[str, Any]:
             extra_meta = {
                 "source_file": md.name,
                 "path": md.as_posix(),
-                # PRODUCTION FIX: Explicitly tag generic documents with "all"
                 "equipment_id": eq_id if eq_id else "all"
             }
 
@@ -205,5 +208,5 @@ def ingest_all() -> dict[str, Any]:
     return stats
 
 if __name__ == "__main__":
-    out = ingest_all()
+    out = ingest_all(force=True)
     print(json.dumps(out, indent=2), flush=True)

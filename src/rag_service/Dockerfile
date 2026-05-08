@@ -26,15 +26,15 @@ RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
 COPY requirements-rag.txt /app/requirements-rag.txt
 
-# Explicitly cap numpy below 2.0.0 to maintain ABI compatibility with PyTorch 2.1.0
+# PRODUCTION FIX: Upgraded PyTorch to 2.4.0 to satisfy sentence-transformers ABI
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --index-url https://pypi.org/simple \
     --extra-index-url https://download.pytorch.org/whl/cpu \
     "numpy>=1.26.0,<2.0.0" \
     "typing_extensions>=4.10" \
-    torch==2.1.0+cpu \
-    torchvision==0.16.0+cpu \
-    torchaudio==2.1.0+cpu
+    torch==2.4.0+cpu \
+    torchvision==0.19.0+cpu \
+    torchaudio==2.4.0+cpu
 
 # Install remaining RAG dependencies
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
@@ -43,6 +43,8 @@ RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     -r /app/requirements-rag.txt
 
 COPY src/ /app/src/
+# PRODUCTION FIX: Explicitly copy the scripts directory to allow containerized data generation
+COPY scripts/ /app/scripts/
 
 # Fail-fast builder tests to ensure core libraries loaded correctly
 RUN python -c "import numpy, typing_extensions; print('builder deps ok')"
@@ -86,9 +88,10 @@ RUN install -d -m 0755 -o 10001 -g 10001 \
       /app/data/processed/manifest \
       /app/data/hf_cache
 
-# 2. Copy code and environment via single-layer chown to drastically reduce image bloat
+# 2. Copy code, environment, and scripts via single-layer chown to drastically reduce image bloat
 COPY --from=builder --chown=10001:10001 /opt/venv /opt/venv
 COPY --from=builder --chown=10001:10001 /app/src /app/src
+COPY --from=builder --chown=10001:10001 /app/scripts /app/scripts
 
 # Switch to non-root user before running final validation to prevent root-owned pycache generation
 USER appuser:appgroup

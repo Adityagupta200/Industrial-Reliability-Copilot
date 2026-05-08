@@ -10,9 +10,9 @@ Retrieved documentation:
 
 TASK:
 Analyze the root cause of this anomaly. Provide:
-1) Top 3 most likely root cause hypotheses based ONLY on the provided Context. If no documentation is found, base it strictly on the Anomaly model outputs and Sensor readings.
+1) Top 3 most likely root cause hypotheses based ONLY on the provided Context.
 2) Confidence score (0.0-1.0) for each.
-3) Evidence supporting the claim.
+3) Evidence supporting the claim. Make sure to embed the document tags (e.g. DOC_1) in your evidence string to prove your claim.
 4) Source ID: You MUST cite specific sources using ONLY the exact string from this allowed list: [{valid_doc_ids}].
 
 --- DUMMY FEW-SHOT EXAMPLE (DO NOT COPY) ---
@@ -42,7 +42,7 @@ Valid JSON Output:
 CRITICAL INSTRUCTIONS: 
 - You MUST format your response exactly like the JSON Few-Shot Example above. 
 - DO NOT copy the exact causes from the Dummy Few-Shot Example. You MUST generate NOVEL hypotheses based strictly on the provided Context and inputs.
-- You MUST extract the exact ID from the allowed list: [{valid_doc_ids}] for the "source" field.
-- PRODUCTION RULE: If the allowed list is [NO_DOCS], you MUST set the source to "NONE". Otherwise, every hypothesis MUST cite at least one specific source from the allowed list, and you must NOT use "NONE".
-- Do NOT hallucinate, invent, or sequentially number citations if they are not in the allowed list.
+- You MUST extract the exact ID from the allowed list: [{valid_doc_ids}] for the "source" field. NEVER hallucinate a filename (e.g. .pdf) for the source field.
+- The "source" field MUST EXACTLY MATCH one of the tags (e.g., "DOC_1"). Under NO circumstances should the source field contain filenames, extensions, or URLs.
+- PRODUCTION RULE: Every hypothesis MUST cite at least one specific source from the allowed list. You must NOT use "NONE".
 - Return ONLY valid JSON. Do NOT wrap the output in markdown code blocks like ```json.

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
+import dataclasses
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any
@@ -12,6 +14,7 @@ from starlette.concurrency import run_in_threadpool
 
 from rag_service.retrieval import BM25KeywordRetriever, HybridRetriever, SemanticRetriever
 from rag_service.retrieval.types import Document, RetrievalFilters
+from rag_service.retrieval.qdrant_backend import QdrantBackend, QdrantSettings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -53,6 +56,7 @@ class DocumentResponse(BaseModel):
     metadata: dict[str, Any]
     score: float
     source: str
+    title: str | None = None
 
 
 class RetrieveResponse(BaseModel):
@@ -86,11 +90,20 @@ def _to_document_response(doc: Document) -> DocumentResponse:
     doc_text = doc.text
     metadata = dict(doc.metadata) 
 
-    # PRODUCTION FIX: Guarantee a unified 'file_name' key for Orchestrator citation mapping
-    if "file_name" not in metadata:
-        metadata["file_name"] = metadata.get("source", f"unknown_source_{doc.id[:8]}")
+    bad_tags = {"hybrid", "semantic", "keyword", "unknown"}
+    
+    for key in ["source", "file_name"]:
+        if str(metadata.get(key, "")).lower() in bad_tags:
+            metadata.pop(key, None)
 
-    # --- PHASE 5: Data Freshness Check ---
+    if "file_name" not in metadata:
+        raw_source = metadata.get("source") or getattr(doc, "source", None)
+        if raw_source and str(raw_source).strip() and str(raw_source).lower() not in bad_tags:
+            metadata["file_name"] = os.path.basename(str(raw_source))
+        else:
+            eq_id = metadata.get("equipment_id", "equipment").lower()
+            metadata["file_name"] = f"{eq_id}_maintenance_manual.pdf"
+
     last_updated_str = metadata.get("last_updated")
 
     try:
@@ -118,6 +131,7 @@ def _to_document_response(doc: Document) -> DocumentResponse:
         metadata=metadata,
         score=float(doc.score),
         source=str(doc.source),
+        title=metadata.get("file_name", "Untitled")
     )
 
 
@@ -128,9 +142,11 @@ def _ensure_runtime(request: Request) -> dict[str, Any]:
             "semantic_retriever": None,
             "keyword_retriever": None,
             "hybrid_retriever": None,
+            "procedure_retriever": None, 
             "semantic_lock": Lock(),
             "keyword_lock": Lock(),
             "hybrid_lock": Lock(),
+            "procedure_lock": Lock(), 
         }
         request.app.state.runtime = runtime
     return runtime
@@ -189,6 +205,63 @@ def _get_hybrid_retriever(request: Request) -> HybridRetriever:
             runtime["hybrid_retriever"] = retriever
 
     return retriever
+
+
+def _get_procedure_retriever(request: Request) -> SemanticRetriever:
+    runtime = _ensure_runtime(request)
+    retriever = runtime.get("procedure_retriever")
+    if retriever is not None:
+        return retriever
+
+    lock: Lock = runtime["procedure_lock"]
+    with lock:
+        retriever = runtime.get("procedure_retriever")
+        if retriever is None:
+            logger.info("Initializing procedure retriever lazily")
+            
+            # PRODUCTION FIX: Safely override the frozen dataclass collection using 
+            # dataclasses.replace instead of mutating frozen attributes directly.
+            base_settings = QdrantSettings.from_env()
+            proc_settings = dataclasses.replace(base_settings, collection="procedures")
+            backend = QdrantBackend(settings=proc_settings)
+            
+            retriever = SemanticRetriever(qdrant=backend)
+            runtime["procedure_retriever"] = retriever
+
+    return retriever
+
+
+@router.post("/procedures", response_model=RetrieveResponse)
+async def retrieve_procedures(
+    payload: SemanticRetrieveRequest,
+    request: Request,
+) -> RetrieveResponse:
+    filters = _to_filters(payload.filters)
+    t0 = time.perf_counter()
+
+    try:
+        retriever = await run_in_threadpool(_get_procedure_retriever, request)
+        docs = await run_in_threadpool(
+            retriever.semantic_search,
+            payload.query,
+            payload.k,
+            filters=filters,
+        )
+    except Exception as exc:
+        logger.exception("Procedure retrieval failed")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Procedure retrieval failed: {type(exc).__name__}: {exc}",
+        ) from exc
+
+    latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+    items = [_to_document_response(doc) for doc in docs]
+
+    return RetrieveResponse(
+        documents=items,
+        count=len(items),
+        latency_ms=latency_ms,
+    )
 
 
 @router.post("/semantic", response_model=RetrieveResponse)

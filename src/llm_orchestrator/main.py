@@ -31,7 +31,11 @@ from .guardrails.input_filters import InputGuardrails
 from .guardrails.output_filters import OutputGuardrails  
 from .providers.base import LLMFatalError, LLMTransientError
 
-from evaluation.online.logger import log_interaction_async, AsyncSessionLocal, QueryLog, init_telemetry_db
+# PRODUCTION FIX: Imported the new job state DB utilities
+from evaluation.online.logger import (
+    log_interaction_async, AsyncSessionLocal, QueryLog, init_telemetry_db,
+    create_job_state, update_job_state, get_job_state
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -62,7 +66,7 @@ GUARDRAIL_FAILURES = Counter(
 )
 
 health_check_client: httpx.AsyncClient | None = None
-JOB_STORE: dict[str, dict] = {}
+# PRODUCTION FIX: Removed the in-memory dictionary JOB_STORE
 
 class FeedbackRequest(BaseModel):
     query_id: str
@@ -118,7 +122,7 @@ def create_app() -> FastAPI:
         hybrid_path=settings.services.rag_retrieve_hybrid_path,
         procedures_path=settings.services.rag_retrieve_procedures_path,
         semantic_path=settings.services.rag_retrieve_semantic_path,
-        timeout_s=5.0,  # PRODUCTION FIX: Increased to 5.0s to allow embedding creation without timeouts
+        timeout_s=5.0,
     )
 
     incident_repo = IncidentRepo(settings.services.incidents_db_dsn)
@@ -258,7 +262,6 @@ def create_app() -> FastAPI:
             pipeline_response.trace_id = trace_id
             pipeline_response.latency_ms = latency_ms
             pipeline_response.guardrails_applied = applied_guardrails
-
             pipeline_response.raw_context = "OMITTED_FROM_RESPONSE"
 
             await log_interaction_async(
@@ -269,11 +272,8 @@ def create_app() -> FastAPI:
                 latency=latency_ms,
             )
 
-            JOB_STORE[job_id] = {
-                "job_id": job_id,
-                "status": "completed",
-                "result": pipeline_response.dict()
-            }
+            # PRODUCTION FIX: Database Update
+            await update_job_state(job_id, status="completed", result=pipeline_response.dict())
 
         except ValueError as ve:
             error_msg = str(ve).lower()
@@ -283,19 +283,19 @@ def create_app() -> FastAPI:
                 GUARDRAIL_FAILURES.labels(type="input_validation").inc()
             
             logger.warning(f"Guardrail/Validation Blocked: {ve}")
-            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": str(ve)}
+            await update_job_state(job_id, status="failed", error=str(ve))
             
         except LLMFatalError as e:
             logger.error(f"Fatal LLM Error: {e}")
-            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": f"API Configuration Error: {str(e)}"}
+            await update_job_state(job_id, status="failed", error=f"API Configuration Error: {str(e)}")
             
         except LLMTransientError as e:
             logger.error(f"Transient LLM Error: {e}")
-            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": "LLM Provider Unavailable. SLA missed."}
+            await update_job_state(job_id, status="failed", error="LLM Provider Unavailable. SLA missed.")
             
         except Exception as e:
             logger.exception("Fatal LLM Orchestrator Background Crash")
-            JOB_STORE[job_id] = {"job_id": job_id, "status": "failed", "error": "Internal Server Error"}
+            await update_job_state(job_id, status="failed", error="Internal Server Error")
 
     @app.post("/query", status_code=202, tags=["Inference"])
     @limiter.limit("10/minute")
@@ -305,17 +305,24 @@ def create_app() -> FastAPI:
         trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
         job_id = trace_id 
         
-        JOB_STORE[job_id] = {"job_id": job_id, "status": "processing"}
+        # PRODUCTION FIX: Persist the job to the database immediately
+        await create_job_state(job_id)
+        
         background_tasks.add_task(process_query_bg, job_id, req, trace_id)
         
         response.headers["X-Trace-ID"] = trace_id
-        return JOB_STORE[job_id]
+        return {"job_id": job_id, "status": "processing"}
 
     @app.get("/query/{job_id}", tags=["Inference"])
     async def get_query_status(job_id: str):
-        if job_id not in JOB_STORE:
+        # PRODUCTION FIX: Retrieve job state from the database
+        job_data = await get_job_state(job_id)
+        
+        if not job_data:
             raise HTTPException(status_code=404, detail="Job not found")
-        return JOB_STORE[job_id]
+            
+        # Clean up response to omit null fields
+        return {k: v for k, v in job_data.items() if v is not None}
 
     @app.post("/feedback", tags=["Evaluation"])
     @limiter.limit("20/minute")

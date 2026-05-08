@@ -27,7 +27,13 @@ class Hypothesis(BaseModel):
     cause: str
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: str
-    source: str = Field(..., description='Must be a valid mapped ID like "DOC_1" or "NONE"')
+    # PRODUCTION FIX: Enforce deterministic citation mapping at the parsing layer.
+    # This prevents the LLM from inserting raw filenames (e.g., .pdf) into the schema.
+    source: str = Field(
+        ..., 
+        pattern=r"^(DOC_\d+|NONE)$", 
+        description='Must be exactly a valid mapped ID like "DOC_1" or "NONE"'
+    )
 
 
 class RootCauseResponse(BaseModel):

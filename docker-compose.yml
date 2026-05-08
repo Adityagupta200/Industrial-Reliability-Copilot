@@ -108,7 +108,6 @@ services:
       HOST: 0.0.0.0
       PORT: "8002"
       PYTHONPATH: /app/src
-      # PRODUCTION FIX: Switch to local HuggingFace embeddings via LangChain to match Qdrant ingestion dimensions
       EMBEDDING_PROVIDER: huggingface
       HUGGINGFACE_EMBEDDING_MODEL: BAAI/bge-large-en-v1.5
       EMBEDDING_NORMALIZE: "true"
@@ -116,7 +115,7 @@ services:
     ports:
       - "127.0.0.1:8002:8002"
     volumes:
-      - ./data/raw:/app/data/raw:ro
+      - ./data/raw:/app/data/raw:rw
       - irc_rag_processed:/app/data/processed
       - irc_hf_cache:/app/data/hf_cache
     networks:
@@ -167,9 +166,8 @@ services:
       - |
         echo "Waiting for Ollama API to settle..."
         sleep 5
-        # PRODUCTION FIX: Ensure the pulled model exactly matches the orchestrator's target
-        echo "Pulling llama3.1:8b-instruct for local background tasks..."
-        ollama pull llama3.1:8b-instruct
+        echo "Pulling llama3.1 for local background tasks..."
+        ollama pull llama3.1
         echo "Model successfully pulled into the volume!"
     depends_on:
       ollama:
@@ -218,10 +216,11 @@ services:
       - RAG_SERVICE_URL=http://rag-service:8002
       - ANOMALY_SERVICE_URL=http://anomaly-service:8001
       - INCIDENTS_DB_DSN=postgresql+asyncpg://irc:irc_password@postgres:5432/industrial_maintenance
-      # PRODUCTION FIX: Force LLM routing through the local LangChain Ollama provider
-      - LLM_PRIMARY_PROVIDER=ollama
+      - LLM_PRIMARY_PROVIDER=openai
+      - LLM_FALLBACK_PROVIDER=ollama
       - LLM_OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_OLLAMA_MODEL=llama3.1:8b-instruct
+      - LLM_OLLAMA_MODEL=llama3.1
+      - LLM_OPENAI_API_KEY=${OPENAI_API_KEY}
     networks:
       - irc_network
     logging:

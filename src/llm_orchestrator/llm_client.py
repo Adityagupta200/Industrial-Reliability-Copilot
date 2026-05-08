@@ -39,7 +39,6 @@ class LLMClient:
         )
 
     def _build_ollama(self, s: LLMSettings, is_judge: bool = False) -> LLMProvider:
-        # PRODUCTION FIX: Override aggressive 5s default timeout to 120s for local inference stability
         return OllamaProvider(
             base_url=s.ollama_base_url,
             model=s.ollama_model,
@@ -78,9 +77,15 @@ class LLMClient:
         try:
             return await self._invoke_with_retry(primary, prompt, json_mode=json_mode)
         except LLMTransientError as e:
-            if self._settings.primary_provider == "openai":
-                logger.error("Primary API unreachable. Blocking fallback to prevent SLA violation.")
-                raise LLMFatalError(f"Production API Failed: {e}") from e
-                
-            fallback = self._get_provider(self._settings.fallback_provider, is_judge)
-            return await self._invoke_with_retry(fallback, prompt, json_mode=json_mode)
+            # PRODUCTION FIX: Implement Graceful Degradation
+            logger.warning(
+                f"Primary provider '{self._settings.primary_provider}' failed: {e}. "
+                f"Initiating failover to fallback provider '{self._settings.fallback_provider}'."
+            )
+            
+            try:
+                fallback = self._get_provider(self._settings.fallback_provider, is_judge)
+                return await self._invoke_with_retry(fallback, prompt, json_mode=json_mode)
+            except Exception as fallback_err:
+                logger.error(f"Fallback provider also failed: {fallback_err}")
+                raise LLMFatalError("Complete LLM orchestration failure: Both primary and fallback APIs are down.") from fallback_err

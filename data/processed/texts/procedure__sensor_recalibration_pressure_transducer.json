@@ -1,5 +1,5 @@
 {
-  "source_file": "data/raw/procedures/sensor_recalibration_pressure_transducer.md",
+  "source_file": "C:/Users/abc/Industrial-Reliability-Copilot/data/raw/procedures/sensor_recalibration_pressure_transducer.md",
   "doc_type": "procedure",
   "text": "# Procedure: Pressure Sensor Recalibration\n\n## Safety\n- Depressurize the line and confirm with gauge.\n- Follow LOTO where applicable.\n\n## Steps\n1. Inspect wiring and connector seating.\n2. Replace cable if insulation damage is present.\n3. Calibrate using reference source at 0%, 50%, 100% points.\n4. Record calibration results and update maintenance log.\n\n## Verification\n- Sensor error within tolerance across test points."
 }

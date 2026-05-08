@@ -5,7 +5,7 @@ metadata:
   name: rag-service
   namespace: industrial-copilot
 spec:
-  replicas: 2
+  replicas: 1 # PRODUCTION FIX: Reduced from 2 to 1 to prevent cluster memory starvation
   selector:
     matchLabels:
       app: rag-service
@@ -16,8 +16,9 @@ spec:
     spec:
       containers:
       - name: rag-service
-        image: irc-rag-service-local:v1.0
-        imagePullPolicy: IfNotPresent
+        # PRODUCTION FIX: Point to AWS ECR instead of local Minikube cache
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/rag-service:v1.2
+        imagePullPolicy: Always # PRODUCTION FIX: Force EKS to pull from cloud registry
         envFrom:
         - configMapRef:
             name: copilot-config
@@ -27,10 +28,10 @@ spec:
         - containerPort: 8002
         resources:
           requests:
-            memory: "1.5Gi" # INCREASED: Accommodates BGE-Large
+            memory: "1.5Gi" # Accommodates BGE-Large
             cpu: "500m"
           limits:
-            memory: "4Gi"   # INCREASED: Prevents OOMKilled during inference spikes
+            memory: "4Gi"   # Prevents OOMKilled during inference spikes
             cpu: "2000m"
         startupProbe:
           httpGet:
@@ -44,15 +45,15 @@ spec:
             port: 8002
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED: Breathing room for heavy retrieval
-          failureThreshold: 10    # FIXED: Prevents pod termination during CPU spikes
+          timeoutSeconds: 10      # Breathing room for heavy retrieval
+          failureThreshold: 10    # Prevents pod termination during CPU spikes
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8002
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED: Prevents removal from internal routing 
+          timeoutSeconds: 10      # Prevents removal from internal routing 
           failureThreshold: 10    
 ---
 apiVersion: v1
@@ -77,7 +78,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: rag-service
-  minReplicas: 2
+  minReplicas: 1 # PRODUCTION FIX: Lowered floor to match base replicas
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -95,7 +96,7 @@ metadata:
   name: anomaly-service
   namespace: industrial-copilot
 spec:
-  replicas: 2
+  replicas: 1 # PRODUCTION FIX
   selector:
     matchLabels:
       app: anomaly-service
@@ -106,8 +107,8 @@ spec:
     spec:
       containers:
       - name: anomaly-service
-        image: irc-anomaly-service-local:v1.0
-        imagePullPolicy: IfNotPresent
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/anomaly-service:v1.2
+        imagePullPolicy: Always
         envFrom:
         - configMapRef:
             name: copilot-config
@@ -132,16 +133,16 @@ spec:
             port: 8001
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED
-          failureThreshold: 10    # FIXED
+          timeoutSeconds: 10      
+          failureThreshold: 10    
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8001
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED
-          failureThreshold: 10    # FIXED
+          timeoutSeconds: 10      
+          failureThreshold: 10    
 ---
 apiVersion: v1
 kind: Service
@@ -165,7 +166,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: anomaly-service
-  minReplicas: 2
+  minReplicas: 1 # PRODUCTION FIX
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -183,7 +184,7 @@ metadata:
   name: llm-orchestrator
   namespace: industrial-copilot
 spec:
-  replicas: 2
+  replicas: 1 # PRODUCTION FIX
   selector:
     matchLabels:
       app: llm-orchestrator
@@ -194,8 +195,8 @@ spec:
     spec:
       containers:
       - name: llm-orchestrator
-        image: irc-llm-orchestrator-local:v1.0
-        imagePullPolicy: IfNotPresent
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/llm-orchestrator:v1.2
+        imagePullPolicy: Always
         envFrom:
         - configMapRef:
             name: copilot-config
@@ -260,7 +261,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: llm-orchestrator
-  minReplicas: 2
+  minReplicas: 1 # PRODUCTION FIX
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -278,7 +279,7 @@ metadata:
   name: api-gateway
   namespace: industrial-copilot
 spec:
-  replicas: 2
+  replicas: 1 # PRODUCTION FIX
   selector:
     matchLabels:
       app: api-gateway
@@ -289,8 +290,8 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: irc-api-gateway-local:v1.0
-        imagePullPolicy: IfNotPresent
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/api-gateway:v1.2
+        imagePullPolicy: Always
         envFrom:
         - configMapRef:
             name: copilot-config
@@ -315,16 +316,16 @@ spec:
             port: 8000
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED
-          failureThreshold: 10    # FIXED
+          timeoutSeconds: 10      
+          failureThreshold: 10    
         readinessProbe:
           httpGet:
             path: /health/ready
             port: 8000
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # FIXED
-          failureThreshold: 10    # FIXED
+          timeoutSeconds: 10      
+          failureThreshold: 10    
 ---
 apiVersion: v1
 kind: Service
@@ -332,7 +333,7 @@ metadata:
   name: api-gateway
   namespace: industrial-copilot
   annotations:
-    # FIXED: Instructs AWS ELB / K8s Nginx to keep connections open for up to 10 minutes
+    # Instructs AWS ELB / K8s Nginx to keep connections open for up to 10 minutes
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "600"
 spec:
   type: LoadBalancer 

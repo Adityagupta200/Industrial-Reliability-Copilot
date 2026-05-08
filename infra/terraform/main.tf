@@ -59,6 +59,7 @@ module "eks" {
       desired_size   = 2
       instance_types = ["t3.medium"] # Matches PDF spec
 
+      # AL2023 explicitly defined to pass Step 7.4 verification
       ami_type = "AL2023_x86_64_STANDARD"
     }
   }
@@ -92,7 +93,7 @@ module "db" {
   skip_final_snapshot     = false # True is for dev only
 }
 
-# 4. Storage (S3) for Models & Documents (Phase 7 explicitly requires both)
+# 4. Storage (S3) for Models & Documents
 resource "aws_s3_bucket" "artifacts" {
   bucket = "irc-artifacts-${data.aws_caller_identity.current.account_id}"
 }
@@ -117,16 +118,17 @@ resource "aws_s3_bucket_versioning" "documents_versioning" {
 
 # 5. Container Registry (ECR)
 resource "aws_ecr_repository" "microservices" {
+  # PRODUCTION FIX: Removed 'irc-' prefix to match Step 7.5 docker push commands
   for_each = toset([
-    "irc-api-gateway",
-    "irc-llm-orchestrator",
-    "irc-rag-service",
-    "irc-anomaly-service"
+    "api-gateway",
+    "llm-orchestrator",
+    "rag-service",
+    "anomaly-service"
   ])
 
   name                 = each.key
   image_tag_mutability = "MUTABLE"
-  force_delete         = true 
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true

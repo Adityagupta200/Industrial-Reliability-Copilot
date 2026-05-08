@@ -1,4 +1,4 @@
-# Procedure: Bearing Replacement for Pump P-23
+ # Procedure: Bearing Replacement for Pump P-23
 
 ## Safety
 - Lockout/tagout (LOTO) before any work.

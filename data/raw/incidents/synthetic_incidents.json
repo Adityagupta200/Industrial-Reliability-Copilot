@@ -1,1378 +1,1438 @@
 {
   "records": [
     {
-      "timestamp": "2025-05-10T06:47:47.158445+00:00",
+      "timestamp": "2025-04-26T15:15:49.107717+00:00",
       "equipment_id": "turbofan_TF-01",
       "sensor_data": {
-        "vibration_rms": 5.439,
-        "temp_c": 124.45,
-        "pressure_bar": 12.87,
-        "flow_rate_lpm": 336.8
-      },
-      "failure_mode": "overheating",
-      "severity": "low",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.59
-    },
-    {
-      "timestamp": "2025-04-08T07:08:47.158445+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 5.807,
-        "temp_c": 34.61,
-        "pressure_bar": 1.45,
-        "flow_rate_lpm": 117.5
-      },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.6
-    },
-    {
-      "timestamp": "2026-01-14T05:39:47.158445+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 0.363,
-        "temp_c": 28.74,
-        "pressure_bar": 0.78,
-        "flow_rate_lpm": 84.0
-      },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.99
-    },
-    {
-      "timestamp": "2025-11-02T03:57:47.158445+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 2.907,
-        "temp_c": 88.29,
-        "pressure_bar": 14.21,
-        "flow_rate_lpm": 357.1
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.52
-    },
-    {
-      "timestamp": "2025-04-23T01:56:47.158445+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 1.285,
-        "temp_c": 40.33,
-        "pressure_bar": 2.78,
-        "flow_rate_lpm": 57.2
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.51
-    },
-    {
-      "timestamp": "2025-11-27T03:42:47.158445+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 4.772,
-        "temp_c": 24.2,
-        "pressure_bar": 9.35,
-        "flow_rate_lpm": 98.4
+        "vibration_rms": 8.229,
+        "temp_c": 87.93,
+        "pressure_bar": 8.38,
+        "flow_rate_lpm": 180.7
       },
       "failure_mode": "bearing_failure",
-      "severity": "medium",
+      "severity": "high",
       "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.19
+      "resolution_time_hours": 3.56
     },
     {
-      "timestamp": "2025-08-07T03:50:47.158445+00:00",
-      "equipment_id": "turbofan_TF-01",
+      "timestamp": "2025-12-13T13:15:49.107760+00:00",
+      "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 1.409,
-        "temp_c": 98.78,
-        "pressure_bar": 1.35,
-        "flow_rate_lpm": 108.8
-      },
-      "failure_mode": "cavitation",
-      "severity": "low",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.55
-    },
-    {
-      "timestamp": "2026-01-13T03:29:47.158445+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 2.458,
-        "temp_c": 115.28,
-        "pressure_bar": 13.22,
-        "flow_rate_lpm": 103.5
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 10.01
-    },
-    {
-      "timestamp": "2026-03-26T02:12:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 4.75,
-        "temp_c": 95.26,
-        "pressure_bar": 5.16,
-        "flow_rate_lpm": 11.7
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.18
-    },
-    {
-      "timestamp": "2025-05-19T05:21:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 1.56,
-        "temp_c": 54.81,
-        "pressure_bar": 1.51,
-        "flow_rate_lpm": 38.5
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "high",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 6.42
-    },
-    {
-      "timestamp": "2025-10-17T22:53:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 1.09,
-        "temp_c": 43.11,
-        "pressure_bar": 8.33,
-        "flow_rate_lpm": 235.7
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "high",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 4.7
-    },
-    {
-      "timestamp": "2025-08-11T22:30:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 1.164,
-        "temp_c": 120.37,
-        "pressure_bar": 14.26,
-        "flow_rate_lpm": 395.7
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.13
-    },
-    {
-      "timestamp": "2025-06-27T14:47:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 3.049,
-        "temp_c": 95.09,
-        "pressure_bar": 7.19,
-        "flow_rate_lpm": 299.4
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.22
-    },
-    {
-      "timestamp": "2026-03-28T20:21:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 0.202,
-        "temp_c": 98.0,
-        "pressure_bar": 4.03,
-        "flow_rate_lpm": 64.2
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.44
-    },
-    {
-      "timestamp": "2025-05-31T07:24:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 2.753,
-        "temp_c": 44.58,
-        "pressure_bar": 7.52,
-        "flow_rate_lpm": 38.7
+        "vibration_rms": 1.812,
+        "temp_c": 31.78,
+        "pressure_bar": 14.48,
+        "flow_rate_lpm": 248.1
       },
       "failure_mode": "scheduled_maintenance",
       "severity": "critical",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 9.09
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 3.77
     },
     {
-      "timestamp": "2025-04-06T23:00:47.159441+00:00",
+      "timestamp": "2025-08-02T11:19:49.107777+00:00",
       "equipment_id": "turbofan_TF-01",
       "sensor_data": {
-        "vibration_rms": 0.916,
-        "temp_c": 27.94,
-        "pressure_bar": 3.06,
-        "flow_rate_lpm": 376.0
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "medium",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.66
-    },
-    {
-      "timestamp": "2025-09-12T05:54:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 1.908,
-        "temp_c": 62.93,
-        "pressure_bar": 6.18,
-        "flow_rate_lpm": 377.2
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.35
-    },
-    {
-      "timestamp": "2026-03-26T12:10:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 1.881,
-        "temp_c": 69.79,
-        "pressure_bar": 1.52,
-        "flow_rate_lpm": 103.4
-      },
-      "failure_mode": "cavitation",
-      "severity": "high",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 8.32
-    },
-    {
-      "timestamp": "2025-10-14T21:19:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 3.952,
-        "temp_c": 118.63,
-        "pressure_bar": 1.97,
-        "flow_rate_lpm": 189.3
-      },
-      "failure_mode": "overheating",
-      "severity": "low",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.65
-    },
-    {
-      "timestamp": "2026-02-16T09:54:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 4.623,
-        "temp_c": 77.13,
-        "pressure_bar": 1.76,
-        "flow_rate_lpm": 68.4
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "high",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 5.27
-    },
-    {
-      "timestamp": "2025-11-07T17:17:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 2.42,
-        "temp_c": 85.42,
-        "pressure_bar": 5.86,
-        "flow_rate_lpm": 69.0
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.11
-    },
-    {
-      "timestamp": "2025-10-14T05:05:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 3.41,
-        "temp_c": 101.13,
-        "pressure_bar": 8.57,
-        "flow_rate_lpm": 356.6
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "high",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 8.51
-    },
-    {
-      "timestamp": "2026-01-01T10:07:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 4.382,
-        "temp_c": 43.24,
-        "pressure_bar": 13.51,
-        "flow_rate_lpm": 155.5
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "high",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 7.52
-    },
-    {
-      "timestamp": "2025-12-16T02:20:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 5.602,
-        "temp_c": 87.85,
-        "pressure_bar": 12.27,
-        "flow_rate_lpm": 336.7
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "critical",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 10.54
-    },
-    {
-      "timestamp": "2025-04-20T07:33:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 4.59,
-        "temp_c": 95.91,
-        "pressure_bar": 10.02,
-        "flow_rate_lpm": 154.9
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 0.9
-    },
-    {
-      "timestamp": "2025-08-01T04:49:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 5.991,
-        "temp_c": 83.68,
-        "pressure_bar": 11.87,
-        "flow_rate_lpm": 322.0
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "high",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 3.88
-    },
-    {
-      "timestamp": "2025-10-03T13:01:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 4.463,
-        "temp_c": 110.1,
-        "pressure_bar": 2.81,
-        "flow_rate_lpm": 260.3
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 3.18
-    },
-    {
-      "timestamp": "2025-06-28T10:52:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 3.877,
-        "temp_c": 92.28,
-        "pressure_bar": 7.01,
-        "flow_rate_lpm": 28.7
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.16
-    },
-    {
-      "timestamp": "2025-05-17T11:32:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 5.413,
-        "temp_c": 135.03,
-        "pressure_bar": 6.3,
-        "flow_rate_lpm": 74.8
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 8.27
-    },
-    {
-      "timestamp": "2025-08-12T12:22:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 3.779,
-        "temp_c": 115.68,
-        "pressure_bar": 2.04,
-        "flow_rate_lpm": 69.0
+        "vibration_rms": 8.33,
+        "temp_c": 27.29,
+        "pressure_bar": 5.01,
+        "flow_rate_lpm": 318.6
       },
       "failure_mode": "bearing_failure",
-      "severity": "medium",
+      "severity": "low",
       "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.39
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 2.47
     },
     {
-      "timestamp": "2025-12-19T12:04:47.159441+00:00",
-      "equipment_id": "pump_P-07",
+      "timestamp": "2025-05-04T04:33:49.107792+00:00",
+      "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 0.996,
-        "temp_c": 66.57,
-        "pressure_bar": 0.58,
-        "flow_rate_lpm": 68.2
-      },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.44
-    },
-    {
-      "timestamp": "2026-03-27T02:05:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 4.771,
-        "temp_c": 60.78,
-        "pressure_bar": 8.18,
-        "flow_rate_lpm": 65.5
+        "vibration_rms": 4.548,
+        "temp_c": 113.07,
+        "pressure_bar": 3.83,
+        "flow_rate_lpm": 202.1
       },
       "failure_mode": "scheduled_maintenance",
       "severity": "medium",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.94
-    },
-    {
-      "timestamp": "2026-02-04T20:04:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 2.269,
-        "temp_c": 102.35,
-        "pressure_bar": 3.5,
-        "flow_rate_lpm": 99.2
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 6.15
-    },
-    {
-      "timestamp": "2025-08-25T08:35:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 2.423,
-        "temp_c": 46.82,
-        "pressure_bar": 7.09,
-        "flow_rate_lpm": 230.0
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.76
-    },
-    {
-      "timestamp": "2026-03-09T23:50:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 3.427,
-        "temp_c": 57.55,
-        "pressure_bar": 3.6,
-        "flow_rate_lpm": 394.8
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.02
-    },
-    {
-      "timestamp": "2025-12-12T20:24:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 7.435,
-        "temp_c": 103.52,
-        "pressure_bar": 13.93,
-        "flow_rate_lpm": 281.3
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "medium",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
       "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.53
+      "resolution_time_hours": 1.48
     },
     {
-      "timestamp": "2026-01-23T22:24:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 3.427,
-        "temp_c": 78.61,
-        "pressure_bar": 5.91,
-        "flow_rate_lpm": 314.0
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "high",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 6.5
-    },
-    {
-      "timestamp": "2025-07-10T08:39:47.159441+00:00",
+      "timestamp": "2026-04-13T00:24:49.107803+00:00",
       "equipment_id": "pump_P-23",
       "sensor_data": {
-        "vibration_rms": 5.731,
-        "temp_c": 102.96,
-        "pressure_bar": 8.35,
-        "flow_rate_lpm": 361.4
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.46
-    },
-    {
-      "timestamp": "2025-11-29T19:05:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 1.419,
-        "temp_c": 117.73,
-        "pressure_bar": 7.28,
-        "flow_rate_lpm": 319.1
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 6.63
-    },
-    {
-      "timestamp": "2025-07-10T19:17:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 1.54,
-        "temp_c": 111.27,
-        "pressure_bar": 3.16,
-        "flow_rate_lpm": 378.6
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.41
-    },
-    {
-      "timestamp": "2025-11-09T12:28:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 0.877,
-        "temp_c": 81.26,
-        "pressure_bar": 13.81,
-        "flow_rate_lpm": 310.6
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.09
-    },
-    {
-      "timestamp": "2026-01-15T19:16:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 2.489,
-        "temp_c": 100.32,
-        "pressure_bar": 1.6,
-        "flow_rate_lpm": 357.0
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.45
-    },
-    {
-      "timestamp": "2026-02-02T05:49:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 1.522,
-        "temp_c": 29.93,
-        "pressure_bar": 2.89,
-        "flow_rate_lpm": 52.6
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "high",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 7.92
-    },
-    {
-      "timestamp": "2026-03-24T19:06:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 3.496,
-        "temp_c": 88.54,
-        "pressure_bar": 13.29,
-        "flow_rate_lpm": 298.1
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.33
-    },
-    {
-      "timestamp": "2026-01-07T20:06:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 1.97,
-        "temp_c": 112.4,
-        "pressure_bar": 0.5,
-        "flow_rate_lpm": 95.4
+        "vibration_rms": 1.003,
+        "temp_c": 26.14,
+        "pressure_bar": 2.01,
+        "flow_rate_lpm": 65.8
       },
       "failure_mode": "cavitation",
-      "severity": "high",
+      "severity": "medium",
       "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 5.8
+      "resolution_time_hours": 2.39
     },
     {
-      "timestamp": "2025-04-29T07:39:47.159441+00:00",
+      "timestamp": "2026-01-19T00:15:49.107815+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 2.469,
+        "temp_c": 120.01,
+        "pressure_bar": 13.98,
+        "flow_rate_lpm": 355.8
+      },
+      "failure_mode": "overheating",
+      "severity": "low",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.65
+    },
+    {
+      "timestamp": "2026-01-09T09:38:49.107826+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 3.445,
+        "temp_c": 110.91,
+        "pressure_bar": 3.72,
+        "flow_rate_lpm": 72.2
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "medium",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.72
+    },
+    {
+      "timestamp": "2025-12-31T19:50:49.107839+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 4.207,
+        "temp_c": 33.54,
+        "pressure_bar": 5.11,
+        "flow_rate_lpm": 175.1
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 2.0
+    },
+    {
+      "timestamp": "2025-08-23T06:48:49.107853+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 0.475,
-        "temp_c": 58.56,
-        "pressure_bar": 11.81,
-        "flow_rate_lpm": 333.5
+        "vibration_rms": 0.646,
+        "temp_c": 57.21,
+        "pressure_bar": 12.16,
+        "flow_rate_lpm": 189.8
       },
       "failure_mode": "scheduled_maintenance",
-      "severity": "critical",
+      "severity": "medium",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 6.56
-    },
-    {
-      "timestamp": "2025-08-08T22:41:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 0.683,
-        "temp_c": 109.88,
-        "pressure_bar": 5.29,
-        "flow_rate_lpm": 294.6
-      },
-      "failure_mode": "overheating",
-      "severity": "critical",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 8.75
-    },
-    {
-      "timestamp": "2025-11-10T03:30:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 2.02,
-        "temp_c": 83.85,
-        "pressure_bar": 0.61,
-        "flow_rate_lpm": 90.8
-      },
-      "failure_mode": "cavitation",
-      "severity": "high",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 11.36
-    },
-    {
-      "timestamp": "2025-08-15T20:08:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 0.16,
-        "temp_c": 88.23,
-        "pressure_bar": 1.28,
-        "flow_rate_lpm": 53.8
-      },
-      "failure_mode": "cavitation",
-      "severity": "low",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.34
-    },
-    {
-      "timestamp": "2025-12-23T07:10:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 4.658,
-        "temp_c": 107.1,
-        "pressure_bar": 13.35,
-        "flow_rate_lpm": 312.8
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "critical",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 10.49
-    },
-    {
-      "timestamp": "2026-03-20T23:26:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 0.923,
-        "temp_c": 119.76,
-        "pressure_bar": 10.87,
-        "flow_rate_lpm": 32.1
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "high",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 5.25
-    },
-    {
-      "timestamp": "2025-07-08T08:17:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 1.827,
-        "temp_c": 101.65,
-        "pressure_bar": 9.56,
-        "flow_rate_lpm": 340.0
-      },
-      "failure_mode": "overheating",
-      "severity": "low",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Resolved; equipment returned to service.",
       "resolution_time_hours": 1.89
     },
     {
-      "timestamp": "2025-12-30T12:02:47.159441+00:00",
-      "equipment_id": "pump_P-07",
+      "timestamp": "2025-12-15T17:09:49.107863+00:00",
+      "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 0.352,
-        "temp_c": 86.7,
-        "pressure_bar": 10.31,
-        "flow_rate_lpm": 310.7
+        "vibration_rms": 2.826,
+        "temp_c": 49.93,
+        "pressure_bar": 0.73,
+        "flow_rate_lpm": 61.2
       },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.05
-    },
-    {
-      "timestamp": "2026-01-22T04:31:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 3.98,
-        "temp_c": 48.77,
-        "pressure_bar": 2.67,
-        "flow_rate_lpm": 258.8
-      },
-      "failure_mode": "bearing_failure",
+      "failure_mode": "sensor_malfunction",
       "severity": "high",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 7.62
-    },
-    {
-      "timestamp": "2026-01-06T23:22:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 3.214,
-        "temp_c": 30.55,
-        "pressure_bar": 13.98,
-        "flow_rate_lpm": 203.9
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.0
-    },
-    {
-      "timestamp": "2025-11-22T20:44:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 4.715,
-        "temp_c": 77.91,
-        "pressure_bar": 14.43,
-        "flow_rate_lpm": 274.6
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.66
-    },
-    {
-      "timestamp": "2026-02-21T07:34:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 3.753,
-        "temp_c": 106.55,
-        "pressure_bar": 4.0,
-        "flow_rate_lpm": 249.7
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.63
-    },
-    {
-      "timestamp": "2025-11-05T18:53:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 0.735,
-        "temp_c": 136.15,
-        "pressure_bar": 14.5,
-        "flow_rate_lpm": 80.1
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.13
-    },
-    {
-      "timestamp": "2025-12-09T03:01:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 5.769,
-        "temp_c": 86.04,
-        "pressure_bar": 7.34,
-        "flow_rate_lpm": 227.1
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "high",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 4.4
+      "resolution_time_hours": 8.21
     },
     {
-      "timestamp": "2025-09-07T04:24:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
+      "timestamp": "2025-11-21T03:15:49.107874+00:00",
+      "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 4.093,
-        "temp_c": 37.12,
-        "pressure_bar": 1.52,
-        "flow_rate_lpm": 61.0
+        "vibration_rms": 0.487,
+        "temp_c": 75.55,
+        "pressure_bar": 0.77,
+        "flow_rate_lpm": 60.0
       },
       "failure_mode": "cavitation",
-      "severity": "high",
+      "severity": "medium",
       "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 6.39
-    },
-    {
-      "timestamp": "2026-01-26T22:59:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 2.146,
-        "temp_c": 120.88,
-        "pressure_bar": 5.62,
-        "flow_rate_lpm": 109.5
-      },
-      "failure_mode": "overheating",
-      "severity": "critical",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 6.24
+      "resolution_time_hours": 1.8
     },
     {
-      "timestamp": "2026-03-12T10:39:47.159441+00:00",
-      "equipment_id": "pump_P-23",
+      "timestamp": "2025-11-02T07:00:49.107886+00:00",
+      "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 0.596,
-        "temp_c": 77.51,
-        "pressure_bar": 1.43,
-        "flow_rate_lpm": 173.3
+        "vibration_rms": 4.839,
+        "temp_c": 87.14,
+        "pressure_bar": 4.1,
+        "flow_rate_lpm": 365.9
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "high",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 3.51
+    },
+    {
+      "timestamp": "2025-06-13T08:03:49.107896+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.057,
+        "temp_c": 26.5,
+        "pressure_bar": 11.09,
+        "flow_rate_lpm": 378.0
       },
       "failure_mode": "sensor_malfunction",
       "severity": "medium",
       "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
       "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.54
+      "resolution_time_hours": 1.43
     },
     {
-      "timestamp": "2025-10-10T08:18:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
+      "timestamp": "2025-12-19T18:51:49.107905+00:00",
+      "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 1.595,
-        "temp_c": 104.62,
-        "pressure_bar": 4.52,
-        "flow_rate_lpm": 193.3
+        "vibration_rms": 4.479,
+        "temp_c": 29.25,
+        "pressure_bar": 6.25,
+        "flow_rate_lpm": 260.8
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.15
+    },
+    {
+      "timestamp": "2025-10-28T21:08:49.107914+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 3.263,
+        "temp_c": 89.1,
+        "pressure_bar": 13.36,
+        "flow_rate_lpm": 164.3
       },
       "failure_mode": "lubrication_issue",
       "severity": "low",
       "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.59
+      "resolution_time_hours": 1.82
     },
     {
-      "timestamp": "2025-12-13T05:44:47.159441+00:00",
+      "timestamp": "2025-10-21T22:06:49.107922+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 4.714,
-        "temp_c": 95.79,
-        "pressure_bar": 2.93,
-        "flow_rate_lpm": 89.9
-      },
-      "failure_mode": "cavitation",
-      "severity": "low",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.46
-    },
-    {
-      "timestamp": "2025-10-18T00:41:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 3.624,
-        "temp_c": 33.03,
-        "pressure_bar": 1.91,
-        "flow_rate_lpm": 73.2
-      },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.4
-    },
-    {
-      "timestamp": "2025-07-06T01:14:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 5.812,
-        "temp_c": 25.98,
-        "pressure_bar": 2.8,
-        "flow_rate_lpm": 97.7
-      },
-      "failure_mode": "cavitation",
-      "severity": "high",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 9.3
-    },
-    {
-      "timestamp": "2026-02-15T13:18:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 2.715,
-        "temp_c": 89.09,
-        "pressure_bar": 14.05,
-        "flow_rate_lpm": 316.1
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "critical",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 3.43
-    },
-    {
-      "timestamp": "2025-05-15T11:00:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 0.631,
-        "temp_c": 39.8,
-        "pressure_bar": 1.83,
-        "flow_rate_lpm": 95.1
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.48
-    },
-    {
-      "timestamp": "2025-09-22T17:11:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 0.989,
-        "temp_c": 100.3,
-        "pressure_bar": 1.97,
-        "flow_rate_lpm": 122.1
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.41
-    },
-    {
-      "timestamp": "2025-09-02T18:30:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 5.921,
-        "temp_c": 53.56,
-        "pressure_bar": 7.62,
-        "flow_rate_lpm": 310.5
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "high",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 5.83
-    },
-    {
-      "timestamp": "2025-04-19T23:10:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 4.541,
-        "temp_c": 49.89,
-        "pressure_bar": 8.09,
-        "flow_rate_lpm": 344.3
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "high",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 6.59
-    },
-    {
-      "timestamp": "2026-01-06T08:45:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 1.859,
-        "temp_c": 61.09,
-        "pressure_bar": 4.85,
-        "flow_rate_lpm": 68.5
+        "vibration_rms": 3.165,
+        "temp_c": 83.42,
+        "pressure_bar": 6.39,
+        "flow_rate_lpm": 226.7
       },
       "failure_mode": "sensor_malfunction",
-      "severity": "low",
+      "severity": "high",
       "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.51
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 11.72
     },
     {
-      "timestamp": "2025-09-17T02:23:47.159441+00:00",
+      "timestamp": "2025-11-04T18:16:49.107930+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 4.747,
+        "temp_c": 91.14,
+        "pressure_bar": 11.94,
+        "flow_rate_lpm": 67.4
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.27
+    },
+    {
+      "timestamp": "2026-03-25T10:03:49.107939+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 2.699,
+        "temp_c": 78.87,
+        "pressure_bar": 0.94,
+        "flow_rate_lpm": 55.5
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 3.78
+    },
+    {
+      "timestamp": "2025-07-18T09:40:49.107949+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 3.61,
-        "temp_c": 64.87,
-        "pressure_bar": 2.48,
-        "flow_rate_lpm": 205.8
+        "vibration_rms": 3.526,
+        "temp_c": 111.98,
+        "pressure_bar": 9.1,
+        "flow_rate_lpm": 134.1
       },
       "failure_mode": "scheduled_maintenance",
       "severity": "medium",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.2
+    },
+    {
+      "timestamp": "2026-03-11T17:09:49.107958+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 2.188,
+        "temp_c": 71.65,
+        "pressure_bar": 2.92,
+        "flow_rate_lpm": 328.3
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.17
+    },
+    {
+      "timestamp": "2025-06-29T12:54:49.107966+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 5.221,
+        "temp_c": 87.5,
+        "pressure_bar": 11.78,
+        "flow_rate_lpm": 313.6
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.65
+    },
+    {
+      "timestamp": "2025-09-22T17:02:49.107974+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 1.881,
+        "temp_c": 101.83,
+        "pressure_bar": 10.41,
+        "flow_rate_lpm": 196.6
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.28
+    },
+    {
+      "timestamp": "2025-04-19T17:52:49.107983+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 2.04,
+        "temp_c": 107.1,
+        "pressure_bar": 2.58,
+        "flow_rate_lpm": 110.4
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 10.24
+    },
+    {
+      "timestamp": "2025-09-29T05:39:49.107992+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 1.69,
+        "temp_c": 98.82,
+        "pressure_bar": 13.29,
+        "flow_rate_lpm": 399.7
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.81
+    },
+    {
+      "timestamp": "2025-12-02T18:29:49.108001+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 3.713,
+        "temp_c": 47.66,
+        "pressure_bar": 4.77,
+        "flow_rate_lpm": 282.4
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "critical",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 3.33
+    },
+    {
+      "timestamp": "2026-01-02T21:08:49.108010+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 0.646,
+        "temp_c": 65.55,
+        "pressure_bar": 0.52,
+        "flow_rate_lpm": 71.7
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.63
+    },
+    {
+      "timestamp": "2026-02-18T05:28:49.108018+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 0.999,
+        "temp_c": 85.85,
+        "pressure_bar": 8.63,
+        "flow_rate_lpm": 301.2
+      },
+      "failure_mode": "overheating",
+      "severity": "low",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.85
+    },
+    {
+      "timestamp": "2025-11-06T17:06:49.108028+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 4.485,
+        "temp_c": 74.18,
+        "pressure_bar": 3.92,
+        "flow_rate_lpm": 380.7
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.74
+    },
+    {
+      "timestamp": "2025-12-31T10:17:49.108042+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 0.528,
+        "temp_c": 102.79,
+        "pressure_bar": 9.9,
+        "flow_rate_lpm": 116.1
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.89
+    },
+    {
+      "timestamp": "2025-07-16T16:45:49.108051+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 8.447,
+        "temp_c": 46.92,
+        "pressure_bar": 3.96,
+        "flow_rate_lpm": 134.1
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "medium",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.72
+    },
+    {
+      "timestamp": "2026-04-02T22:49:49.108061+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 3.31,
+        "temp_c": 111.14,
+        "pressure_bar": 14.61,
+        "flow_rate_lpm": 149.9
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 6.97
+    },
+    {
+      "timestamp": "2025-07-11T11:38:49.108070+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 0.698,
+        "temp_c": 117.77,
+        "pressure_bar": 2.03,
+        "flow_rate_lpm": 166.0
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.72
+    },
+    {
+      "timestamp": "2026-02-04T12:09:49.108078+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 3.65,
+        "temp_c": 110.32,
+        "pressure_bar": 12.16,
+        "flow_rate_lpm": 227.7
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "critical",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.96
+    },
+    {
+      "timestamp": "2025-08-03T02:13:49.108087+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.794,
+        "temp_c": 46.22,
+        "pressure_bar": 12.68,
+        "flow_rate_lpm": 376.1
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "medium",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.33
+    },
+    {
+      "timestamp": "2025-11-12T15:37:49.108098+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 0.822,
+        "temp_c": 44.01,
+        "pressure_bar": 5.57,
+        "flow_rate_lpm": 326.4
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "high",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 4.67
+    },
+    {
+      "timestamp": "2025-04-27T14:32:49.108107+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 7.737,
+        "temp_c": 31.46,
+        "pressure_bar": 0.94,
+        "flow_rate_lpm": 212.9
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "high",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 3.35
+    },
+    {
+      "timestamp": "2025-06-05T19:11:49.108115+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 4.548,
+        "temp_c": 30.62,
+        "pressure_bar": 12.74,
+        "flow_rate_lpm": 345.5
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.89
+    },
+    {
+      "timestamp": "2025-05-04T17:54:49.108126+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.744,
+        "temp_c": 100.79,
+        "pressure_bar": 7.54,
+        "flow_rate_lpm": 84.0
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.84
+    },
+    {
+      "timestamp": "2025-12-30T01:54:49.108135+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 6.822,
+        "temp_c": 101.57,
+        "pressure_bar": 5.57,
+        "flow_rate_lpm": 13.4
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "high",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.19
+    },
+    {
+      "timestamp": "2026-03-28T17:41:49.108143+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 0.485,
+        "temp_c": 136.38,
+        "pressure_bar": 2.08,
+        "flow_rate_lpm": 304.0
+      },
+      "failure_mode": "overheating",
+      "severity": "low",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.18
+    },
+    {
+      "timestamp": "2026-03-11T06:45:49.108152+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 1.331,
+        "temp_c": 112.33,
+        "pressure_bar": 1.61,
+        "flow_rate_lpm": 93.6
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.34
+    },
+    {
+      "timestamp": "2025-09-25T16:37:49.108161+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 5.882,
+        "temp_c": 58.49,
+        "pressure_bar": 13.88,
+        "flow_rate_lpm": 78.3
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
       "outcome": "Mitigated; monitor for 48 hours.",
       "resolution_time_hours": 2.45
     },
     {
-      "timestamp": "2025-08-29T15:01:47.159441+00:00",
-      "equipment_id": "motor_M-12",
+      "timestamp": "2025-06-30T21:17:49.108169+00:00",
+      "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 1.815,
-        "temp_c": 34.86,
-        "pressure_bar": 1.48,
-        "flow_rate_lpm": 90.8
-      },
-      "failure_mode": "cavitation",
-      "severity": "critical",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 10.68
-    },
-    {
-      "timestamp": "2026-03-15T13:40:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 2.332,
-        "temp_c": 42.81,
-        "pressure_bar": 14.75,
-        "flow_rate_lpm": 398.7
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.25
-    },
-    {
-      "timestamp": "2026-03-02T10:22:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 6.078,
-        "temp_c": 52.78,
-        "pressure_bar": 9.82,
-        "flow_rate_lpm": 41.5
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "medium",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.51
-    },
-    {
-      "timestamp": "2025-05-21T21:54:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 2.48,
-        "temp_c": 43.42,
-        "pressure_bar": 14.56,
-        "flow_rate_lpm": 49.5
+        "vibration_rms": 1.324,
+        "temp_c": 84.91,
+        "pressure_bar": 12.23,
+        "flow_rate_lpm": 329.9
       },
       "failure_mode": "scheduled_maintenance",
       "severity": "medium",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.16
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.65
     },
     {
-      "timestamp": "2025-07-03T01:11:47.159441+00:00",
+      "timestamp": "2025-09-11T05:40:49.108177+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 5.623,
+        "temp_c": 52.3,
+        "pressure_bar": 0.69,
+        "flow_rate_lpm": 64.2
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 4.56
+    },
+    {
+      "timestamp": "2025-10-13T13:54:49.108186+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 4.787,
+        "temp_c": 111.81,
+        "pressure_bar": 9.18,
+        "flow_rate_lpm": 325.5
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 6.4
+    },
+    {
+      "timestamp": "2026-02-18T09:02:49.108195+00:00",
       "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 4.861,
-        "temp_c": 38.53,
-        "pressure_bar": 1.07,
-        "flow_rate_lpm": 86.2
+        "vibration_rms": 2.665,
+        "temp_c": 33.62,
+        "pressure_bar": 2.63,
+        "flow_rate_lpm": 77.9
+      },
+      "failure_mode": "cavitation",
+      "severity": "medium",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.5
+    },
+    {
+      "timestamp": "2025-08-24T11:44:49.108203+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 5.005,
+        "temp_c": 86.54,
+        "pressure_bar": 5.54,
+        "flow_rate_lpm": 184.0
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "medium",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.72
+    },
+    {
+      "timestamp": "2025-07-03T16:16:49.108211+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 5.839,
+        "temp_c": 49.31,
+        "pressure_bar": 9.79,
+        "flow_rate_lpm": 114.5
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.76
+    },
+    {
+      "timestamp": "2025-12-26T09:30:49.108265+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 4.214,
+        "temp_c": 29.37,
+        "pressure_bar": 1.73,
+        "flow_rate_lpm": 85.3
+      },
+      "failure_mode": "cavitation",
+      "severity": "medium",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.9
+    },
+    {
+      "timestamp": "2025-08-14T23:43:49.108277+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 4.542,
+        "temp_c": 60.47,
+        "pressure_bar": 7.33,
+        "flow_rate_lpm": 152.8
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "medium",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.57
+    },
+    {
+      "timestamp": "2026-01-01T23:56:49.108285+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.752,
+        "temp_c": 116.81,
+        "pressure_bar": 11.47,
+        "flow_rate_lpm": 270.0
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "low",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.64
+    },
+    {
+      "timestamp": "2025-05-01T09:05:49.108294+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 3.775,
+        "temp_c": 32.72,
+        "pressure_bar": 9.77,
+        "flow_rate_lpm": 159.8
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "medium",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.01
+    },
+    {
+      "timestamp": "2025-07-02T07:53:49.108303+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 4.797,
+        "temp_c": 37.57,
+        "pressure_bar": 8.66,
+        "flow_rate_lpm": 10.7
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "low",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.85
+    },
+    {
+      "timestamp": "2025-10-24T17:01:49.108313+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 8.486,
+        "temp_c": 101.86,
+        "pressure_bar": 3.48,
+        "flow_rate_lpm": 52.0
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "high",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 10.1
+    },
+    {
+      "timestamp": "2025-11-01T03:50:49.108322+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 5.224,
+        "temp_c": 86.96,
+        "pressure_bar": 13.35,
+        "flow_rate_lpm": 268.7
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "high",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 6.29
+    },
+    {
+      "timestamp": "2025-12-25T17:41:49.108330+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 0.809,
+        "temp_c": 93.12,
+        "pressure_bar": 2.4,
+        "flow_rate_lpm": 116.0
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 7.77
+    },
+    {
+      "timestamp": "2025-08-21T07:36:49.108340+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.941,
+        "temp_c": 89.62,
+        "pressure_bar": 7.19,
+        "flow_rate_lpm": 115.8
+      },
+      "failure_mode": "overheating",
+      "severity": "low",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.34
+    },
+    {
+      "timestamp": "2025-04-14T02:41:49.108352+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 1.475,
+        "temp_c": 57.07,
+        "pressure_bar": 2.39,
+        "flow_rate_lpm": 84.3
+      },
+      "failure_mode": "cavitation",
+      "severity": "critical",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 6.51
+    },
+    {
+      "timestamp": "2025-09-01T04:31:49.108364+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 4.635,
+        "temp_c": 97.76,
+        "pressure_bar": 3.13,
+        "flow_rate_lpm": 305.3
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.73
+    },
+    {
+      "timestamp": "2026-04-01T05:52:49.108376+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 3.753,
+        "temp_c": 81.72,
+        "pressure_bar": 1.58,
+        "flow_rate_lpm": 84.7
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 6.81
+    },
+    {
+      "timestamp": "2025-07-03T07:39:49.108389+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 3.754,
+        "temp_c": 40.65,
+        "pressure_bar": 9.64,
+        "flow_rate_lpm": 92.0
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "critical",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.93
+    },
+    {
+      "timestamp": "2025-08-15T02:18:49.108398+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 4.885,
+        "temp_c": 98.87,
+        "pressure_bar": 3.4,
+        "flow_rate_lpm": 310.7
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.43
+    },
+    {
+      "timestamp": "2025-12-01T10:04:49.108407+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.043,
+        "temp_c": 53.2,
+        "pressure_bar": 13.82,
+        "flow_rate_lpm": 115.5
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.27
+    },
+    {
+      "timestamp": "2025-05-08T19:32:49.108416+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 1.713,
+        "temp_c": 102.28,
+        "pressure_bar": 5.94,
+        "flow_rate_lpm": 361.6
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "low",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.98
+    },
+    {
+      "timestamp": "2025-09-07T02:12:49.108425+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.526,
+        "temp_c": 119.84,
+        "pressure_bar": 2.74,
+        "flow_rate_lpm": 278.0
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 9.72
+    },
+    {
+      "timestamp": "2026-03-27T19:04:49.108435+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 5.979,
+        "temp_c": 104.65,
+        "pressure_bar": 2.95,
+        "flow_rate_lpm": 33.0
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "high",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 5.75
+    },
+    {
+      "timestamp": "2026-01-14T11:35:49.108443+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 0.41,
+        "temp_c": 48.25,
+        "pressure_bar": 1.64,
+        "flow_rate_lpm": 50.5
       },
       "failure_mode": "cavitation",
       "severity": "low",
       "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Escalated; further inspection required.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.65
+    },
+    {
+      "timestamp": "2026-04-03T08:32:49.108452+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 2.104,
+        "temp_c": 71.75,
+        "pressure_bar": 1.52,
+        "flow_rate_lpm": 95.9
+      },
+      "failure_mode": "cavitation",
+      "severity": "medium",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.37
+    },
+    {
+      "timestamp": "2026-03-31T10:12:49.108462+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 0.603,
+        "temp_c": 137.66,
+        "pressure_bar": 0.58,
+        "flow_rate_lpm": 223.4
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Resolved; equipment returned to service.",
       "resolution_time_hours": 1.15
     },
     {
-      "timestamp": "2025-07-03T17:19:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
+      "timestamp": "2025-12-12T04:47:49.108470+00:00",
+      "equipment_id": "pump_P-23",
       "sensor_data": {
-        "vibration_rms": 8.414,
-        "temp_c": 81.98,
-        "pressure_bar": 6.44,
-        "flow_rate_lpm": 115.1
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "critical",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 7.75
-    },
-    {
-      "timestamp": "2025-07-25T13:05:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 4.18,
-        "temp_c": 80.89,
-        "pressure_bar": 2.35,
-        "flow_rate_lpm": 91.2
+        "vibration_rms": 1.598,
+        "temp_c": 87.48,
+        "pressure_bar": 2.33,
+        "flow_rate_lpm": 77.6
       },
       "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.46
-    },
-    {
-      "timestamp": "2025-04-08T17:09:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 4.747,
-        "temp_c": 117.29,
-        "pressure_bar": 10.01,
-        "flow_rate_lpm": 16.2
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.07
-    },
-    {
-      "timestamp": "2026-01-03T21:55:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 6.715,
-        "temp_c": 24.86,
-        "pressure_bar": 2.97,
-        "flow_rate_lpm": 215.7
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "medium",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 0.96
-    },
-    {
-      "timestamp": "2025-05-31T01:11:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 0.231,
-        "temp_c": 105.93,
-        "pressure_bar": 3.02,
-        "flow_rate_lpm": 178.8
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.5
-    },
-    {
-      "timestamp": "2025-05-26T16:21:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 4.354,
-        "temp_c": 38.94,
-        "pressure_bar": 3.6,
-        "flow_rate_lpm": 397.5
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.08
-    },
-    {
-      "timestamp": "2026-03-04T06:32:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 6.483,
-        "temp_c": 116.95,
-        "pressure_bar": 11.98,
-        "flow_rate_lpm": 180.8
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "medium",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.99
-    },
-    {
-      "timestamp": "2026-02-12T11:21:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 2.041,
-        "temp_c": 127.36,
-        "pressure_bar": 11.83,
-        "flow_rate_lpm": 277.3
-      },
-      "failure_mode": "overheating",
-      "severity": "low",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.4
-    },
-    {
-      "timestamp": "2025-05-28T02:21:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 5.021,
-        "temp_c": 61.05,
-        "pressure_bar": 3.4,
-        "flow_rate_lpm": 91.3
-      },
-      "failure_mode": "sensor_malfunction",
       "severity": "critical",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 4.79
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 4.51
     },
     {
-      "timestamp": "2025-11-01T23:54:47.159441+00:00",
+      "timestamp": "2026-01-12T04:02:49.108479+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 5.327,
+        "temp_c": 98.36,
+        "pressure_bar": 11.93,
+        "flow_rate_lpm": 88.7
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 7.22
+    },
+    {
+      "timestamp": "2025-10-14T01:06:49.108488+00:00",
       "equipment_id": "turbofan_TF-01",
       "sensor_data": {
-        "vibration_rms": 4.242,
-        "temp_c": 90.18,
-        "pressure_bar": 6.06,
-        "flow_rate_lpm": 107.7
+        "vibration_rms": 5.364,
+        "temp_c": 67.3,
+        "pressure_bar": 9.0,
+        "flow_rate_lpm": 294.8
       },
       "failure_mode": "scheduled_maintenance",
-      "severity": "critical",
+      "severity": "medium",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 10.09
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.86
     },
     {
-      "timestamp": "2025-04-12T08:44:47.159441+00:00",
+      "timestamp": "2025-07-24T16:45:49.108496+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 2.73,
+        "temp_c": 45.4,
+        "pressure_bar": 7.34,
+        "flow_rate_lpm": 174.4
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "low",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.15
+    },
+    {
+      "timestamp": "2025-10-19T23:17:49.108505+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 1.019,
+        "temp_c": 93.26,
+        "pressure_bar": 11.82,
+        "flow_rate_lpm": 264.1
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 11.85
+    },
+    {
+      "timestamp": "2025-09-14T02:44:49.108516+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 1.046,
+        "temp_c": 98.14,
+        "pressure_bar": 5.18,
+        "flow_rate_lpm": 26.7
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.88
+    },
+    {
+      "timestamp": "2025-09-25T03:57:49.108539+00:00",
       "equipment_id": "pump_P-07",
       "sensor_data": {
-        "vibration_rms": 3.86,
-        "temp_c": 24.04,
-        "pressure_bar": 3.98,
-        "flow_rate_lpm": 208.8
+        "vibration_rms": 5.181,
+        "temp_c": 114.46,
+        "pressure_bar": 0.87,
+        "flow_rate_lpm": 72.3
       },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "critical",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 3.41
+      "failure_mode": "bearing_failure",
+      "severity": "high",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 5.16
     },
     {
-      "timestamp": "2025-05-03T22:19:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
+      "timestamp": "2026-03-11T10:50:49.108553+00:00",
+      "equipment_id": "pump_P-23",
       "sensor_data": {
-        "vibration_rms": 3.349,
-        "temp_c": 60.6,
-        "pressure_bar": 8.46,
-        "flow_rate_lpm": 384.9
+        "vibration_rms": 2.813,
+        "temp_c": 89.08,
+        "pressure_bar": 1.35,
+        "flow_rate_lpm": 61.3
       },
       "failure_mode": "sensor_malfunction",
       "severity": "critical",
       "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
       "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.43
+      "resolution_time_hours": 3.1
     },
     {
-      "timestamp": "2025-09-02T17:38:47.159441+00:00",
+      "timestamp": "2026-03-12T19:18:49.108563+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 1.606,
+        "temp_c": 43.32,
+        "pressure_bar": 9.11,
+        "flow_rate_lpm": 66.9
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "medium",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.36
+    },
+    {
+      "timestamp": "2025-09-22T05:24:49.108572+00:00",
       "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 3.252,
-        "temp_c": 77.96,
-        "pressure_bar": 2.15,
-        "flow_rate_lpm": 314.7
+        "vibration_rms": 5.259,
+        "temp_c": 56.24,
+        "pressure_bar": 14.86,
+        "flow_rate_lpm": 43.1
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "low",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.93
+    },
+    {
+      "timestamp": "2025-06-26T14:17:49.108585+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 0.52,
+        "temp_c": 132.37,
+        "pressure_bar": 9.44,
+        "flow_rate_lpm": 343.6
+      },
+      "failure_mode": "overheating",
+      "severity": "critical",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 8.05
+    },
+    {
+      "timestamp": "2025-05-26T15:29:49.108594+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 1.172,
+        "temp_c": 114.62,
+        "pressure_bar": 13.57,
+        "flow_rate_lpm": 105.4
       },
       "failure_mode": "sensor_malfunction",
       "severity": "critical",
       "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 5.51
+      "resolution_time_hours": 11.23
     },
     {
-      "timestamp": "2025-10-16T20:47:47.159441+00:00",
+      "timestamp": "2025-04-14T13:08:49.108609+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 7.504,
+        "temp_c": 51.47,
+        "pressure_bar": 4.27,
+        "flow_rate_lpm": 143.5
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "medium",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.0
+    },
+    {
+      "timestamp": "2025-08-28T00:48:49.108619+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 0.915,
+        "temp_c": 119.29,
+        "pressure_bar": 3.13,
+        "flow_rate_lpm": 262.8
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "low",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.1
+    },
+    {
+      "timestamp": "2025-08-30T08:40:49.108627+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.707,
+        "temp_c": 92.14,
+        "pressure_bar": 7.03,
+        "flow_rate_lpm": 38.3
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "high",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 6.99
+    },
+    {
+      "timestamp": "2025-11-07T09:41:49.108635+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 5.607,
+        "temp_c": 54.67,
+        "pressure_bar": 5.64,
+        "flow_rate_lpm": 163.7
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.75
+    },
+    {
+      "timestamp": "2026-04-11T15:28:49.108647+00:00",
       "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 4.965,
-        "temp_c": 113.4,
-        "pressure_bar": 9.06,
-        "flow_rate_lpm": 258.6
+        "vibration_rms": 4.688,
+        "temp_c": 48.87,
+        "pressure_bar": 12.6,
+        "flow_rate_lpm": 61.0
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.88
+    },
+    {
+      "timestamp": "2025-04-22T14:57:49.108655+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.72,
+        "temp_c": 90.39,
+        "pressure_bar": 1.71,
+        "flow_rate_lpm": 81.9
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.83
+    },
+    {
+      "timestamp": "2026-02-20T17:48:49.108664+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 0.421,
+        "temp_c": 62.35,
+        "pressure_bar": 9.13,
+        "flow_rate_lpm": 322.0
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.56
+    },
+    {
+      "timestamp": "2025-10-19T05:00:49.108672+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 0.786,
+        "temp_c": 117.38,
+        "pressure_bar": 9.42,
+        "flow_rate_lpm": 345.4
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "high",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 5.59
+    },
+    {
+      "timestamp": "2025-12-30T22:32:49.108681+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 1.003,
+        "temp_c": 92.01,
+        "pressure_bar": 5.7,
+        "flow_rate_lpm": 131.6
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "medium",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.93
+    },
+    {
+      "timestamp": "2025-10-30T11:46:49.108689+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 4.404,
+        "temp_c": 64.12,
+        "pressure_bar": 8.14,
+        "flow_rate_lpm": 94.4
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "high",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 5.5
+    },
+    {
+      "timestamp": "2026-03-27T14:10:49.108701+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 3.746,
+        "temp_c": 122.9,
+        "pressure_bar": 9.05,
+        "flow_rate_lpm": 105.5
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 3.12
+    },
+    {
+      "timestamp": "2025-06-11T03:57:49.108710+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 4.86,
+        "temp_c": 85.21,
+        "pressure_bar": 0.93,
+        "flow_rate_lpm": 81.7
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.99
+    },
+    {
+      "timestamp": "2025-05-27T17:24:49.108720+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 3.782,
+        "temp_c": 122.85,
+        "pressure_bar": 2.75,
+        "flow_rate_lpm": 365.8
+      },
+      "failure_mode": "overheating",
+      "severity": "critical",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 10.55
+    },
+    {
+      "timestamp": "2026-03-18T22:06:49.108728+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.887,
+        "temp_c": 25.69,
+        "pressure_bar": 14.66,
+        "flow_rate_lpm": 343.9
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.83
+    },
+    {
+      "timestamp": "2025-06-12T23:40:49.108742+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 5.108,
+        "temp_c": 104.41,
+        "pressure_bar": 13.64,
+        "flow_rate_lpm": 188.5
       },
       "failure_mode": "sensor_malfunction",
       "severity": "low",
@@ -1381,1018 +1441,373 @@
       "resolution_time_hours": 0.9
     },
     {
-      "timestamp": "2025-04-06T16:56:47.159441+00:00",
-      "equipment_id": "motor_M-12",
+      "timestamp": "2025-08-02T16:46:49.108751+00:00",
+      "equipment_id": "turbofan_TF-01",
       "sensor_data": {
-        "vibration_rms": 2.881,
-        "temp_c": 115.37,
-        "pressure_bar": 1.48,
-        "flow_rate_lpm": 66.3
+        "vibration_rms": 3.977,
+        "temp_c": 107.25,
+        "pressure_bar": 2.27,
+        "flow_rate_lpm": 291.0
       },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.24
-    },
-    {
-      "timestamp": "2025-11-23T08:21:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 5.067,
-        "temp_c": 118.77,
-        "pressure_bar": 2.26,
-        "flow_rate_lpm": 15.1
-      },
-      "failure_mode": "lubrication_issue",
+      "failure_mode": "bearing_failure",
       "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.13
+      "resolution_time_hours": 0.85
     },
     {
-      "timestamp": "2025-11-05T04:51:47.159441+00:00",
+      "timestamp": "2025-05-16T08:10:49.108759+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 7.972,
-        "temp_c": 81.4,
-        "pressure_bar": 14.35,
-        "flow_rate_lpm": 199.8
+        "vibration_rms": 7.775,
+        "temp_c": 68.41,
+        "pressure_bar": 5.33,
+        "flow_rate_lpm": 379.6
       },
       "failure_mode": "bearing_failure",
       "severity": "medium",
       "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.37
-    },
-    {
-      "timestamp": "2025-12-28T10:27:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 5.631,
-        "temp_c": 94.97,
-        "pressure_bar": 6.52,
-        "flow_rate_lpm": 386.3
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 7.71
+      "resolution_time_hours": 1.65
     },
     {
-      "timestamp": "2025-10-22T02:59:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 1.382,
-        "temp_c": 104.72,
-        "pressure_bar": 6.17,
-        "flow_rate_lpm": 17.1
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 6.0
-    },
-    {
-      "timestamp": "2025-07-27T09:43:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 0.596,
-        "temp_c": 54.31,
-        "pressure_bar": 4.37,
-        "flow_rate_lpm": 13.7
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.36
-    },
-    {
-      "timestamp": "2025-08-17T12:31:47.159441+00:00",
+      "timestamp": "2026-02-27T13:45:49.108768+00:00",
       "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 3.063,
-        "temp_c": 94.09,
-        "pressure_bar": 9.15,
-        "flow_rate_lpm": 305.1
+        "vibration_rms": 2.109,
+        "temp_c": 38.91,
+        "pressure_bar": 14.23,
+        "flow_rate_lpm": 269.5
       },
       "failure_mode": "sensor_malfunction",
       "severity": "medium",
       "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.26
-    },
-    {
-      "timestamp": "2025-07-17T07:26:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 0.478,
-        "temp_c": 102.15,
-        "pressure_bar": 11.11,
-        "flow_rate_lpm": 141.5
-      },
-      "failure_mode": "overheating",
-      "severity": "critical",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 9.22
-    },
-    {
-      "timestamp": "2025-05-01T01:49:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 4.491,
-        "temp_c": 113.63,
-        "pressure_bar": 6.99,
-        "flow_rate_lpm": 85.2
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.38
+      "resolution_time_hours": 1.5
     },
     {
-      "timestamp": "2025-10-09T13:38:47.159441+00:00",
+      "timestamp": "2025-10-25T09:07:49.108776+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.068,
+        "temp_c": 116.85,
+        "pressure_bar": 6.34,
+        "flow_rate_lpm": 299.8
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.54
+    },
+    {
+      "timestamp": "2025-12-08T03:07:49.108784+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 8.163,
+        "temp_c": 110.34,
+        "pressure_bar": 7.16,
+        "flow_rate_lpm": 149.5
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "low",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.9
+    },
+    {
+      "timestamp": "2025-10-02T09:00:49.108795+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 3.002,
-        "temp_c": 110.25,
-        "pressure_bar": 1.46,
-        "flow_rate_lpm": 113.8
+        "vibration_rms": 3.117,
+        "temp_c": 53.06,
+        "pressure_bar": 6.6,
+        "flow_rate_lpm": 105.3
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.97
+    },
+    {
+      "timestamp": "2025-08-23T10:15:49.108803+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 2.592,
+        "temp_c": 64.56,
+        "pressure_bar": 12.17,
+        "flow_rate_lpm": 342.2
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "medium",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.4
+    },
+    {
+      "timestamp": "2025-09-15T14:47:49.108811+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 2.593,
+        "temp_c": 67.54,
+        "pressure_bar": 2.64,
+        "flow_rate_lpm": 80.3
       },
       "failure_mode": "cavitation",
       "severity": "low",
       "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.32
+      "resolution_time_hours": 2.44
     },
     {
-      "timestamp": "2025-06-17T12:29:47.159441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 6.238,
-        "temp_c": 63.12,
-        "pressure_bar": 8.55,
-        "flow_rate_lpm": 251.8
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "medium",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.1
-    },
-    {
-      "timestamp": "2025-04-30T04:02:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 3.654,
-        "temp_c": 65.85,
-        "pressure_bar": 9.12,
-        "flow_rate_lpm": 35.1
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "critical",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 8.53
-    },
-    {
-      "timestamp": "2026-01-28T07:17:47.159441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 2.485,
-        "temp_c": 99.01,
-        "pressure_bar": 14.27,
-        "flow_rate_lpm": 139.0
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.14
-    },
-    {
-      "timestamp": "2025-06-01T11:34:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 5.423,
-        "temp_c": 35.52,
-        "pressure_bar": 9.99,
-        "flow_rate_lpm": 91.5
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.21
-    },
-    {
-      "timestamp": "2025-10-18T02:40:47.159441+00:00",
+      "timestamp": "2026-01-04T23:25:49.108820+00:00",
       "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 2.649,
-        "temp_c": 69.23,
-        "pressure_bar": 2.05,
-        "flow_rate_lpm": 357.0
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "high",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 3.06
-    },
-    {
-      "timestamp": "2026-03-14T10:39:47.159441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 0.914,
-        "temp_c": 43.54,
-        "pressure_bar": 6.41,
-        "flow_rate_lpm": 51.6
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "high",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 8.92
-    },
-    {
-      "timestamp": "2025-05-17T04:44:47.159441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 0.683,
-        "temp_c": 54.33,
-        "pressure_bar": 1.47,
-        "flow_rate_lpm": 66.5
-      },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.9
-    },
-    {
-      "timestamp": "2025-10-15T10:10:47.159441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 0.57,
-        "temp_c": 96.82,
-        "pressure_bar": 13.21,
-        "flow_rate_lpm": 373.8
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "critical",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 6.84
-    },
-    {
-      "timestamp": "2025-08-25T01:12:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 1.341,
-        "temp_c": 76.97,
-        "pressure_bar": 0.95,
-        "flow_rate_lpm": 59.6
-      },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.08
-    },
-    {
-      "timestamp": "2026-02-10T14:50:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 1.82,
-        "temp_c": 63.49,
-        "pressure_bar": 5.47,
-        "flow_rate_lpm": 115.3
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "critical",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 10.71
-    },
-    {
-      "timestamp": "2025-05-14T04:34:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 5.493,
-        "temp_c": 106.18,
-        "pressure_bar": 13.35,
-        "flow_rate_lpm": 326.6
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.84
-    },
-    {
-      "timestamp": "2025-09-08T21:00:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 3.119,
-        "temp_c": 28.98,
-        "pressure_bar": 1.04,
-        "flow_rate_lpm": 17.4
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.13
-    },
-    {
-      "timestamp": "2026-01-14T01:20:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 2.88,
-        "temp_c": 86.73,
-        "pressure_bar": 1.11,
-        "flow_rate_lpm": 156.8
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.39
-    },
-    {
-      "timestamp": "2025-11-21T17:48:47.160441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 8.485,
-        "temp_c": 31.35,
-        "pressure_bar": 1.27,
-        "flow_rate_lpm": 393.1
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.25
-    },
-    {
-      "timestamp": "2026-02-01T19:34:47.160441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 5.025,
-        "temp_c": 106.65,
-        "pressure_bar": 0.68,
-        "flow_rate_lpm": 99.2
-      },
-      "failure_mode": "overheating",
-      "severity": "low",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.91
-    },
-    {
-      "timestamp": "2025-06-25T21:25:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 2.696,
-        "temp_c": 113.61,
-        "pressure_bar": 3.43,
-        "flow_rate_lpm": 100.7
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "high",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 8.51
-    },
-    {
-      "timestamp": "2025-06-02T03:34:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 5.2,
-        "temp_c": 82.7,
-        "pressure_bar": 13.75,
-        "flow_rate_lpm": 206.8
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "medium",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.03
-    },
-    {
-      "timestamp": "2025-08-27T06:45:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 4.677,
-        "temp_c": 64.78,
-        "pressure_bar": 9.16,
-        "flow_rate_lpm": 195.0
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.34
-    },
-    {
-      "timestamp": "2026-02-03T02:52:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 4.359,
-        "temp_c": 52.03,
-        "pressure_bar": 11.02,
-        "flow_rate_lpm": 195.4
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.16
-    },
-    {
-      "timestamp": "2026-02-15T09:18:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 4.258,
-        "temp_c": 58.7,
-        "pressure_bar": 7.05,
-        "flow_rate_lpm": 364.4
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "critical",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 9.18
-    },
-    {
-      "timestamp": "2025-04-06T02:53:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 3.642,
-        "temp_c": 111.45,
-        "pressure_bar": 10.59,
-        "flow_rate_lpm": 333.5
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.05
-    },
-    {
-      "timestamp": "2025-08-12T23:51:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 8.032,
-        "temp_c": 109.58,
-        "pressure_bar": 3.84,
-        "flow_rate_lpm": 315.7
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.46
-    },
-    {
-      "timestamp": "2025-04-19T05:58:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 5.06,
-        "temp_c": 114.05,
-        "pressure_bar": 8.83,
-        "flow_rate_lpm": 356.2
+        "vibration_rms": 3.467,
+        "temp_c": 87.5,
+        "pressure_bar": 11.63,
+        "flow_rate_lpm": 200.4
       },
       "failure_mode": "overheating",
       "severity": "medium",
       "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.08
+      "resolution_time_hours": 2.33
     },
     {
-      "timestamp": "2025-06-01T06:50:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 3.59,
-        "temp_c": 88.51,
-        "pressure_bar": 12.23,
-        "flow_rate_lpm": 170.9
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "medium",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.89
-    },
-    {
-      "timestamp": "2025-07-08T14:09:47.160441+00:00",
+      "timestamp": "2025-09-18T20:57:49.108828+00:00",
       "equipment_id": "pump_P-23",
       "sensor_data": {
-        "vibration_rms": 3.904,
-        "temp_c": 103.61,
-        "pressure_bar": 12.62,
-        "flow_rate_lpm": 30.7
+        "vibration_rms": 5.363,
+        "temp_c": 117.39,
+        "pressure_bar": 7.8,
+        "flow_rate_lpm": 397.7
       },
-      "failure_mode": "scheduled_maintenance",
+      "failure_mode": "overheating",
       "severity": "high",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 4.02
+      "resolution_time_hours": 7.32
     },
     {
-      "timestamp": "2026-03-28T07:25:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 3.874,
-        "temp_c": 25.25,
-        "pressure_bar": 8.57,
-        "flow_rate_lpm": 316.7
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.27
-    },
-    {
-      "timestamp": "2025-10-21T14:05:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 3.428,
-        "temp_c": 99.25,
-        "pressure_bar": 10.65,
-        "flow_rate_lpm": 391.8
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.14
-    },
-    {
-      "timestamp": "2025-09-30T12:54:47.160441+00:00",
+      "timestamp": "2025-09-28T09:29:49.108837+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 8.41,
-        "temp_c": 69.92,
-        "pressure_bar": 12.55,
-        "flow_rate_lpm": 159.6
+        "vibration_rms": 3.603,
+        "temp_c": 91.99,
+        "pressure_bar": 4.96,
+        "flow_rate_lpm": 70.5
       },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.05
+      "resolution_time_hours": 10.41
     },
     {
-      "timestamp": "2025-08-24T08:42:47.160441+00:00",
-      "equipment_id": "pump_P-07",
+      "timestamp": "2025-06-09T15:41:49.108845+00:00",
+      "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 5.834,
-        "temp_c": 38.4,
-        "pressure_bar": 11.83,
-        "flow_rate_lpm": 311.9
+        "vibration_rms": 5.914,
+        "temp_c": 46.39,
+        "pressure_bar": 2.98,
+        "flow_rate_lpm": 156.6
       },
       "failure_mode": "scheduled_maintenance",
-      "severity": "low",
+      "severity": "medium",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.14
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.01
     },
     {
-      "timestamp": "2025-05-29T11:56:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 5.578,
-        "temp_c": 38.05,
-        "pressure_bar": 14.53,
-        "flow_rate_lpm": 368.6
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "high",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 4.81
-    },
-    {
-      "timestamp": "2025-12-08T10:07:47.160441+00:00",
+      "timestamp": "2025-09-25T01:26:49.108853+00:00",
       "equipment_id": "pump_P-07",
       "sensor_data": {
-        "vibration_rms": 3.864,
-        "temp_c": 95.56,
-        "pressure_bar": 2.46,
-        "flow_rate_lpm": 252.3
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.28
-    },
-    {
-      "timestamp": "2025-10-21T18:59:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 5.828,
-        "temp_c": 57.61,
+        "vibration_rms": 4.612,
+        "temp_c": 127.66,
         "pressure_bar": 8.33,
-        "flow_rate_lpm": 175.7
+        "flow_rate_lpm": 326.5
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 9.32
+    },
+    {
+      "timestamp": "2025-12-05T07:07:49.108862+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 7.698,
+        "temp_c": 55.96,
+        "pressure_bar": 7.31,
+        "flow_rate_lpm": 214.7
       },
       "failure_mode": "bearing_failure",
       "severity": "low",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.0
+    },
+    {
+      "timestamp": "2026-01-21T03:13:49.108870+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 4.698,
+        "temp_c": 63.82,
+        "pressure_bar": 2.23,
+        "flow_rate_lpm": 251.4
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "medium",
       "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
       "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.53
+      "resolution_time_hours": 1.71
     },
     {
-      "timestamp": "2025-11-07T23:56:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 7.397,
-        "temp_c": 80.94,
-        "pressure_bar": 12.27,
-        "flow_rate_lpm": 193.3
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "high",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 6.3
-    },
-    {
-      "timestamp": "2026-02-17T23:34:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 2.262,
-        "temp_c": 60.97,
-        "pressure_bar": 1.42,
-        "flow_rate_lpm": 130.8
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.17
-    },
-    {
-      "timestamp": "2025-09-30T20:51:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 0.33,
-        "temp_c": 56.26,
-        "pressure_bar": 8.74,
-        "flow_rate_lpm": 235.5
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.15
-    },
-    {
-      "timestamp": "2026-02-22T16:27:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 2.51,
-        "temp_c": 54.15,
-        "pressure_bar": 11.28,
-        "flow_rate_lpm": 307.2
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "medium",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.54
-    },
-    {
-      "timestamp": "2025-07-27T03:44:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 1.507,
-        "temp_c": 102.8,
-        "pressure_bar": 14.5,
-        "flow_rate_lpm": 66.6
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.42
-    },
-    {
-      "timestamp": "2025-08-10T13:38:47.160441+00:00",
+      "timestamp": "2025-09-18T00:26:49.108882+00:00",
       "equipment_id": "pump_P-23",
       "sensor_data": {
-        "vibration_rms": 3.14,
-        "temp_c": 69.06,
-        "pressure_bar": 4.65,
-        "flow_rate_lpm": 369.1
+        "vibration_rms": 1.71,
+        "temp_c": 118.82,
+        "pressure_bar": 5.65,
+        "flow_rate_lpm": 308.9
       },
-      "failure_mode": "lubrication_issue",
+      "failure_mode": "overheating",
       "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
       "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.37
+      "resolution_time_hours": 0.87
     },
     {
-      "timestamp": "2025-08-25T15:27:47.160441+00:00",
+      "timestamp": "2026-04-02T08:53:49.108891+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 1.541,
+        "temp_c": 55.12,
+        "pressure_bar": 8.11,
+        "flow_rate_lpm": 106.7
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "critical",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 3.41
+    },
+    {
+      "timestamp": "2025-12-11T23:44:49.108899+00:00",
       "equipment_id": "turbofan_TF-01",
       "sensor_data": {
-        "vibration_rms": 5.522,
-        "temp_c": 68.19,
-        "pressure_bar": 8.29,
-        "flow_rate_lpm": 168.3
-      },
-      "failure_mode": "bearing_failure",
-      "severity": "low",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.99
-    },
-    {
-      "timestamp": "2025-05-11T09:29:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 0.236,
-        "temp_c": 65.34,
-        "pressure_bar": 1.03,
-        "flow_rate_lpm": 115.6
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.42
-    },
-    {
-      "timestamp": "2025-08-26T23:59:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 4.597,
-        "temp_c": 117.9,
-        "pressure_bar": 1.62,
-        "flow_rate_lpm": 97.4
+        "vibration_rms": 4.922,
+        "temp_c": 118.76,
+        "pressure_bar": 2.49,
+        "flow_rate_lpm": 99.7
       },
       "failure_mode": "cavitation",
-      "severity": "critical",
+      "severity": "medium",
       "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 10.95
-    },
-    {
-      "timestamp": "2026-03-22T11:04:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 5.098,
-        "temp_c": 81.24,
-        "pressure_bar": 12.56,
-        "flow_rate_lpm": 385.8
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.84
-    },
-    {
-      "timestamp": "2025-05-30T15:14:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 5.734,
-        "temp_c": 107.33,
-        "pressure_bar": 10.14,
-        "flow_rate_lpm": 189.9
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "critical",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 5.97
-    },
-    {
-      "timestamp": "2025-07-08T11:50:47.160441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 3.241,
-        "temp_c": 36.63,
-        "pressure_bar": 8.07,
-        "flow_rate_lpm": 207.0
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
       "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.66
+      "resolution_time_hours": 1.58
     },
     {
-      "timestamp": "2025-05-30T16:31:47.160441+00:00",
+      "timestamp": "2025-10-08T11:54:49.108909+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 3.175,
-        "temp_c": 106.93,
-        "pressure_bar": 3.84,
-        "flow_rate_lpm": 74.4
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "low",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.76
-    },
-    {
-      "timestamp": "2025-04-15T11:44:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 1.404,
-        "temp_c": 22.59,
-        "pressure_bar": 12.35,
-        "flow_rate_lpm": 152.6
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "medium",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.88
-    },
-    {
-      "timestamp": "2025-11-02T00:25:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 8.055,
-        "temp_c": 56.23,
-        "pressure_bar": 13.21,
-        "flow_rate_lpm": 397.2
+        "vibration_rms": 4.029,
+        "temp_c": 88.3,
+        "pressure_bar": 11.73,
+        "flow_rate_lpm": 257.3
       },
       "failure_mode": "bearing_failure",
-      "severity": "low",
+      "severity": "critical",
       "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.67
-    },
-    {
-      "timestamp": "2025-06-05T08:15:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 4.536,
-        "temp_c": 26.39,
-        "pressure_bar": 9.09,
-        "flow_rate_lpm": 232.6
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
       "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.68
+      "resolution_time_hours": 7.14
     },
     {
-      "timestamp": "2025-12-28T05:06:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 0.566,
-        "temp_c": 90.84,
-        "pressure_bar": 1.18,
-        "flow_rate_lpm": 50.3
-      },
-      "failure_mode": "cavitation",
-      "severity": "high",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 9.53
-    },
-    {
-      "timestamp": "2025-06-14T01:38:47.160441+00:00",
+      "timestamp": "2025-09-23T11:48:49.108918+00:00",
       "equipment_id": "pump_P-23",
       "sensor_data": {
-        "vibration_rms": 5.69,
-        "temp_c": 109.01,
-        "pressure_bar": 5.72,
-        "flow_rate_lpm": 180.8
+        "vibration_rms": 3.756,
+        "temp_c": 23.13,
+        "pressure_bar": 10.7,
+        "flow_rate_lpm": 239.5
       },
-      "failure_mode": "overheating",
-      "severity": "low",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.23
-    },
-    {
-      "timestamp": "2026-01-30T09:50:47.160441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 4.283,
-        "temp_c": 124.04,
-        "pressure_bar": 8.91,
-        "flow_rate_lpm": 144.5
-      },
-      "failure_mode": "overheating",
-      "severity": "low",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.29
-    },
-    {
-      "timestamp": "2026-02-24T19:39:47.160441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 5.642,
-        "temp_c": 113.48,
-        "pressure_bar": 7.27,
-        "flow_rate_lpm": 385.8
-      },
-      "failure_mode": "overheating",
-      "severity": "high",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.73
-    },
-    {
-      "timestamp": "2025-11-10T04:21:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 0.806,
-        "temp_c": 52.05,
-        "pressure_bar": 0.64,
-        "flow_rate_lpm": 300.0
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "high",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 7.7
-    },
-    {
-      "timestamp": "2025-05-11T19:02:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 0.427,
-        "temp_c": 36.62,
-        "pressure_bar": 6.65,
-        "flow_rate_lpm": 271.0
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 0.6
-    },
-    {
-      "timestamp": "2025-04-30T19:47:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 1.27,
-        "temp_c": 83.87,
-        "pressure_bar": 12.33,
-        "flow_rate_lpm": 180.7
-      },
-      "failure_mode": "sensor_malfunction",
+      "failure_mode": "bearing_failure",
       "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.04
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.43
     },
     {
-      "timestamp": "2025-06-29T22:02:47.160441+00:00",
+      "timestamp": "2025-08-19T10:10:49.108927+00:00",
       "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 0.617,
-        "temp_c": 76.52,
-        "pressure_bar": 1.26,
-        "flow_rate_lpm": 203.0
+        "vibration_rms": 4.399,
+        "temp_c": 106.63,
+        "pressure_bar": 1.13,
+        "flow_rate_lpm": 61.3
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.83
+    },
+    {
+      "timestamp": "2025-04-20T01:59:49.108968+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 3.877,
+        "temp_c": 63.56,
+        "pressure_bar": 12.04,
+        "flow_rate_lpm": 295.0
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "medium",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.85
+    },
+    {
+      "timestamp": "2026-02-16T06:58:49.108984+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 4.786,
+        "temp_c": 99.98,
+        "pressure_bar": 4.61,
+        "flow_rate_lpm": 311.3
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "high",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 5.66
+    },
+    {
+      "timestamp": "2026-02-02T16:53:49.108995+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.025,
+        "temp_c": 114.83,
+        "pressure_bar": 14.52,
+        "flow_rate_lpm": 127.3
       },
       "failure_mode": "sensor_malfunction",
       "severity": "low",
       "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 2.05
+      "resolution_time_hours": 2.41
     },
     {
-      "timestamp": "2026-03-10T17:08:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
+      "timestamp": "2026-02-22T07:17:49.109004+00:00",
+      "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 5.596,
-        "temp_c": 63.87,
-        "pressure_bar": 5.55,
-        "flow_rate_lpm": 331.5
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "high",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 9.68
-    },
-    {
-      "timestamp": "2026-01-25T14:22:47.160441+00:00",
-      "equipment_id": "pump_P-23",
-      "sensor_data": {
-        "vibration_rms": 4.82,
-        "temp_c": 96.88,
-        "pressure_bar": 9.01,
-        "flow_rate_lpm": 281.1
+        "vibration_rms": 5.895,
+        "temp_c": 23.27,
+        "pressure_bar": 2.76,
+        "flow_rate_lpm": 155.0
       },
       "failure_mode": "bearing_failure",
       "severity": "low",
@@ -2401,304 +1816,889 @@
       "resolution_time_hours": 0.82
     },
     {
-      "timestamp": "2025-04-07T22:19:47.160441+00:00",
-      "equipment_id": "pump_P-07",
+      "timestamp": "2025-04-17T11:10:49.109013+00:00",
+      "equipment_id": "turbofan_TF-01",
       "sensor_data": {
-        "vibration_rms": 7.666,
-        "temp_c": 116.59,
-        "pressure_bar": 11.91,
-        "flow_rate_lpm": 227.3
+        "vibration_rms": 3.136,
+        "temp_c": 35.62,
+        "pressure_bar": 4.67,
+        "flow_rate_lpm": 293.3
       },
-      "failure_mode": "bearing_failure",
-      "severity": "medium",
-      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
       "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.25
+      "resolution_time_hours": 1.05
     },
     {
-      "timestamp": "2026-02-15T02:48:47.160441+00:00",
+      "timestamp": "2026-03-04T08:17:49.109025+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 0.366,
+        "temp_c": 135.79,
+        "pressure_bar": 8.1,
+        "flow_rate_lpm": 35.6
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.48
+    },
+    {
+      "timestamp": "2025-08-13T05:09:49.109037+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 8.317,
-        "temp_c": 42.57,
-        "pressure_bar": 13.47,
-        "flow_rate_lpm": 182.1
+        "vibration_rms": 3.422,
+        "temp_c": 104.15,
+        "pressure_bar": 10.43,
+        "flow_rate_lpm": 21.4
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.0
+    },
+    {
+      "timestamp": "2025-10-01T13:04:49.109045+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 0.428,
+        "temp_c": 88.33,
+        "pressure_bar": 13.42,
+        "flow_rate_lpm": 193.2
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.84
+    },
+    {
+      "timestamp": "2026-02-27T12:19:49.109054+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 0.808,
+        "temp_c": 95.01,
+        "pressure_bar": 8.95,
+        "flow_rate_lpm": 72.5
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.66
+    },
+    {
+      "timestamp": "2025-10-28T20:24:49.109062+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 2.949,
+        "temp_c": 94.39,
+        "pressure_bar": 8.22,
+        "flow_rate_lpm": 395.3
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.73
+    },
+    {
+      "timestamp": "2025-12-22T02:10:49.109070+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 5.948,
+        "temp_c": 101.2,
+        "pressure_bar": 7.72,
+        "flow_rate_lpm": 184.7
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 8.6
+    },
+    {
+      "timestamp": "2025-10-14T11:14:49.109078+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 4.439,
+        "temp_c": 113.43,
+        "pressure_bar": 4.53,
+        "flow_rate_lpm": 164.1
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "high",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 10.13
+    },
+    {
+      "timestamp": "2025-06-01T06:13:49.109087+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 1.352,
+        "temp_c": 62.51,
+        "pressure_bar": 5.66,
+        "flow_rate_lpm": 396.1
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.4
+    },
+    {
+      "timestamp": "2025-10-28T11:12:49.109096+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 4.733,
+        "temp_c": 51.68,
+        "pressure_bar": 4.08,
+        "flow_rate_lpm": 300.0
       },
       "failure_mode": "bearing_failure",
       "severity": "low",
       "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
       "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.46
+      "resolution_time_hours": 1.66
     },
     {
-      "timestamp": "2026-01-23T17:23:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 0.966,
-        "temp_c": 24.72,
-        "pressure_bar": 11.92,
-        "flow_rate_lpm": 260.2
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "medium",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.67
-    },
-    {
-      "timestamp": "2025-10-14T20:17:47.160441+00:00",
+      "timestamp": "2025-11-11T15:30:49.109104+00:00",
       "equipment_id": "compressor_C-02",
       "sensor_data": {
-        "vibration_rms": 1.307,
-        "temp_c": 68.49,
-        "pressure_bar": 6.22,
-        "flow_rate_lpm": 385.3
+        "vibration_rms": 3.615,
+        "temp_c": 45.14,
+        "pressure_bar": 5.41,
+        "flow_rate_lpm": 13.1
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "low",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.55
+    },
+    {
+      "timestamp": "2025-11-12T15:24:49.109113+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 1.471,
+        "temp_c": 89.67,
+        "pressure_bar": 0.67,
+        "flow_rate_lpm": 112.0
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.23
+    },
+    {
+      "timestamp": "2026-01-04T01:48:49.109122+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 0.321,
+        "temp_c": 43.3,
+        "pressure_bar": 4.59,
+        "flow_rate_lpm": 29.6
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "low",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 2.22
+    },
+    {
+      "timestamp": "2025-05-21T05:11:49.109130+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 2.969,
+        "temp_c": 98.93,
+        "pressure_bar": 0.8,
+        "flow_rate_lpm": 88.5
+      },
+      "failure_mode": "cavitation",
+      "severity": "critical",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 6.11
+    },
+    {
+      "timestamp": "2026-03-15T10:43:49.109138+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 1.507,
+        "temp_c": 130.02,
+        "pressure_bar": 7.01,
+        "flow_rate_lpm": 74.8
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.06
+    },
+    {
+      "timestamp": "2025-12-09T18:27:49.109150+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 1.446,
+        "temp_c": 33.94,
+        "pressure_bar": 0.54,
+        "flow_rate_lpm": 114.1
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "critical",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.72
+    },
+    {
+      "timestamp": "2026-03-26T04:48:49.109158+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 4.735,
+        "temp_c": 113.8,
+        "pressure_bar": 13.93,
+        "flow_rate_lpm": 35.3
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.65
+    },
+    {
+      "timestamp": "2025-12-01T08:22:49.109169+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 1.702,
+        "temp_c": 107.51,
+        "pressure_bar": 8.61,
+        "flow_rate_lpm": 171.2
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "high",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 10.69
+    },
+    {
+      "timestamp": "2026-03-04T16:20:49.109178+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 5.768,
+        "temp_c": 29.38,
+        "pressure_bar": 4.97,
+        "flow_rate_lpm": 111.2
       },
       "failure_mode": "scheduled_maintenance",
       "severity": "low",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
       "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.82
+      "resolution_time_hours": 1.98
     },
     {
-      "timestamp": "2026-02-16T06:11:47.160441+00:00",
+      "timestamp": "2025-11-26T19:27:49.109187+00:00",
       "equipment_id": "motor_M-12",
       "sensor_data": {
-        "vibration_rms": 3.058,
-        "temp_c": 113.85,
-        "pressure_bar": 12.38,
-        "flow_rate_lpm": 360.3
+        "vibration_rms": 1.182,
+        "temp_c": 104.53,
+        "pressure_bar": 1.18,
+        "flow_rate_lpm": 158.6
+      },
+      "failure_mode": "overheating",
+      "severity": "high",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 7.96
+    },
+    {
+      "timestamp": "2026-02-07T22:16:49.109195+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.399,
+        "temp_c": 62.45,
+        "pressure_bar": 0.91,
+        "flow_rate_lpm": 83.6
+      },
+      "failure_mode": "cavitation",
+      "severity": "medium",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.43
+    },
+    {
+      "timestamp": "2025-08-30T20:11:49.109205+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 5.482,
+        "temp_c": 65.45,
+        "pressure_bar": 2.32,
+        "flow_rate_lpm": 82.7
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 8.34
+    },
+    {
+      "timestamp": "2026-01-23T09:31:49.109216+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 0.378,
+        "temp_c": 29.26,
+        "pressure_bar": 2.85,
+        "flow_rate_lpm": 333.1
       },
       "failure_mode": "scheduled_maintenance",
       "severity": "medium",
       "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 0.75
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.13
     },
     {
-      "timestamp": "2025-12-11T16:54:47.160441+00:00",
+      "timestamp": "2026-01-24T19:56:49.109225+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 4.989,
+        "temp_c": 78.47,
+        "pressure_bar": 1.34,
+        "flow_rate_lpm": 78.3
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 6.38
+    },
+    {
+      "timestamp": "2025-11-03T08:12:49.109234+00:00",
       "equipment_id": "turbofan_TF-01",
       "sensor_data": {
-        "vibration_rms": 3.714,
-        "temp_c": 86.02,
-        "pressure_bar": 3.77,
-        "flow_rate_lpm": 335.5
+        "vibration_rms": 4.774,
+        "temp_c": 86.03,
+        "pressure_bar": 2.77,
+        "flow_rate_lpm": 111.2
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 4.38
+    },
+    {
+      "timestamp": "2025-09-07T12:07:49.109243+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 4.487,
+        "temp_c": 128.25,
+        "pressure_bar": 6.72,
+        "flow_rate_lpm": 184.8
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.92
+    },
+    {
+      "timestamp": "2025-11-29T10:52:49.109252+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 0.107,
+        "temp_c": 82.26,
+        "pressure_bar": 0.6,
+        "flow_rate_lpm": 95.1
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 9.76
+    },
+    {
+      "timestamp": "2026-01-10T01:06:49.109262+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 1.214,
+        "temp_c": 55.19,
+        "pressure_bar": 3.27,
+        "flow_rate_lpm": 34.0
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "critical",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 4.89
+    },
+    {
+      "timestamp": "2025-07-04T02:36:49.109271+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 6.765,
+        "temp_c": 51.59,
+        "pressure_bar": 5.09,
+        "flow_rate_lpm": 175.6
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "medium",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.72
+    },
+    {
+      "timestamp": "2025-05-23T18:47:49.109280+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 4.19,
+        "temp_c": 92.29,
+        "pressure_bar": 1.71,
+        "flow_rate_lpm": 241.4
       },
       "failure_mode": "sensor_malfunction",
       "severity": "medium",
       "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.25
+    },
+    {
+      "timestamp": "2026-03-23T21:43:49.109288+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 1.308,
+        "temp_c": 86.96,
+        "pressure_bar": 13.73,
+        "flow_rate_lpm": 81.6
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "low",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.93
+    },
+    {
+      "timestamp": "2025-09-14T02:25:49.109296+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 0.105,
+        "temp_c": 94.76,
+        "pressure_bar": 11.34,
+        "flow_rate_lpm": 388.3
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "critical",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 4.84
+    },
+    {
+      "timestamp": "2025-07-30T12:25:49.109304+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 5.107,
+        "temp_c": 73.78,
+        "pressure_bar": 13.66,
+        "flow_rate_lpm": 79.7
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "low",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.54
+    },
+    {
+      "timestamp": "2025-07-04T02:42:49.109312+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 1.875,
+        "temp_c": 112.63,
+        "pressure_bar": 11.1,
+        "flow_rate_lpm": 280.8
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.36
+    },
+    {
+      "timestamp": "2025-07-23T16:42:49.109323+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 3.907,
+        "temp_c": 115.46,
+        "pressure_bar": 2.69,
+        "flow_rate_lpm": 324.5
+      },
+      "failure_mode": "overheating",
+      "severity": "low",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.62
+    },
+    {
+      "timestamp": "2026-03-15T17:13:49.109331+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 0.931,
+        "temp_c": 43.49,
+        "pressure_bar": 1.8,
+        "flow_rate_lpm": 87.1
+      },
+      "failure_mode": "cavitation",
+      "severity": "high",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 10.33
+    },
+    {
+      "timestamp": "2025-08-27T01:37:49.109340+00:00",
+      "equipment_id": "compressor_C-02",
+      "sensor_data": {
+        "vibration_rms": 4.126,
+        "temp_c": 36.56,
+        "pressure_bar": 12.97,
+        "flow_rate_lpm": 13.1
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "medium",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.82
+    },
+    {
+      "timestamp": "2025-09-23T19:09:49.109348+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.445,
+        "temp_c": 130.44,
+        "pressure_bar": 4.1,
+        "flow_rate_lpm": 299.7
+      },
+      "failure_mode": "overheating",
+      "severity": "medium",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.9
+    },
+    {
+      "timestamp": "2025-05-09T22:46:49.109361+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 5.887,
+        "temp_c": 45.73,
+        "pressure_bar": 4.37,
+        "flow_rate_lpm": 383.3
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "low",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.68
+    },
+    {
+      "timestamp": "2026-01-08T13:33:49.109370+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 0.555,
+        "temp_c": 56.03,
+        "pressure_bar": 8.21,
+        "flow_rate_lpm": 36.1
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "low",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.93
+    },
+    {
+      "timestamp": "2026-01-09T01:06:49.109378+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 1.991,
+        "temp_c": 87.84,
+        "pressure_bar": 10.04,
+        "flow_rate_lpm": 52.7
+      },
+      "failure_mode": "overheating",
+      "severity": "low",
+      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.45
+    },
+    {
+      "timestamp": "2025-10-26T17:37:49.109389+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 1.087,
+        "temp_c": 98.24,
+        "pressure_bar": 2.19,
+        "flow_rate_lpm": 59.8
+      },
+      "failure_mode": "cavitation",
+      "severity": "medium",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.57
+    },
+    {
+      "timestamp": "2025-11-27T21:17:49.109398+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 1.784,
+        "temp_c": 45.1,
+        "pressure_bar": 2.82,
+        "flow_rate_lpm": 101.5
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 0.72
+    },
+    {
+      "timestamp": "2026-02-01T15:47:49.109410+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.271,
+        "temp_c": 93.27,
+        "pressure_bar": 0.93,
+        "flow_rate_lpm": 82.4
+      },
+      "failure_mode": "cavitation",
+      "severity": "medium",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.43
+    },
+    {
+      "timestamp": "2025-08-17T17:46:49.109419+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.979,
+        "temp_c": 105.97,
+        "pressure_bar": 2.65,
+        "flow_rate_lpm": 74.5
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.23
+    },
+    {
+      "timestamp": "2025-07-26T22:19:49.109427+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 5.988,
+        "temp_c": 48.96,
+        "pressure_bar": 11.51,
+        "flow_rate_lpm": 350.1
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.06
+    },
+    {
+      "timestamp": "2025-07-26T19:17:49.109435+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 1.889,
+        "temp_c": 50.2,
+        "pressure_bar": 1.29,
+        "flow_rate_lpm": 103.7
+      },
+      "failure_mode": "cavitation",
+      "severity": "medium",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 0.63
+    },
+    {
+      "timestamp": "2025-09-24T21:54:49.109444+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 4.034,
+        "temp_c": 49.77,
+        "pressure_bar": 0.51,
+        "flow_rate_lpm": 81.0
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.74
+    },
+    {
+      "timestamp": "2025-05-16T23:33:49.109453+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.931,
+        "temp_c": 20.42,
+        "pressure_bar": 8.3,
+        "flow_rate_lpm": 129.9
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "medium",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.28
+    },
+    {
+      "timestamp": "2025-08-31T00:07:49.109461+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 6.24,
+        "temp_c": 61.69,
+        "pressure_bar": 7.23,
+        "flow_rate_lpm": 71.9
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "medium",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Resolved; equipment returned to service.",
+      "resolution_time_hours": 1.72
+    },
+    {
+      "timestamp": "2025-07-20T11:37:49.109470+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 4.987,
+        "temp_c": 30.82,
+        "pressure_bar": 2.0,
+        "flow_rate_lpm": 87.3
+      },
+      "failure_mode": "cavitation",
+      "severity": "low",
+      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 1.15
+    },
+    {
+      "timestamp": "2026-03-06T18:26:49.109479+00:00",
+      "equipment_id": "pump_P-23",
+      "sensor_data": {
+        "vibration_rms": 4.074,
+        "temp_c": 59.37,
+        "pressure_bar": 4.51,
+        "flow_rate_lpm": 34.7
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "medium",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 0.72
+    },
+    {
+      "timestamp": "2025-12-18T15:50:49.109487+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 3.824,
+        "temp_c": 58.82,
+        "pressure_bar": 6.4,
+        "flow_rate_lpm": 363.7
+      },
+      "failure_mode": "sensor_malfunction",
+      "severity": "low",
+      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.27
+    },
+    {
+      "timestamp": "2026-02-24T20:22:49.109495+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 2.421,
+        "temp_c": 105.99,
+        "pressure_bar": 6.93,
+        "flow_rate_lpm": 150.6
+      },
+      "failure_mode": "scheduled_maintenance",
+      "severity": "high",
+      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
+      "outcome": "Escalated; further inspection required.",
+      "resolution_time_hours": 2.45
+    },
+    {
+      "timestamp": "2025-10-03T05:06:49.109503+00:00",
+      "equipment_id": "turbofan_TF-01",
+      "sensor_data": {
+        "vibration_rms": 5.791,
+        "temp_c": 96.78,
+        "pressure_bar": 11.01,
+        "flow_rate_lpm": 141.6
+      },
+      "failure_mode": "lubrication_issue",
+      "severity": "medium",
+      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 2.17
+    },
+    {
+      "timestamp": "2025-05-04T13:38:49.109512+00:00",
+      "equipment_id": "motor_M-12",
+      "sensor_data": {
+        "vibration_rms": 7.791,
+        "temp_c": 110.73,
+        "pressure_bar": 4.58,
+        "flow_rate_lpm": 175.8
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "high",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 5.11
+    },
+    {
+      "timestamp": "2026-01-13T10:52:49.109520+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 4.097,
+        "temp_c": 95.12,
+        "pressure_bar": 3.36,
+        "flow_rate_lpm": 35.3
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "medium",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
       "outcome": "Mitigated; monitor for 48 hours.",
       "resolution_time_hours": 0.92
     },
     {
-      "timestamp": "2025-11-06T19:51:47.160441+00:00",
+      "timestamp": "2026-04-12T12:18:49.109529+00:00",
+      "equipment_id": "pump_P-07",
+      "sensor_data": {
+        "vibration_rms": 7.295,
+        "temp_c": 26.34,
+        "pressure_bar": 14.0,
+        "flow_rate_lpm": 27.1
+      },
+      "failure_mode": "bearing_failure",
+      "severity": "medium",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
+      "outcome": "Mitigated; monitor for 48 hours.",
+      "resolution_time_hours": 1.34
+    },
+    {
+      "timestamp": "2025-12-21T17:47:49.109537+00:00",
       "equipment_id": "pump_P-23",
       "sensor_data": {
-        "vibration_rms": 1.029,
-        "temp_c": 114.12,
-        "pressure_bar": 1.55,
-        "flow_rate_lpm": 104.5
+        "vibration_rms": 4.594,
+        "temp_c": 61.98,
+        "pressure_bar": 8.01,
+        "flow_rate_lpm": 356.1
       },
-      "failure_mode": "cavitation",
-      "severity": "low",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.01
-    },
-    {
-      "timestamp": "2026-03-06T18:06:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 5.668,
-        "temp_c": 112.83,
-        "pressure_bar": 3.66,
-        "flow_rate_lpm": 236.1
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "high",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
+      "failure_mode": "bearing_failure",
+      "severity": "critical",
+      "actions_taken": "Inspected bearing housing; replaced bearing; verified alignment; relubricated.",
       "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 10.51
-    },
-    {
-      "timestamp": "2025-12-10T07:45:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 1.456,
-        "temp_c": 124.46,
-        "pressure_bar": 6.84,
-        "flow_rate_lpm": 82.8
-      },
-      "failure_mode": "overheating",
-      "severity": "critical",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 4.74
-    },
-    {
-      "timestamp": "2025-06-20T01:13:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 4.499,
-        "temp_c": 116.54,
-        "pressure_bar": 8.8,
-        "flow_rate_lpm": 49.0
-      },
-      "failure_mode": "scheduled_maintenance",
-      "severity": "critical",
-      "actions_taken": "Performed scheduled PM; replaced consumables; updated CMMS notes.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 3.09
-    },
-    {
-      "timestamp": "2025-10-29T02:57:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 1.694,
-        "temp_c": 105.08,
-        "pressure_bar": 6.93,
-        "flow_rate_lpm": 31.6
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Escalated; further inspection required.",
-      "resolution_time_hours": 1.59
-    },
-    {
-      "timestamp": "2025-06-02T11:35:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 0.256,
-        "temp_c": 80.39,
-        "pressure_bar": 1.17,
-        "flow_rate_lpm": 97.0
-      },
-      "failure_mode": "cavitation",
-      "severity": "medium",
-      "actions_taken": "Adjusted inlet conditions; inspected suction line; removed blockage; re-tested.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 0.6
-    },
-    {
-      "timestamp": "2026-02-10T04:28:47.160441+00:00",
-      "equipment_id": "compressor_C-02",
-      "sensor_data": {
-        "vibration_rms": 1.13,
-        "temp_c": 20.86,
-        "pressure_bar": 4.89,
-        "flow_rate_lpm": 301.9
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 1.04
-    },
-    {
-      "timestamp": "2026-03-31T18:03:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 2.915,
-        "temp_c": 103.77,
-        "pressure_bar": 12.78,
-        "flow_rate_lpm": 32.0
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 1.83
-    },
-    {
-      "timestamp": "2025-07-12T12:04:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 5.864,
-        "temp_c": 81.63,
-        "pressure_bar": 1.5,
-        "flow_rate_lpm": 62.2
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "high",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 6.74
-    },
-    {
-      "timestamp": "2026-02-14T08:06:47.160441+00:00",
-      "equipment_id": "pump_P-07",
-      "sensor_data": {
-        "vibration_rms": 3.983,
-        "temp_c": 114.07,
-        "pressure_bar": 3.71,
-        "flow_rate_lpm": 64.8
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "medium",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.04
-    },
-    {
-      "timestamp": "2026-01-10T08:05:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 2.276,
-        "temp_c": 77.11,
-        "pressure_bar": 12.62,
-        "flow_rate_lpm": 261.4
-      },
-      "failure_mode": "sensor_malfunction",
-      "severity": "low",
-      "actions_taken": "Re-seated sensor; checked wiring; replaced faulty transducer; recalibrated.",
-      "outcome": "Resolved; equipment returned to service.",
-      "resolution_time_hours": 2.38
-    },
-    {
-      "timestamp": "2025-12-21T15:37:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 2.708,
-        "temp_c": 64.76,
-        "pressure_bar": 9.15,
-        "flow_rate_lpm": 341.4
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "low",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.15
-    },
-    {
-      "timestamp": "2025-09-20T20:34:47.160441+00:00",
-      "equipment_id": "turbofan_TF-01",
-      "sensor_data": {
-        "vibration_rms": 2.555,
-        "temp_c": 122.71,
-        "pressure_bar": 2.49,
-        "flow_rate_lpm": 143.8
-      },
-      "failure_mode": "overheating",
-      "severity": "medium",
-      "actions_taken": "Checked cooling; cleaned vents; reduced load; verified thermal sensors.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 2.33
-    },
-    {
-      "timestamp": "2025-11-24T10:27:47.160441+00:00",
-      "equipment_id": "motor_M-12",
-      "sensor_data": {
-        "vibration_rms": 0.169,
-        "temp_c": 60.75,
-        "pressure_bar": 12.99,
-        "flow_rate_lpm": 90.9
-      },
-      "failure_mode": "lubrication_issue",
-      "severity": "critical",
-      "actions_taken": "Checked oil level; replaced filter; flushed line; refilled per spec.",
-      "outcome": "Mitigated; monitor for 48 hours.",
-      "resolution_time_hours": 9.39
+      "resolution_time_hours": 11.8
     }
   ]
 }

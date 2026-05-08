@@ -1,5 +1,5 @@
 {
-  "source_file": "data/raw/procedures/bearing_replacement_pump_P-23.md",
+  "source_file": "C:/Users/abc/Industrial-Reliability-Copilot/data/raw/procedures/bearing_replacement_pump_P-23.md",
   "doc_type": "procedure",
   "text": "# Procedure: Bearing Replacement for Pump P-23\n\n## Safety\n- Lockout/tagout (LOTO) before any work.\n- Verify zero pressure in suction/discharge lines.\n- Wear PPE: gloves, goggles, hearing protection.\n\n## Tools\n- Bearing puller, torque wrench, dial indicator, grease gun.\n\n## Steps\n1. Isolate pump and drain as required.\n2. Remove coupling guard and decouple drive.\n3. Open bearing housing; inspect for scoring and contamination.\n4. Remove old bearing using puller; clean shaft and seating surface.\n5. Install new bearing; verify fit and alignment.\n6. Relubricate per spec; reassemble housing.\n7. Perform alignment check; re-couple and reinstall guards.\n8. Run at low load for 15 minutes; monitor vibration and temperature.\n\n## Verification\n- Vibration RMS returns to baseline range.\n- No abnormal temperature rise after 30 minutes."
 }

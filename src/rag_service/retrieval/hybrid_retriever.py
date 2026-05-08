@@ -10,10 +10,12 @@ from .types import Document, RetrievalFilters
 
 @dataclass(frozen=True)
 class HybridSettings:
-    semantic_k: int = 30
-    keyword_k: int = 30
+    # PRODUCTION FIX: Asymmetric Retrieval Optimization
+    # Drastically reduced initial candidate pool to minimize heavy Cross-Encoder CPU inference.
+    semantic_k: int = 15
+    keyword_k: int = 15
     rrf_k: int = 60
-    out_k: int = 15
+    out_k: int = 8 # Hard limit: Pass exactly 8 docs to Reranker for a single batch pass
 
 
 class HybridRetriever:
@@ -28,7 +30,7 @@ class HybridRetriever:
         self.keyword = keyword or BM25KeywordRetriever()
         self.settings = settings or HybridSettings()
 
-        # Ensure BM25 is ready (can be moved to app startup)
+        # Ensure BM25 is ready
         self.keyword.build_or_load(force_rebuild=False)
 
     @staticmethod

@@ -23,6 +23,8 @@ rank-bm25>=0.2.2
 
 # Chunking / text split
 langchain-text-splitters>=0.2.2
+# PRODUCTION FIX: Added tiktoken to resolve ModuleNotFoundError during ingestion chunking
+tiktoken>=0.6.0
 
 # Local Embeddings/Reranker core dependencies
 # PRODUCTION FIX: Removed <3.0.0 and <4.40 bounds to resolve tokenizers conflict

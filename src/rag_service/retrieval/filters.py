@@ -23,13 +23,21 @@ def build_qdrant_filter(
 
     must: list[qmodels.Condition] = []
 
-    # PRODUCTION FIX: Match specific equipment OR explicitly tagged "all" generic documents.
-    # Completely replaces buggy IsNull/IsEmpty conditions.
+    # PRODUCTION FIX: Replaced MatchAny with explicit Should (OR) condition.
+    # Scalar string payloads can cause silent MatchAny dropouts depending on Qdrant index schemas.
     if getattr(filters, "equipment_id", None):
         must.append(
-            qmodels.FieldCondition(
-                key=equipment_id_key,
-                match=qmodels.MatchAny(any=[filters.equipment_id, "all"])
+            qmodels.Filter(
+                should=[
+                    qmodels.FieldCondition(
+                        key=equipment_id_key,
+                        match=qmodels.MatchValue(value=filters.equipment_id)
+                    ),
+                    qmodels.FieldCondition(
+                        key=equipment_id_key,
+                        match=qmodels.MatchValue(value="all")
+                    )
+                ]
             )
         )
 

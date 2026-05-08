@@ -19,16 +19,15 @@ class OllamaProvider(LLMProvider):
     ) -> None:
         self._model_name = model
 
-        # Applies the extended timeout safely down to the LangChain HTTP core
-        timeout_config = httpx.Timeout(timeout_s, connect=10.0, read=timeout_s, write=timeout_s)
-
+        # PRODUCTION FIX: Removed problematic client_kwargs that caused Langchain 
+        # to swallow the extended timeout on large context loads. Passed the raw 
+        # float directly to the timeout parameter to guarantee the 300s window.
         self._client = ChatOllama(
             base_url=base_url,
             model=model,
             temperature=temperature,
             num_predict=max_tokens,
             timeout=timeout_s,  
-            client_kwargs={"timeout": timeout_config}, 
         )
 
     async def invoke(self, prompt: str, json_mode: bool = False) -> LLMResult:
@@ -38,4 +37,6 @@ class OllamaProvider(LLMProvider):
             content = msg.content if isinstance(msg.content, str) else str(msg.content)
             return LLMResult(content=content, model=self._model_name, provider=self.provider_name)
         except Exception as e:
-            raise LLMTransientError(f"Ollama invocation failed: {e}") from e
+            # Provide more explicit logging in case of future errors
+            error_details = str(e) or repr(e) or "ReadTimeout"
+            raise LLMTransientError(f"Ollama invocation failed: {error_details}") from e

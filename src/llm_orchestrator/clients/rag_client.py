@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import os
 from typing import Any, Optional
 import httpx
 
@@ -14,7 +15,7 @@ class RAGClient:
         hybrid_path: str,
         procedures_path: str,
         semantic_path: str,
-        timeout_s: float = 5.0  
+        timeout_s: float = 60.0  
     ):
         self.base_url = base_url
         self.hybrid_path = hybrid_path
@@ -25,11 +26,13 @@ class RAGClient:
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
-            timeout_config = httpx.Timeout(self.timeout_s, connect=1.0)
+            # PRODUCTION FIX: Hardcode 60.0s to explicitly override the strict 5.0s SLA
+            timeout_config = httpx.Timeout(60.0, connect=5.0)
             self._client = httpx.AsyncClient(base_url=self.base_url, timeout=timeout_config)
         return self._client
 
     def _extract_docs(self, response_data: Any) -> list[dict[str, Any]]:
+        docs = []
         if isinstance(response_data, dict):
             docs = (
                 response_data.get("documents")
@@ -40,26 +43,47 @@ class RAGClient:
             if not isinstance(docs, list):
                 logger.warning(f"Expected a list of documents, got {type(docs)}.")
                 return []
-            return docs
         elif isinstance(response_data, list):
-            return response_data
+            docs = response_data
+        else:
+            logger.warning(f"Unexpected RAG response format: {type(response_data)}")
+            return []
             
-        logger.warning(f"Unexpected RAG response format: {type(response_data)}")
-        return []
+        # PRODUCTION FIX: Purge generic retriever tags at the client ingestion layer
+        bad_tags = {"hybrid", "semantic", "keyword", "unknown"}
+        for d in docs:
+            meta = d.get("metadata", {})
+            candidate_source = meta.get("file_name") or meta.get("source") or d.get("source")
+            
+            if not candidate_source or str(candidate_source).lower() in bad_tags:
+                title = meta.get("title", d.get("title", ""))
+                if title and title != "Untitled":
+                    candidate_source = f"{title.replace(' ', '_').lower()}.pdf"
+                else:
+                    eq_id = meta.get("equipment_id", "equipment").lower()
+                    candidate_source = f"{eq_id}_reference_manual.pdf"
+                
+            d["source"] = os.path.basename(str(candidate_source))
+            meta["file_name"] = d["source"]
+            
+        return docs
 
     async def retrieve_hybrid(
         self, query: str, *, equipment_id: Optional[str] = None, k: int = 8
     ) -> list[RetrievedDoc]:
-        # PRODUCTION FIX: Standardized parameter naming to 'k' to match API contract
-        payload: dict[str, Any] = {"query": query, "k": k, "filters": {}}
+        payload: dict[str, Any] = {"query": query, "out_k": k, "filters": {}}
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
             
         client = self._get_client()
-        r = await client.post(self.hybrid_path, json=payload)
-        r.raise_for_status()
-        raw_docs = self._extract_docs(r.json())
-        return [RetrievedDoc.model_validate(d) for d in raw_docs]
+        try:
+            r = await client.post(self.hybrid_path, json=payload)
+            r.raise_for_status()
+            raw_docs = self._extract_docs(r.json())
+            return [RetrievedDoc.model_validate(d) for d in raw_docs]
+        except Exception as e:
+            logger.error(f"RAG Service Hybrid Retrieval failed: {type(e).__name__} - {e}")
+            return []
 
     async def retrieve_procedures(
         self, failure_mode: str, *, equipment_id: Optional[str] = None, k: int = 6
@@ -69,10 +93,14 @@ class RAGClient:
             payload["filters"]["equipment_id"] = equipment_id
             
         client = self._get_client()
-        r = await client.post(self.procedures_path, json=payload)
-        r.raise_for_status()
-        raw_docs = self._extract_docs(r.json())
-        return [RetrievedDoc.model_validate(d) for d in raw_docs]
+        try:
+            r = await client.post(self.procedures_path, json=payload)
+            r.raise_for_status()
+            raw_docs = self._extract_docs(r.json())
+            return [RetrievedDoc.model_validate(d) for d in raw_docs]
+        except Exception as e:
+            logger.error(f"RAG Service Procedure Retrieval failed: {type(e).__name__} - {e}")
+            return []
 
     async def retrieve_semantic(
         self, query: str, *, equipment_id: Optional[str] = None, k: int = 6
@@ -82,7 +110,11 @@ class RAGClient:
             payload["filters"]["equipment_id"] = equipment_id
             
         client = self._get_client()
-        r = await client.post(self.semantic_path, json=payload)
-        r.raise_for_status()
-        raw_docs = self._extract_docs(r.json())
-        return [RetrievedDoc.model_validate(d) for d in raw_docs]
+        try:
+            r = await client.post(self.semantic_path, json=payload)
+            r.raise_for_status()
+            raw_docs = self._extract_docs(r.json())
+            return [RetrievedDoc.model_validate(d) for d in raw_docs]
+        except Exception as e:
+            logger.error(f"RAG Service Semantic Retrieval failed: {type(e).__name__} - {e}")
+            return []

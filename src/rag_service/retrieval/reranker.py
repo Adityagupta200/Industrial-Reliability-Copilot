@@ -21,9 +21,11 @@ class RerankerSettings:
     def from_env() -> "RerankerSettings":
         return RerankerSettings(
             model_name=os.getenv("RERANKER_MODEL_NAME", "cross-encoder/ms-marco-MiniLM-L-12-v2"),
-            max_rerank=int(os.getenv("RERANK_MAX_DOCS", "10")),
-            top_n=int(os.getenv("RERANK_TOP_N", "5")),
-            batch_size=int(os.getenv("RERANK_BATCH_SIZE", "16")),
+            # PRODUCTION FIX: Hard ceiling aligned with HybridSettings out_k
+            max_rerank=int(os.getenv("RERANK_MAX_DOCS", "8")),
+            top_n=int(os.getenv("RERANK_TOP_N", "3")),
+            # PRODUCTION FIX: Process all candidates in exactly one batch
+            batch_size=int(os.getenv("RERANK_BATCH_SIZE", "8")),
             device=os.getenv("RERANKER_DEVICE") or None,
         )
 
@@ -32,9 +34,15 @@ class CrossEncoderReranker:
     def __init__(self, *, settings: Optional[RerankerSettings] = None):
         self.settings = settings or RerankerSettings.from_env()
         self._model = None
+        
+        # PRODUCTION FIX: Prevent CPU Thread Thrashing
+        # Clamps PyTorch threads to prevent catastrophic context-switching in containerized 
+        # or restricted memory environments.
+        if self.settings.device is None or self.settings.device == "cpu":
+            import torch
+            torch.set_num_threads(2)
 
     def _get_model(self):
-        # Cached model prevents repeated HF loads in integration loops. [web:56]
         if self._model is None:
             self._model = get_cross_encoder(
                 self.settings.model_name,
@@ -55,7 +63,8 @@ class CrossEncoderReranker:
         pairs = [(query, (d.text or "")) for d in candidates]
 
         model = self._get_model()
-        scores = model.predict(pairs, batch_size=self.settings.batch_size)
+        # PRODUCTION FIX: Disable progress bar I/O overhead
+        scores = model.predict(pairs, batch_size=self.settings.batch_size, show_progress_bar=False)
 
         rescored: list[Document] = []
         for d, s in zip(candidates, scores):
