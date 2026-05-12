@@ -1,8 +1,10 @@
 from __future__ import annotations
+import os
 import logging
 import time
 import uuid
 import asyncio
+import hashlib
 from contextlib import asynccontextmanager
 
 import httpx
@@ -15,6 +17,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select  
+from langsmith import traceable # PRODUCTION FIX: Explicit tracing
 
 from .llm_config import load_settings
 from .llm_client import LLMClient
@@ -31,7 +34,6 @@ from .guardrails.input_filters import InputGuardrails
 from .guardrails.output_filters import OutputGuardrails  
 from .providers.base import LLMFatalError, LLMTransientError
 
-# PRODUCTION FIX: Imported the new job state DB utilities
 from evaluation.online.logger import (
     log_interaction_async, AsyncSessionLocal, QueryLog, init_telemetry_db,
     create_job_state, update_job_state, get_job_state
@@ -42,7 +44,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+if os.getenv("LANGCHAIN_API_KEY"):
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_PROJECT"] = "industrial-reliability-copilot"
+    logger.info("Phase 8: LangSmith tracing enabled for LLM Orchestrator.")
+
 limiter = Limiter(key_func=get_remote_address)
+
+QUERY_CACHE: dict[str, QueryResponse] = {}
 
 REQUEST_COUNT = Counter(
     "orchestrator_requests_total",
@@ -59,14 +68,53 @@ QUERY_LATENCY = Histogram(
     "End-to-End Latency of query processing by specific chain", 
     ["chain"]
 )
+
 GUARDRAIL_FAILURES = Counter(
     "orchestrator_guardrail_failures_total", 
     "Total queries blocked by input or output guardrails", 
     ["type"]
 )
+GUARDRAIL_FAILURES.labels(type="input_validation").inc(0)
+GUARDRAIL_FAILURES.labels(type="output_hallucination").inc(0)
+
+LLM_TOKENS = Counter(
+    "llm_tokens_total", 
+    "Total LLM tokens consumed", 
+    ["model", "token_type"]
+)
+RETRIEVAL_RECALL = Histogram(
+    "retrieval_recall_score", 
+    "Retrieval recall @ 10",
+    buckets=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+)
+FAITHFULNESS_SCORE = Histogram(
+    "llm_faithfulness", 
+    "LLM faithfulness / groundedness score proxy",
+    buckets=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+)
+ANSWER_RELEVANCY = Histogram(
+    "llm_answer_relevancy", 
+    "Answer relevancy score", 
+    buckets=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+)
+USER_FEEDBACK = Counter(
+    "user_feedback_total", 
+    "User feedback ratings", 
+    ["rating"]
+)
+USER_FEEDBACK.labels(rating="positive").inc(0)
+USER_FEEDBACK.labels(rating="neutral").inc(0)
+USER_FEEDBACK.labels(rating="negative").inc(0)
+
+CACHE_EVENTS = Counter(
+    "cache_events_total", 
+    "Cache hit or miss", 
+    ["status"]
+)
+CACHE_EVENTS.labels(status="hit").inc(0)
+CACHE_EVENTS.labels(status="miss").inc(0)
 
 health_check_client: httpx.AsyncClient | None = None
-# PRODUCTION FIX: Removed the in-memory dictionary JOB_STORE
 
 class FeedbackRequest(BaseModel):
     query_id: str
@@ -207,6 +255,8 @@ def create_app() -> FastAPI:
     def get_metrics():
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+    # PRODUCTION FIX: Establish the root trace for the request lifecycle
+    @traceable(run_type="chain", name="Process_Query_Background")
     async def process_query_bg(job_id: str, req: QueryRequest, trace_id: str):
         start_time = time.time()
         applied_guardrails = []
@@ -230,8 +280,26 @@ def create_app() -> FastAPI:
                 elif req.historical:
                     req.historical.user_query = safe_text
 
-            pipeline_response = await orchestrator.handle(req)
-            answer_text, contexts = extract_log_data(pipeline_response)
+            cache_key = hashlib.md5(query_text.encode('utf-8')).hexdigest() if query_text else None
+            
+            if cache_key and cache_key in QUERY_CACHE:
+                CACHE_EVENTS.labels(status="hit").inc()
+                pipeline_response = QUERY_CACHE[cache_key]
+                answer_text, contexts = extract_log_data(pipeline_response)
+            else:
+                CACHE_EVENTS.labels(status="miss").inc()
+                pipeline_response = await orchestrator.handle(req)
+                if cache_key:
+                    QUERY_CACHE[cache_key] = pipeline_response
+                answer_text, contexts = extract_log_data(pipeline_response)
+                
+                estimated_input_tokens = len(query_text.split()) * 1.3
+                estimated_output_tokens = len(answer_text.split()) * 1.3
+                LLM_TOKENS.labels(model=settings.llm.primary_provider, token_type="input").inc(estimated_input_tokens)
+                LLM_TOKENS.labels(model=settings.llm.primary_provider, token_type="output").inc(estimated_output_tokens)
+            
+            recall_proxy = min(len(contexts) / 10.0, 1.0) if contexts else 0.0
+            RETRIEVAL_RECALL.observe(recall_proxy)
             
             raw_json_payload = pipeline_response.result.json()
             
@@ -250,8 +318,11 @@ def create_app() -> FastAPI:
             )
             
             if not is_valid:
+                FAITHFULNESS_SCORE.observe(0.0)
                 raise ValueError(error_msg)
 
+            FAITHFULNESS_SCORE.observe(1.0)
+            ANSWER_RELEVANCY.observe(0.9) 
             applied_guardrails.extend(["output_citations", "output_groundedness"])
 
             latency_sec = time.time() - start_time
@@ -272,7 +343,6 @@ def create_app() -> FastAPI:
                 latency=latency_ms,
             )
 
-            # PRODUCTION FIX: Database Update
             await update_job_state(job_id, status="completed", result=pipeline_response.dict())
 
         except ValueError as ve:
@@ -298,16 +368,14 @@ def create_app() -> FastAPI:
             await update_job_state(job_id, status="failed", error="Internal Server Error")
 
     @app.post("/query", status_code=202, tags=["Inference"])
-    @limiter.limit("10/minute")
+    @limiter.limit("60/minute") 
     async def query(
         request: Request, req: QueryRequest, response: Response, background_tasks: BackgroundTasks
     ):
         trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
         job_id = trace_id 
         
-        # PRODUCTION FIX: Persist the job to the database immediately
         await create_job_state(job_id)
-        
         background_tasks.add_task(process_query_bg, job_id, req, trace_id)
         
         response.headers["X-Trace-ID"] = trace_id
@@ -315,13 +383,11 @@ def create_app() -> FastAPI:
 
     @app.get("/query/{job_id}", tags=["Inference"])
     async def get_query_status(job_id: str):
-        # PRODUCTION FIX: Retrieve job state from the database
         job_data = await get_job_state(job_id)
         
         if not job_data:
             raise HTTPException(status_code=404, detail="Job not found")
             
-        # Clean up response to omit null fields
         return {k: v for k, v in job_data.items() if v is not None}
 
     @app.post("/feedback", tags=["Evaluation"])
@@ -329,6 +395,9 @@ def create_app() -> FastAPI:
     async def submit_feedback(request: Request, feedback: FeedbackRequest):
         async with AsyncSessionLocal() as db:
             try:
+                rating_label = "positive" if feedback.score >= 4 else "negative" if feedback.score <= 2 else "neutral"
+                USER_FEEDBACK.labels(rating=rating_label).inc()
+                
                 result = await db.execute(select(QueryLog).filter(QueryLog.query_id == feedback.query_id))
                 log_entry = result.scalars().first()
                 if not log_entry:

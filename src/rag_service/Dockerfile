@@ -26,20 +26,16 @@ RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
 COPY requirements-rag.txt /app/requirements-rag.txt
 
-# PRODUCTION FIX: Upgraded PyTorch to 2.4.0 to satisfy sentence-transformers ABI
+# PRODUCTION FIX: Upgrade past the unstable 2.4.x branch to 2.5.1+cpu 
+# to permanently resolve the C++ custom_op schema crashes on CPU architectures.
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --index-url https://pypi.org/simple \
     --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch==2.5.1+cpu \
+    torchvision==0.20.1+cpu \
+    torchaudio==2.5.1+cpu \
     "numpy>=1.26.0,<2.0.0" \
     "typing_extensions>=4.10" \
-    torch==2.4.0+cpu \
-    torchvision==0.19.0+cpu \
-    torchaudio==2.4.0+cpu
-
-# Install remaining RAG dependencies
-RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
-    --index-url https://pypi.org/simple \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
     -r /app/requirements-rag.txt
 
 COPY src/ /app/src/

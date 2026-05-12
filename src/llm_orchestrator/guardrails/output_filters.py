@@ -2,6 +2,7 @@ import re
 import asyncio
 import logging
 from typing import Tuple
+from langsmith import traceable # PRODUCTION FIX: Explicit Tracing
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,7 @@ class OutputGuardrails:
         return 0.0
 
     @staticmethod
+    @traceable(run_type="llm", name="Groundedness_LLM_Judge") # PRODUCTION FIX: Explicit Tracing
     async def check_groundedness(llm_client, context: str, answer: str, initial_input: str = "") -> float:
         """LLM-as-a-judge: Ensure answer relies purely on retrieved context."""
         if "NO DOCUMENTATION FOUND" in context or context.strip() == "NONE":
@@ -92,6 +94,7 @@ class OutputGuardrails:
             return OutputGuardrails._lexical_fallback(context, answer)
 
     @classmethod
+    @traceable(run_type="chain", name="Output_Guardrails") # PRODUCTION FIX: Explicit Tracing
     async def validate_output(cls, llm_client, context: str, answer: str, initial_input: str = "") -> Tuple[bool, str]:
         safety_task = asyncio.to_thread(cls.check_safety, answer)
         citation_task = asyncio.to_thread(cls.check_citations, answer, context)

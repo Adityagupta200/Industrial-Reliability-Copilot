@@ -1,0 +1,33 @@
+{
+  "title": "System Health - LLM Orchestrator",
+  "tags": ["production", "orchestrator"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "QPS (Requests Per Second)", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(orchestrator_requests_total[1m])) by (endpoint)", "legendFormat": "{{endpoint}}"}]
+    },
+    {
+      "title": "Latency Percentiles (P50, P95, P99)", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "histogram_quantile(0.99, sum(rate(orchestrator_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P99"},
+        {"expr": "histogram_quantile(0.95, sum(rate(orchestrator_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P95"},
+        {"expr": "histogram_quantile(0.50, sum(rate(orchestrator_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P50"}
+      ]
+    },
+    {
+      "title": "Error Rate (5xx)", "type": "gauge", "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "(sum(rate(orchestrator_requests_total{http_status=~\"5..\"}[5m])) / sum(rate(orchestrator_requests_total[5m]))) OR on() vector(0)"}]
+    },
+    {
+      "title": "Active Service Pods", "type": "stat", "gridPos": { "h": 6, "w": 6, "x": 6, "y": 8 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(up) by (job)", "legendFormat": "{{job}}"}]
+    }
+  ]
+}

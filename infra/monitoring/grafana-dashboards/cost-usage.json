@@ -1,0 +1,33 @@
+{
+  "title": "LLM Cost & Token Usage",
+  "tags": ["production", "finops"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "Token Usage (Input vs Output)", "type": "timeseries", "gridPos": { "h": 9, "w": 16, "x": 0, "y": 0 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 80, "stacked": true } } },
+      "targets": [{"expr": "sum(increase(llm_tokens_total[5m])) by (token_type, model)", "legendFormat": "{{model}} - {{token_type}}"}]
+    },
+    {
+      "title": "Cost Per Query ($)", "type": "stat", "gridPos": { "h": 9, "w": 8, "x": 16, "y": 0 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 } },
+      "targets": [{"expr": "(((sum(rate(llm_tokens_total{token_type=\"input\"}[5m])) * 0.0001) + (sum(rate(llm_tokens_total{token_type=\"output\"}[5m])) * 0.0002)) / sum(rate(orchestrator_requests_total{endpoint=\"/query\"}[5m]))) OR on() vector(0)"}]
+    },
+    {
+      "title": "Total Daily Cost", "type": "stat", "gridPos": { "h": 7, "w": 12, "x": 0, "y": 9 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 } },
+      "targets": [{"expr": "(sum(increase(llm_tokens_total{token_type=\"input\"}[24h])) * 0.0001) + (sum(increase(llm_tokens_total{token_type=\"output\"}[24h])) * 0.0002) OR on() vector(0)"}]
+    },
+    {
+      "title": "Cache Hit Rate", "type": "gauge", "gridPos": { "h": 7, "w": 12, "x": 12, "y": 9 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "decimals": 2 } },
+      "targets": [{"expr": "(sum(cache_events_total{status=\"hit\"}) / sum(cache_events_total)) OR on() vector(0)"}]
+    }
+  ]
+}

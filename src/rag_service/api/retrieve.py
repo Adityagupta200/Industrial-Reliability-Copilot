@@ -152,39 +152,46 @@ def _ensure_runtime(request: Request) -> dict[str, Any]:
     return runtime
 
 
-def _get_semantic_retriever(request: Request) -> SemanticRetriever:
+def _get_semantic_retriever(request: Request) -> SemanticRetriever | None:
     runtime = _ensure_runtime(request)
-    retriever = runtime.get("semantic_retriever")
-    if retriever is not None:
-        return retriever
+    
+    if "semantic_retriever" in runtime and runtime["semantic_retriever"] is not None:
+        return runtime["semantic_retriever"]
 
     lock: Lock = runtime["semantic_lock"]
     with lock:
-        retriever = runtime.get("semantic_retriever")
-        if retriever is None:
+        if runtime.get("semantic_retriever") is None:
             logger.info("Initializing semantic retriever lazily")
-            retriever = SemanticRetriever()
-            runtime["semantic_retriever"] = retriever
+            try:
+                retriever = SemanticRetriever()
+                runtime["semantic_retriever"] = retriever
+            except Exception as e:
+                # PRODUCTION FIX: Graceful Degradation
+                logger.error(f"Graceful Degradation: SemanticRetriever initialization failed: {e}. Semantic search disabled.")
+                return None
 
-    return retriever
+    return runtime.get("semantic_retriever")
 
 
-def _get_keyword_retriever(request: Request) -> BM25KeywordRetriever:
+def _get_keyword_retriever(request: Request) -> BM25KeywordRetriever | None:
     runtime = _ensure_runtime(request)
-    retriever = runtime.get("keyword_retriever")
-    if retriever is not None:
-        return retriever
+    
+    if "keyword_retriever" in runtime and runtime["keyword_retriever"] is not None:
+        return runtime["keyword_retriever"]
 
     lock: Lock = runtime["keyword_lock"]
     with lock:
-        retriever = runtime.get("keyword_retriever")
-        if retriever is None:
+        if runtime.get("keyword_retriever") is None:
             logger.info("Initializing keyword retriever lazily")
-            retriever = BM25KeywordRetriever()
-            retriever.build_or_load(force_rebuild=False)
-            runtime["keyword_retriever"] = retriever
+            try:
+                retriever = BM25KeywordRetriever()
+                retriever.build_or_load(force_rebuild=False)
+                runtime["keyword_retriever"] = retriever
+            except Exception as e:
+                logger.error(f"Graceful Degradation: KeywordRetriever initialization failed: {e}")
+                return None
 
-    return retriever
+    return runtime.get("keyword_retriever")
 
 
 def _get_hybrid_retriever(request: Request) -> HybridRetriever:
@@ -198,6 +205,7 @@ def _get_hybrid_retriever(request: Request) -> HybridRetriever:
         retriever = runtime.get("hybrid_retriever")
         if retriever is None:
             logger.info("Initializing hybrid retriever lazily")
+            # If a retriever fails, it returns None. HybridRetriever gracefully handles None.
             retriever = HybridRetriever(
                 semantic=_get_semantic_retriever(request),
                 keyword=_get_keyword_retriever(request),
@@ -207,28 +215,28 @@ def _get_hybrid_retriever(request: Request) -> HybridRetriever:
     return retriever
 
 
-def _get_procedure_retriever(request: Request) -> SemanticRetriever:
+def _get_procedure_retriever(request: Request) -> SemanticRetriever | None:
     runtime = _ensure_runtime(request)
-    retriever = runtime.get("procedure_retriever")
-    if retriever is not None:
-        return retriever
+    
+    if "procedure_retriever" in runtime and runtime["procedure_retriever"] is not None:
+        return runtime["procedure_retriever"]
 
     lock: Lock = runtime["procedure_lock"]
     with lock:
-        retriever = runtime.get("procedure_retriever")
-        if retriever is None:
+        if runtime.get("procedure_retriever") is None:
             logger.info("Initializing procedure retriever lazily")
-            
-            # PRODUCTION FIX: Safely override the frozen dataclass collection using 
-            # dataclasses.replace instead of mutating frozen attributes directly.
-            base_settings = QdrantSettings.from_env()
-            proc_settings = dataclasses.replace(base_settings, collection="procedures")
-            backend = QdrantBackend(settings=proc_settings)
-            
-            retriever = SemanticRetriever(qdrant=backend)
-            runtime["procedure_retriever"] = retriever
+            try:
+                base_settings = QdrantSettings.from_env()
+                proc_settings = dataclasses.replace(base_settings, collection="procedures")
+                backend = QdrantBackend(settings=proc_settings)
+                
+                retriever = SemanticRetriever(qdrant=backend)
+                runtime["procedure_retriever"] = retriever
+            except Exception as e:
+                logger.error(f"Graceful Degradation: Procedure Retriever initialization failed: {e}")
+                return None
 
-    return retriever
+    return runtime.get("procedure_retriever")
 
 
 @router.post("/procedures", response_model=RetrieveResponse)
@@ -241,6 +249,9 @@ async def retrieve_procedures(
 
     try:
         retriever = await run_in_threadpool(_get_procedure_retriever, request)
+        if retriever is None:
+            raise RuntimeError("Procedure Retriever is unavailable due to model initialization failure.")
+            
         docs = await run_in_threadpool(
             retriever.semantic_search,
             payload.query,
@@ -274,6 +285,9 @@ async def retrieve_semantic(
 
     try:
         retriever = await run_in_threadpool(_get_semantic_retriever, request)
+        if retriever is None:
+            raise RuntimeError("SemanticRetriever is unavailable due to model initialization failure.")
+            
         docs = await run_in_threadpool(
             retriever.semantic_search,
             payload.query,
@@ -307,6 +321,9 @@ async def retrieve_keyword(
 
     try:
         retriever = await run_in_threadpool(_get_keyword_retriever, request)
+        if retriever is None:
+            raise RuntimeError("Keyword Retriever is unavailable.")
+            
         docs = await run_in_threadpool(
             retriever.keyword_search,
             payload.query,

@@ -1,0 +1,35 @@
+{
+  "title": "RAG Quality Metrics",
+  "tags": ["production", "rag", "quality"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "Faithfulness Distribution", "type": "heatmap", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(increase(llm_faithfulness_bucket[5m])) by (le)", "format": "heatmap"}]
+    },
+    {
+      "title": "Answer Relevancy Trend", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "histogram_quantile(0.50, sum(increase(llm_answer_relevancy_bucket[5m])) by (le))", "legendFormat": "Median Relevancy"}]
+    },
+    {
+      "title": "Retrieval Recall @ 10", "type": "gauge", "gridPos": { "h": 7, "w": 8, "x": 0, "y": 8 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": { "defaults": { "min": 0, "max": 1 } },
+      "targets": [{"expr": "histogram_quantile(0.50, sum(increase(retrieval_recall_score_bucket[5m])) by (le))"}]
+    },
+    {
+      "title": "User Feedback Ratings", "type": "piechart", "gridPos": { "h": 7, "w": 8, "x": 8, "y": 8 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(user_feedback_total) by (rating)", "legendFormat": "{{rating}}"}]
+    },
+    {
+      "title": "Queries per Failure Mode", "type": "barchart", "gridPos": { "h": 7, "w": 8, "x": 16, "y": 8 },
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(orchestrator_guardrail_failures_total) by (type)", "legendFormat": "{{type}}"}]
+    }
+  ]
+}

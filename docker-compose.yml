@@ -64,6 +64,9 @@ services:
       PYTHONPATH: /app/src
     ports:
       - "127.0.0.1:8001:8001"
+    volumes:
+      # PRODUCTION FIX: Read-only mount to prevent WSL sync freezes
+      - ./src:/app/src:ro
     networks:
       - irc_network
     logging:
@@ -118,6 +121,8 @@ services:
       - ./data/raw:/app/data/raw:rw
       - irc_rag_processed:/app/data/processed
       - irc_hf_cache:/app/data/hf_cache
+      # PRODUCTION FIX: Read-only mount to prevent WSL sync freezes
+      - ./src:/app/src:ro
     networks:
       - irc_network
     logging:
@@ -221,6 +226,8 @@ services:
       - LLM_OLLAMA_BASE_URL=http://ollama:11434
       - LLM_OLLAMA_MODEL=llama3.1
       - LLM_OPENAI_API_KEY=${OPENAI_API_KEY}
+      # LangSmith variables pulled dynamically from .env at runtime
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
     networks:
       - irc_network
     logging:
@@ -271,6 +278,9 @@ services:
       - ORCHESTRATOR_URL=http://llm-orchestrator:8000 
     ports:
       - "127.0.0.1:8000:8000" 
+    volumes:
+      # PRODUCTION FIX: Read-only mount to prevent WSL sync freezes
+      - ./src:/app/src:ro
     networks:
       - irc_network
     logging:
@@ -300,6 +310,51 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  # --- PHASE 8: Observability Stack (Prometheus, Alertmanager, Grafana) ---
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: irc-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitoring/prometheus-alerts.yaml:/etc/prometheus/prometheus-alerts.yaml:ro
+      - irc_prom_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    networks:
+      - irc_network
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: irc-alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    networks:
+      - irc_network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: irc-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - irc_grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./infra/monitoring/grafana-provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infra/monitoring/grafana-dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - irc_network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 networks:
   irc_network:
     driver: bridge
@@ -311,3 +366,5 @@ volumes:
   irc_rag_processed:
   irc_hf_cache:
   irc_ollama_data:
+  irc_prom_data:
+  irc_grafana_data:

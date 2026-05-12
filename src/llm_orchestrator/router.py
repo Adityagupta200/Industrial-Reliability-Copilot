@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal, Optional
+from langsmith import traceable # PRODUCTION FIX: Explicit Tracing
 
 from .schemas import QueryRequest, QueryResponse
 from .chains.root_cause_chain import RootCauseChain
@@ -30,6 +31,7 @@ class ChainOrchestrator:
     remediation: RemediationChain
     historical: HistoricalSearchChain
 
+    @traceable(run_type="chain", name="Chain_Orchestrator") # PRODUCTION FIX: Explicit Tracing
     async def handle(self, req: QueryRequest) -> QueryResponse:
         chain: Optional[ChainName] = req.chain
 

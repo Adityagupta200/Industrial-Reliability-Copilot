@@ -1,0 +1,29 @@
+groups:
+  - name: rag_alerts
+    rules:
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(orchestrator_request_duration_seconds_bucket[5m])) > 3.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Orchestrator P95 latency is above 3s"
+          description: "The LLM Orchestrator is missing its 3-second SLA for the last 5 minutes."
+
+      - alert: LowFaithfulness
+        expr: avg_over_time(llm_faithfulness_sum[1h]) / avg_over_time(llm_faithfulness_count[1h]) < 0.75
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LLM Faithfulness dropped below 75%"
+          description: "Hallucination risk high. Groundedness scores are failing safety thresholds."
+
+      - alert: HighErrorRate
+        expr: rate(orchestrator_requests_total{http_status=~"5.."}[5m]) / rate(orchestrator_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx Error Rate > 5%"
+          description: "Orchestrator is returning excessive internal server errors."

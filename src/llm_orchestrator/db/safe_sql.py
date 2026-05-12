@@ -5,16 +5,13 @@ from dataclasses import dataclass
 import sqlglot
 from sqlglot import exp
 
-
 class UnsafeSQLError(ValueError):
     pass
-
 
 @dataclass(frozen=True)
 class SQLPolicy:
     allowed_tables: set[str]
     max_limit: int = 200
-
 
 def validate_readonly_sql(sql: str, policy: SQLPolicy) -> str:
     try:
@@ -25,9 +22,14 @@ def validate_readonly_sql(sql: str, policy: SQLPolicy) -> str:
     if not isinstance(parsed, exp.Select):
         raise UnsafeSQLError("Only SELECT queries are allowed.")
 
-    # Block any mutation/DDL just in case
-    blocked = (exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Create, exp.Alter, exp.Truncate)
-    if parsed.find(lambda n: isinstance(n, blocked)) is not None:
+    # PRODUCTION FIX: Dynamically build the tuple of blocked types based on what 
+    # exists in this specific version of sqlglot. This avoids both the 
+    # AttributeError (if Truncate is missing) AND the TypeError (by passing valid types to find).
+    blocked_names = ["Insert", "Update", "Delete", "Drop", "Create", "Alter", "Command", "Truncate"]
+    blocked_types = tuple(getattr(exp, name) for name in blocked_names if hasattr(exp, name))
+    
+    # We unpack the tuple using *blocked_types so sqlglot receives them correctly
+    if parsed.find(*blocked_types) is not None:
         raise UnsafeSQLError("Mutating/DDL SQL is not allowed.")
 
     # Ensure FROM tables are allowed

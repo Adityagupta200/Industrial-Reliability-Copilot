@@ -5,6 +5,7 @@ from typing import Optional
 from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
+from langsmith import traceable # PRODUCTION FIX: Explicit Tracing
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ class InputGuardrails:
         return any(word in text.lower() for word in toxic_keywords)
 
     @classmethod
+    @traceable(run_type="chain", name="Input_Guardrails") # PRODUCTION FIX: Explicit Tracing
     def process(cls, query: str) -> str:
         """
         Runs guardrails in optimized order.

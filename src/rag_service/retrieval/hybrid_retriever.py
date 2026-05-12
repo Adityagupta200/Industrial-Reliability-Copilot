@@ -26,12 +26,14 @@ class HybridRetriever:
         keyword: Optional[BM25KeywordRetriever] = None,
         settings: Optional[HybridSettings] = None,
     ):
-        self.semantic = semantic or SemanticRetriever()
-        self.keyword = keyword or BM25KeywordRetriever()
+        # PRODUCTION FIX: We no longer force "or SemanticRetriever()". 
+        # We accept None to allow Graceful Degradation.
+        self.semantic = semantic
+        self.keyword = keyword
         self.settings = settings or HybridSettings()
 
-        # Ensure BM25 is ready
-        self.keyword.build_or_load(force_rebuild=False)
+        if self.keyword:
+            self.keyword.build_or_load(force_rebuild=False)
 
     @staticmethod
     def _rrf_score(rank: int, k: int) -> float:
@@ -52,8 +54,9 @@ class HybridRetriever:
         out = out_k or self.settings.out_k
         rrf_const = rrf_k or self.settings.rrf_k
 
-        sem_docs = self.semantic.semantic_search(query, k=sem_k, filters=filters)
-        key_docs = self.keyword.keyword_search(query, k=key_k, filters=filters)
+        # Safe execution: only run if the retriever stream is active
+        sem_docs = self.semantic.semantic_search(query, k=sem_k, filters=filters) if self.semantic else []
+        key_docs = self.keyword.keyword_search(query, k=key_k, filters=filters) if self.keyword else []
 
         fused: dict[str, Document] = {}
         fused_score: dict[str, float] = {}

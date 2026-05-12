@@ -27,10 +27,11 @@ langchain-text-splitters>=0.2.2
 tiktoken>=0.6.0
 
 # Local Embeddings/Reranker core dependencies
-# PRODUCTION FIX: Removed <3.0.0 and <4.40 bounds to resolve tokenizers conflict
-sentence-transformers>=2.5.0
-transformers>=4.38.0
-tokenizers>=0.15.0
+# PRODUCTION FIX: Locked to the highly stable 2.5.1 ecosystem to permanently resolve infer_schema crashes
+torch>=2.5.1
+sentence-transformers>=3.3.1
+transformers>=4.46.1
+tokenizers>=0.20.3
 
 # PRODUCTION FIX: Inject explicitly requested LangChain integration packages 
 # into the RAG container boundary to support local HuggingFace routing

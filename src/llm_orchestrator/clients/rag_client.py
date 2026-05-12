@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Any, Optional
 import httpx
+from langsmith import traceable # PRODUCTION FIX: Explicit Tracing
 
 from ..schemas import RetrievedDoc
 
@@ -68,6 +69,7 @@ class RAGClient:
             
         return docs
 
+    @traceable(run_type="retriever", name="Qdrant_Hybrid_Search") # PRODUCTION FIX: Explicit Tracing
     async def retrieve_hybrid(
         self, query: str, *, equipment_id: Optional[str] = None, k: int = 8
     ) -> list[RetrievedDoc]:
@@ -85,6 +87,7 @@ class RAGClient:
             logger.error(f"RAG Service Hybrid Retrieval failed: {type(e).__name__} - {e}")
             return []
 
+    @traceable(run_type="retriever", name="Qdrant_Procedure_Search") # PRODUCTION FIX: Explicit Tracing
     async def retrieve_procedures(
         self, failure_mode: str, *, equipment_id: Optional[str] = None, k: int = 6
     ) -> list[RetrievedDoc]:
@@ -102,6 +105,7 @@ class RAGClient:
             logger.error(f"RAG Service Procedure Retrieval failed: {type(e).__name__} - {e}")
             return []
 
+    @traceable(run_type="retriever", name="Qdrant_Semantic_Search") # PRODUCTION FIX: Explicit Tracing
     async def retrieve_semantic(
         self, query: str, *, equipment_id: Optional[str] = None, k: int = 6
     ) -> list[RetrievedDoc]:
