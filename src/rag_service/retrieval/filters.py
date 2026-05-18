@@ -4,10 +4,12 @@ from typing import Optional
 from qdrant_client.http import models as qmodels
 from .types import RetrievalFilters
 
+
 def _dt_to_rfc3339(dt: datetime) -> str:
     if dt.tzinfo is None:
         return dt.isoformat() + "Z"
     return dt.isoformat()
+
 
 def build_qdrant_filter(
     filters: Optional[RetrievalFilters],
@@ -15,7 +17,7 @@ def build_qdrant_filter(
     equipment_id_key: str = "equipment_id",
     severity_key: str = "severity",
     date_key: str = "date",
-    plant_id_key: str = "plant_id", 
+    plant_id_key: str = "plant_id",
     roles_key: str = "allowed_roles",
 ) -> Optional[qmodels.Filter]:
     if not filters:
@@ -30,13 +32,11 @@ def build_qdrant_filter(
             qmodels.Filter(
                 should=[
                     qmodels.FieldCondition(
-                        key=equipment_id_key,
-                        match=qmodels.MatchValue(value=filters.equipment_id)
+                        key=equipment_id_key, match=qmodels.MatchValue(value=filters.equipment_id)
                     ),
                     qmodels.FieldCondition(
-                        key=equipment_id_key,
-                        match=qmodels.MatchValue(value="all")
-                    )
+                        key=equipment_id_key, match=qmodels.MatchValue(value="all")
+                    ),
                 ]
             )
         )

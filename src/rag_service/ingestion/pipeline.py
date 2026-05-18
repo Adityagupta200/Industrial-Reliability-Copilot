@@ -16,8 +16,10 @@ from rag_service.ingestion.markdown_loader import load_markdown
 from rag_service.ingestion.cleaning import clean_text
 from rag_service.ingestion.chunking import chunk_text
 
+
 def _log(msg: str) -> None:
     print(msg, flush=True)
+
 
 def _write_processed_text(source_id: str, obj: dict[str, Any]) -> None:
     out_dir = Path(settings.processed_texts_dir)
@@ -25,11 +27,15 @@ def _write_processed_text(source_id: str, obj: dict[str, Any]) -> None:
     out_path = out_dir / f"{source_id}.json"
     out_path.write_text(json.dumps(obj, indent=2, ensure_ascii=False), encoding="utf-8")
 
+
 def _extract_equipment_id(filename: str) -> str | None:
-    match = re.search(r'(pump_P-\d+|motor_M-\d+|compressor_C-\d+|turbofan_TF-\d+)', filename, re.IGNORECASE)
+    match = re.search(
+        r"(pump_P-\d+|motor_M-\d+|compressor_C-\d+|turbofan_TF-\d+)", filename, re.IGNORECASE
+    )
     if match:
         return match.group(1)
     return None
+
 
 # PRODUCTION FIX: Added 'force' parameter to bypass manifest checks
 def ingest_all(force: bool = False) -> dict[str, Any]:
@@ -61,7 +67,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
     for n, pdf in enumerate(pdfs, start=1):
         key = f"manual::{pdf.as_posix()}"
         sha = sha256_file(pdf)
-        
+
         # PRODUCTION FIX: Check if force is True before skipping
         if not force and manifest.is_unchanged(key, sha):
             stats["skipped_files"] += 1
@@ -87,7 +93,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
             extra_meta = {
                 "source_file": pdf.name,
                 "path": pdf.as_posix(),
-                "equipment_id": eq_id if eq_id else "all"
+                "equipment_id": eq_id if eq_id else "all",
             }
 
             chunks = chunk_text(
@@ -130,7 +136,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
     for n, md in enumerate(mds, start=1):
         key = f"procedure::{md.as_posix()}"
         sha = sha256_file(md)
-        
+
         # PRODUCTION FIX: Check if force is True before skipping
         if not force and manifest.is_unchanged(key, sha):
             stats["skipped_files"] += 1
@@ -161,7 +167,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
             extra_meta = {
                 "source_file": md.name,
                 "path": md.as_posix(),
-                "equipment_id": eq_id if eq_id else "all"
+                "equipment_id": eq_id if eq_id else "all",
             }
 
             chunks = chunk_text(
@@ -206,6 +212,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
     }
     _log(f"Finished. Qdrant counts: {stats['qdrant_counts']}")
     return stats
+
 
 if __name__ == "__main__":
     out = ingest_all(force=True)

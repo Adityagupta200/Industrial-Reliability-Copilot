@@ -1,0 +1,114 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging & Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        
+      - name: Build, tag, and push images
+        run: |
+          SERVICES=("anomaly_service" "api_gateway" "llm_orchestrator" "rag_service")
+          for SERVICE in "${SERVICES[@]}"; do
+            docker build -t $SERVICE:${{ github.sha }} src/$SERVICE/
+            docker tag $SERVICE:${{ github.sha }} ${{ env.ECR_REGISTRY }}/$SERVICE:${{ github.sha }}
+            docker push ${{ env.ECR_REGISTRY }}/$SERVICE:${{ github.sha }}
+          done
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        
+      - name: Update K8s manifests with new images
+        run: |
+          # Using sed to dynamically inject the new image hashes into the microservices manifest
+          sed -i "s|image: .*/anomaly_service:.*|image: ${{ env.ECR_REGISTRY }}/anomaly_service:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
+          sed -i "s|image: .*/api_gateway:.*|image: ${{ env.ECR_REGISTRY }}/api_gateway:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
+          sed -i "s|image: .*/llm_orchestrator:.*|image: ${{ env.ECR_REGISTRY }}/llm_orchestrator:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
+          sed -i "s|image: .*/rag_service:.*|image: ${{ env.ECR_REGISTRY }}/rag_service:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
+          
+      - name: Deploy to Staging
+        run: |
+          aws eks update-kubeconfig --name industrial-copilot-cluster --region ${{ env.AWS_REGION }}
+          kubectl apply -f infra/kubernetes/01_config.yaml -n staging
+          kubectl apply -f infra/kubernetes/02-backing-services.yaml -n staging
+          kubectl apply -f infra/kubernetes/03-microservices.yaml -n staging
+          
+      - name: Wait for Staging Rollout
+        run: |
+          kubectl rollout status deployment/api-gateway -n staging --timeout=300s
+          kubectl rollout status deployment/llm-orchestrator -n staging --timeout=300s
+          
+      - name: Run Smoke Tests
+        run: |
+          pip install requests pytest
+          pytest tests/integration/test_api_contract.py --env=staging
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production # Triggers manual approval gate in GitHub Settings
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        
+      - name: Deploy to Production
+        run: |
+          aws eks update-kubeconfig --name industrial-copilot-cluster --region ${{ env.AWS_REGION }}
+          # Apply config maps and secrets first
+          kubectl apply -f infra/kubernetes/01_config.yaml -n production
+          
+          # Set images directly using kubectl set image for zero-downtime rolling update
+          kubectl set image deployment/anomaly-service anomaly-service=${{ env.ECR_REGISTRY }}/anomaly_service:${{ github.sha }} -n production
+          kubectl set image deployment/api-gateway api-gateway=${{ env.ECR_REGISTRY }}/api_gateway:${{ github.sha }} -n production
+          kubectl set image deployment/llm-orchestrator llm-orchestrator=${{ env.ECR_REGISTRY }}/llm_orchestrator:${{ github.sha }} -n production
+          kubectl set image deployment/rag-service rag-service=${{ env.ECR_REGISTRY }}/rag_service:${{ github.sha }} -n production
+          
+      - name: Wait for Production Rollout
+        run: |
+          kubectl rollout status deployment/api-gateway -n production
+          kubectl rollout status deployment/llm-orchestrator -n production
+          
+      - name: Monitor Deployment (SLA & Health Check)
+        run: |
+          pip install requests
+          python scripts/monitor_deployment.py --duration=600 --namespace=production
+          
+      - name: Automated Rollback on Failure
+        if: failure()
+        run: |
+          echo "Deployment or Monitoring failed! Initiating automated rollback..."
+          kubectl rollout undo deployment/api-gateway -n production
+          kubectl rollout undo deployment/llm-orchestrator -n production
+          kubectl rollout undo deployment/rag-service -n production
+          kubectl rollout undo deployment/anomaly-service -n production
+          echo "Rollback complete. Please investigate logs."

@@ -15,7 +15,7 @@ class HybridSettings:
     semantic_k: int = 15
     keyword_k: int = 15
     rrf_k: int = 60
-    out_k: int = 8 # Hard limit: Pass exactly 8 docs to Reranker for a single batch pass
+    out_k: int = 8  # Hard limit: Pass exactly 8 docs to Reranker for a single batch pass
 
 
 class HybridRetriever:
@@ -26,7 +26,7 @@ class HybridRetriever:
         keyword: Optional[BM25KeywordRetriever] = None,
         settings: Optional[HybridSettings] = None,
     ):
-        # PRODUCTION FIX: We no longer force "or SemanticRetriever()". 
+        # PRODUCTION FIX: We no longer force "or SemanticRetriever()".
         # We accept None to allow Graceful Degradation.
         self.semantic = semantic
         self.keyword = keyword
@@ -55,8 +55,12 @@ class HybridRetriever:
         rrf_const = rrf_k or self.settings.rrf_k
 
         # Safe execution: only run if the retriever stream is active
-        sem_docs = self.semantic.semantic_search(query, k=sem_k, filters=filters) if self.semantic else []
-        key_docs = self.keyword.keyword_search(query, k=key_k, filters=filters) if self.keyword else []
+        sem_docs = (
+            self.semantic.semantic_search(query, k=sem_k, filters=filters) if self.semantic else []
+        )
+        key_docs = (
+            self.keyword.keyword_search(query, k=key_k, filters=filters) if self.keyword else []
+        )
 
         fused: dict[str, Document] = {}
         fused_score: dict[str, float] = {}

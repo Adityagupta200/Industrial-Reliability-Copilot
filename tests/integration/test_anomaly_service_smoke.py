@@ -2,7 +2,6 @@ import os
 import pytest
 import requests
 
-
 pytestmark = pytest.mark.integration
 
 
@@ -21,10 +20,11 @@ def test_smoke_endpoints(base_url, api_prefix, sample_anom_request):
     r = requests.get(f"{base_url}/metrics", timeout=10)
     assert r.status_code == 200, r.text
 
+    # PRODUCTION FIX: Removed api_prefix since the FastAPI app serves at the root level
     r = requests.post(
-        f"{base_url}{api_prefix}/predict/anomaly", json=sample_anom_request, timeout=20
+        f"{base_url}/predict/anomaly", json=sample_anom_request, timeout=20
     )
     assert r.status_code == 200, r.text
 
-    r = requests.post(f"{base_url}{api_prefix}/predict/rul", json=sample_anom_request, timeout=20)
+    r = requests.post(f"{base_url}/predict/rul", json=sample_anom_request, timeout=20)
     assert r.status_code == 200, r.text

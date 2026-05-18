@@ -13,6 +13,7 @@ from prometheus_client import Counter, Histogram, CONTENT_TYPE_LATEST, generate_
 from rag_service.api.retrieve import router as retrieve_router
 from rag_service.core.config import settings
 
+
 # --- Production Logging Setup ---
 def _configure_logging() -> None:
     level_name = str(settings.log_level).upper()
@@ -23,6 +24,7 @@ def _configure_logging() -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
+
 _configure_logging()
 logger = logging.getLogger("rag_service.main")
 
@@ -31,12 +33,12 @@ logger = logging.getLogger("rag_service.main")
 REQUEST_COUNT = Counter(
     "rag_service_requests_total",
     "Total HTTP requests routed to the RAG service",
-    ["method", "endpoint", "http_status"]
+    ["method", "endpoint", "http_status"],
 )
 REQUEST_LATENCY = Histogram(
     "rag_service_request_duration_seconds",
     "Latency of requests through the RAG service",
-    ["endpoint"]
+    ["endpoint"],
 )
 
 # Global HTTP Client strictly for K8s dependency health checking
@@ -50,26 +52,30 @@ async def lifespan(app: FastAPI):
     Crucial for graceful startups and shutdowns in Kubernetes.
     """
     global health_check_client
-    
+
     # Initialize a fast-failing client (kept for potential future downstream API calls)
     limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
     health_check_client = httpx.AsyncClient(timeout=2.0, limits=limits)
-    
-    logger.info({"event": "service_startup", "message": "RAG Service background resources initialized."})
-    
+
+    logger.info(
+        {"event": "service_startup", "message": "RAG Service background resources initialized."}
+    )
+
     yield  # Application runs here
-    
+
     # Graceful shutdown cleanup
     if health_check_client:
         await health_check_client.aclose()
-        logger.info({"event": "service_shutdown", "message": "RAG Service background resources cleaned up."})
+        logger.info(
+            {"event": "service_shutdown", "message": "RAG Service background resources cleaned up."}
+        )
 
 
 app = FastAPI(
     title="Industrial Reliability Copilot - RAG Service",
     version="1.0.0",
     lifespan=lifespan,
-    description="Microservice responsible for semantic and hybrid retrieval from the Vector DB."
+    description="Microservice responsible for semantic and hybrid retrieval from the Vector DB.",
 )
 
 # --- Phase 7 Security: CORS Middleware ---
@@ -80,6 +86,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # --- Phase 7 Observability: Metrics Middleware ---
 @app.middleware("http")
@@ -95,9 +102,7 @@ async def metrics_middleware(request: Request, call_next):
         latency = time.time() - start_time
         REQUEST_LATENCY.labels(endpoint=request.url.path).observe(latency)
         REQUEST_COUNT.labels(
-            method=request.method, 
-            endpoint=request.url.path, 
-            http_status=status_code
+            method=request.method, endpoint=request.url.path, http_status=status_code
         ).inc()
 
 
@@ -105,6 +110,7 @@ app.include_router(retrieve_router, prefix="/retrieve", tags=["retrieve"])
 
 
 # --- Phase 7: Kubernetes Probes & Telemetry ---
+
 
 @app.get("/health/live", tags=["Health"])
 async def liveness_probe() -> dict[str, str]:
@@ -120,8 +126,8 @@ async def readiness_probe() -> Response:
     """
     Production Fix: Shallow readiness probe.
     Confirms the application is fully booted and the event loop is responsive.
-    By removing the deep downstream check to Qdrant, we ensure Kubernetes 
-    does not falsely mark this pod as unready (and sever the ELB connection) 
+    By removing the deep downstream check to Qdrant, we ensure Kubernetes
+    does not falsely mark this pod as unready (and sever the ELB connection)
     during CPU-heavy embedding inference spikes.
     """
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ready"})

@@ -5,8 +5,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
@@ -30,6 +29,7 @@ REQUEST_LATENCY = Histogram(
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://llm-orchestrator:8000")
 http_client: httpx.AsyncClient | None = None
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global http_client
@@ -39,11 +39,12 @@ async def lifespan(app: FastAPI):
     http_client = httpx.AsyncClient(limits=limits, timeout=timeout)
     logger.info("Gateway HTTP client initialized with connection pooling.")
 
-    yield 
-    
+    yield
+
     if http_client:
         await http_client.aclose()
         logger.info("Gateway HTTP client connection pool closed.")
+
 
 app = FastAPI(
     title="Industrial Reliability Copilot - API Gateway",
@@ -55,11 +56,12 @@ app = FastAPI(
 # --- Phase 7 Security: CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.middleware("http")
 async def metrics_middleware(request: Request, call_next):
@@ -76,25 +78,33 @@ async def metrics_middleware(request: Request, call_next):
             method=request.method, endpoint=request.url.path, http_status=status_code
         ).inc()
 
+
 # --- Phase 7: Kubernetes Probes & Observability ---
+
 
 @app.get("/health/live", tags=["Health"])
 async def liveness_probe():
     return {"status": "alive"}
 
+
 @app.get("/health/ready", tags=["Health"])
 async def readiness_probe():
     return {"status": "ready"}
+
 
 @app.get("/metrics", tags=["Telemetry"])
 async def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+
 # --- Core Gateway Routing ---
+
 
 @app.post("/query", tags=["Routing"])
 async def route_query(request: Request):
-    assert http_client is not None
+    # PRODUCTION FIX: Avoid unsafe assert
+    if http_client is None:
+        raise RuntimeError("HTTP client not initialized")
 
     try:
         body = await request.json()
@@ -107,7 +117,7 @@ async def route_query(request: Request):
         headers = {"X-Trace-ID": trace_id}
         if request.client:
             headers["X-Forwarded-For"] = request.client.host
-            
+
         response = await http_client.post(f"{ORCHESTRATOR_URL}/query", json=body, headers=headers)
 
     except httpx.RequestError as e:
@@ -115,33 +125,40 @@ async def route_query(request: Request):
         raise HTTPException(
             status_code=502, detail="Bad Gateway: Failed to communicate with downstream service."
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected Gateway Error")
         raise HTTPException(status_code=500, detail="Internal Gateway Error")
 
     return Response(
-        content=response.content, 
-        status_code=response.status_code, 
+        content=response.content,
+        status_code=response.status_code,
         media_type="application/json",
-        headers={"X-Trace-ID": trace_id}
+        headers={"X-Trace-ID": trace_id},
     )
+
 
 @app.get("/query/{job_id}", tags=["Routing"])
 async def get_query_status(job_id: str):
-    assert http_client is not None
+    # PRODUCTION FIX: Avoid unsafe assert
+    if http_client is None:
+        raise RuntimeError("HTTP client not initialized")
+        
     try:
         response = await http_client.get(f"{ORCHESTRATOR_URL}/query/{job_id}")
-        
-        # PRODUCTION FIX: Log explicit errors parsed from the downstream orchestrator payload
+
         if response.status_code == 200:
             payload = response.json()
-            if payload.get("status") == "failed" and "API Configuration Error" in payload.get("error", ""):
-                logger.error(f"Gateway observed downstream API Configuration Error for Job {job_id}")
-                
+            if payload.get("status") == "failed" and "API Configuration Error" in payload.get(
+                "error", ""
+            ):
+                logger.error(
+                    f"Gateway observed downstream API Configuration Error for Job {job_id}"
+                )
+
         return Response(
             content=response.content,
             status_code=response.status_code,
-            media_type="application/json"
+            media_type="application/json",
         )
     except httpx.RequestError as e:
         logger.error(f"Gateway network error fetching job: {e}")

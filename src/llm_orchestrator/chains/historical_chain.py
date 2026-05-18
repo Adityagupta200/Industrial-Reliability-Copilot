@@ -62,8 +62,10 @@ class HistoricalSearchChain:
     incident_repo: IncidentRepo
     incidents_table: str
 
-    @traceable(run_type="chain", name="Historical_Chain") 
-    async def run(self, req: HistoricalSearchRequest) -> tuple[HistoricalSearchResponse, str, str, str]:
+    @traceable(run_type="chain", name="Historical_Chain")
+    async def run(
+        self, req: HistoricalSearchRequest
+    ) -> tuple[HistoricalSearchResponse, str, str, str]:
         sql_prompt = _TEXT2SQL_PROMPT.format(
             table=self.incidents_table,
             limit=req.limit,
@@ -74,7 +76,7 @@ class HistoricalSearchChain:
         sql_result = await self.llm.invoke(sql_prompt)
 
         policy = SQLPolicy(allowed_tables={self.incidents_table}, max_limit=max(req.limit, 50))
-        
+
         safe_sql = validate_readonly_sql(sql_result.content.strip(), policy)
 
         rows = await self.incident_repo.run_query(safe_sql)
@@ -84,7 +86,7 @@ class HistoricalSearchChain:
         )
 
         formatted_context = _format_docs(docs)
-        
+
         bundle = self.prompts.load("historical_search", req.prompt_version)
         prompt = bundle.template.format(
             user_query=req.user_query,

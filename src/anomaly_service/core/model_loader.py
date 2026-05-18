@@ -226,7 +226,7 @@ class HybridMultiDomainArchitecture(nn.Module):
             input_dim=hidden_dim, hidden_dim=hidden_dim
         )
 
-        # IMPORTANT: this must match checkpoint shapes (e.g., 128->64->32 in your error)
+        # IMPORTANT: this must match checkpoint shapes
         self.additional_processing = nn.Sequential(
             nn.Linear(hidden_dim, ap_hidden1),
             nn.ReLU(),
@@ -235,7 +235,7 @@ class HybridMultiDomainArchitecture(nn.Module):
             nn.ReLU(),
         )
 
-        # Heads must take ap_hidden2 as input (e.g., 32)
+        # Heads must take ap_hidden2 as input
         self.classifier = nn.Sequential(
             nn.Linear(ap_hidden2, num_classes),
         )
@@ -271,7 +271,8 @@ def load_rul_model():
 
 
 def load_anomaly_model():
-    ckpt = torch.load(settings.anomaly_ckpt_path, map_location=settings.torch_device)
+    # PRODUCTION FIX: Enforce weights_only=True to prevent arbitrary code execution attacks
+    ckpt = torch.load(settings.anomaly_ckpt_path, map_location=settings.torch_device, weights_only=True)
     version = _sha256_of_file(settings.anomaly_ckpt_path)
 
     state_dict, meta = _extract_state_dict_and_meta(ckpt)
@@ -302,7 +303,7 @@ def load_anomaly_model():
             raise ValueError("Missing key 'domain_norm.domain_gamma' in anomaly state_dict.")
         num_domains = int(dg.shape[0])
 
-    # additional_processing dims directly from checkpoint (fixes your current mismatch)
+    # additional_processing dims directly from checkpoint
     ap0 = state_dict.get("additional_processing.0.weight", None)
     ap3 = state_dict.get("additional_processing.3.weight", None)
     if ap0 is None or ap3 is None:

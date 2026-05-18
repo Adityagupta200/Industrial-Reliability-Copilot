@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-import random
+import secrets
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -38,4 +38,5 @@ def rul_infer(model, x_np: np.ndarray) -> tuple[float, float]:
 def should_log_to_mlflow() -> bool:
     if not settings.mlflow_log_inference:
         return False
-    return random.random() < settings.mlflow_inference_sample_rate
+    # PRODUCTION FIX: Use cryptographically secure randomness
+    return secrets.SystemRandom().random() < settings.mlflow_inference_sample_rate

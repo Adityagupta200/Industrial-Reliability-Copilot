@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import threading
 import time
+import json
 from dataclasses import dataclass
 from typing import Optional
 
@@ -49,10 +50,9 @@ class QueryEmbeddingCache:
                 self.stats.misses += 1
                 return None
             try:
-                import pickle
-
+                # PRODUCTION FIX: Replaced pickle with secure json deserialization
                 self.stats.hits += 1
-                return pickle.loads(raw)
+                return json.loads(raw)
             except Exception:
                 self.stats.misses += 1
                 return None
@@ -75,9 +75,8 @@ class QueryEmbeddingCache:
         key = self._mk_key(query)
 
         if self._redis is not None:
-            import pickle
-
-            self._redis.setex(key, self.ttl_seconds, pickle.dumps(vec))
+            # PRODUCTION FIX: Replaced pickle with secure json serialization
+            self._redis.setex(key, self.ttl_seconds, json.dumps(vec))
             return
 
         expires_at = time.time() + self.ttl_seconds

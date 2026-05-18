@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal, Optional
-from langsmith import traceable # PRODUCTION FIX: Explicit Tracing
+from langsmith import traceable  # PRODUCTION FIX: Explicit Tracing
 
 from .schemas import QueryRequest, QueryResponse
 from .chains.root_cause_chain import RootCauseChain
@@ -10,6 +10,7 @@ from .chains.remediation_chain import RemediationChain
 from .chains.historical_chain import HistoricalSearchChain
 
 ChainName = Literal["root_cause", "remediation", "historical"]
+
 
 def heuristic_route(text: str) -> ChainName:
     t = text.lower()
@@ -25,13 +26,14 @@ def heuristic_route(text: str) -> ChainName:
         return "remediation"
     return "root_cause"
 
+
 @dataclass(frozen=True)
 class ChainOrchestrator:
     root_cause: RootCauseChain
     remediation: RemediationChain
     historical: HistoricalSearchChain
 
-    @traceable(run_type="chain", name="Chain_Orchestrator") # PRODUCTION FIX: Explicit Tracing
+    @traceable(run_type="chain", name="Chain_Orchestrator")  # PRODUCTION FIX: Explicit Tracing
     async def handle(self, req: QueryRequest) -> QueryResponse:
         chain: Optional[ChainName] = req.chain
 
@@ -50,18 +52,36 @@ class ChainOrchestrator:
                 raise ValueError("root_cause payload is required.")
             # PRODUCTION FIX: Unpacking 4 variables
             result, prov, model, raw_ctx = await self.root_cause.run(req.root_cause)
-            return QueryResponse(chain=chain, result=result, model_provider=prov, model_name=model, raw_context=raw_ctx)
+            return QueryResponse(
+                chain=chain,
+                result=result,
+                model_provider=prov,
+                model_name=model,
+                raw_context=raw_ctx,
+            )
 
         if chain == "remediation":
             if req.remediation is None:
                 raise ValueError("remediation payload is required.")
             result, prov, model, raw_ctx = await self.remediation.run(req.remediation)
-            return QueryResponse(chain=chain, result=result, model_provider=prov, model_name=model, raw_context=raw_ctx)
+            return QueryResponse(
+                chain=chain,
+                result=result,
+                model_provider=prov,
+                model_name=model,
+                raw_context=raw_ctx,
+            )
 
         if chain == "historical":
             if req.historical is None:
                 raise ValueError("historical payload is required.")
             result, prov, model, raw_ctx = await self.historical.run(req.historical)
-            return QueryResponse(chain=chain, result=result, model_provider=prov, model_name=model, raw_context=raw_ctx)
+            return QueryResponse(
+                chain=chain,
+                result=result,
+                model_provider=prov,
+                model_name=model,
+                raw_context=raw_ctx,
+            )
 
         raise ValueError(f"Unknown chain '{chain}'.")

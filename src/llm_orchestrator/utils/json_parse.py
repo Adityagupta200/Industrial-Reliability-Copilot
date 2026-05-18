@@ -21,7 +21,7 @@ class LLMOutputParseError(RuntimeError):
 
 def _extract_json_object(text: str) -> str:
     text = text.strip()
-    
+
     # Strip common markdown formatting from smaller LLMs
     if text.startswith("```json"):
         text = text[7:]
@@ -31,7 +31,7 @@ def _extract_json_object(text: str) -> str:
 
     if text.startswith("{") and text.endswith("}"):
         return text
-        
+
     m = _JSON_BLOCK_RE.search(text)
     if not m:
         # MLE FIX: If the LLM truncates the JSON (hitting max_tokens mid-generation),

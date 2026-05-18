@@ -25,8 +25,8 @@ class RetrievalFiltersPayload(BaseModel):
     severity: str | None = None
     date_from: datetime | None = None
     date_to: datetime | None = None
-    plant_id: str | None = None 
-    user_role: str | None = None 
+    plant_id: str | None = None
+    user_role: str | None = None
 
 
 class SemanticRetrieveRequest(BaseModel):
@@ -82,16 +82,16 @@ def _to_filters(payload: RetrievalFiltersPayload) -> RetrievalFilters | None:
         date_from=payload.date_from,
         date_to=payload.date_to,
         plant_id=payload.plant_id,
-        user_role=payload.user_role, 
+        user_role=payload.user_role,
     )
 
 
 def _to_document_response(doc: Document) -> DocumentResponse:
     doc_text = doc.text
-    metadata = dict(doc.metadata) 
+    metadata = dict(doc.metadata)
 
     bad_tags = {"hybrid", "semantic", "keyword", "unknown"}
-    
+
     for key in ["source", "file_name"]:
         if str(metadata.get(key, "")).lower() in bad_tags:
             metadata.pop(key, None)
@@ -131,7 +131,7 @@ def _to_document_response(doc: Document) -> DocumentResponse:
         metadata=metadata,
         score=float(doc.score),
         source=str(doc.source),
-        title=metadata.get("file_name", "Untitled")
+        title=metadata.get("file_name", "Untitled"),
     )
 
 
@@ -142,11 +142,11 @@ def _ensure_runtime(request: Request) -> dict[str, Any]:
             "semantic_retriever": None,
             "keyword_retriever": None,
             "hybrid_retriever": None,
-            "procedure_retriever": None, 
+            "procedure_retriever": None,
             "semantic_lock": Lock(),
             "keyword_lock": Lock(),
             "hybrid_lock": Lock(),
-            "procedure_lock": Lock(), 
+            "procedure_lock": Lock(),
         }
         request.app.state.runtime = runtime
     return runtime
@@ -154,7 +154,7 @@ def _ensure_runtime(request: Request) -> dict[str, Any]:
 
 def _get_semantic_retriever(request: Request) -> SemanticRetriever | None:
     runtime = _ensure_runtime(request)
-    
+
     if "semantic_retriever" in runtime and runtime["semantic_retriever"] is not None:
         return runtime["semantic_retriever"]
 
@@ -167,7 +167,9 @@ def _get_semantic_retriever(request: Request) -> SemanticRetriever | None:
                 runtime["semantic_retriever"] = retriever
             except Exception as e:
                 # PRODUCTION FIX: Graceful Degradation
-                logger.error(f"Graceful Degradation: SemanticRetriever initialization failed: {e}. Semantic search disabled.")
+                logger.error(
+                    f"Graceful Degradation: SemanticRetriever initialization failed: {e}. Semantic search disabled."
+                )
                 return None
 
     return runtime.get("semantic_retriever")
@@ -175,7 +177,7 @@ def _get_semantic_retriever(request: Request) -> SemanticRetriever | None:
 
 def _get_keyword_retriever(request: Request) -> BM25KeywordRetriever | None:
     runtime = _ensure_runtime(request)
-    
+
     if "keyword_retriever" in runtime and runtime["keyword_retriever"] is not None:
         return runtime["keyword_retriever"]
 
@@ -217,7 +219,7 @@ def _get_hybrid_retriever(request: Request) -> HybridRetriever:
 
 def _get_procedure_retriever(request: Request) -> SemanticRetriever | None:
     runtime = _ensure_runtime(request)
-    
+
     if "procedure_retriever" in runtime and runtime["procedure_retriever"] is not None:
         return runtime["procedure_retriever"]
 
@@ -229,11 +231,13 @@ def _get_procedure_retriever(request: Request) -> SemanticRetriever | None:
                 base_settings = QdrantSettings.from_env()
                 proc_settings = dataclasses.replace(base_settings, collection="procedures")
                 backend = QdrantBackend(settings=proc_settings)
-                
+
                 retriever = SemanticRetriever(qdrant=backend)
                 runtime["procedure_retriever"] = retriever
             except Exception as e:
-                logger.error(f"Graceful Degradation: Procedure Retriever initialization failed: {e}")
+                logger.error(
+                    f"Graceful Degradation: Procedure Retriever initialization failed: {e}"
+                )
                 return None
 
     return runtime.get("procedure_retriever")
@@ -250,8 +254,10 @@ async def retrieve_procedures(
     try:
         retriever = await run_in_threadpool(_get_procedure_retriever, request)
         if retriever is None:
-            raise RuntimeError("Procedure Retriever is unavailable due to model initialization failure.")
-            
+            raise RuntimeError(
+                "Procedure Retriever is unavailable due to model initialization failure."
+            )
+
         docs = await run_in_threadpool(
             retriever.semantic_search,
             payload.query,
@@ -286,8 +292,10 @@ async def retrieve_semantic(
     try:
         retriever = await run_in_threadpool(_get_semantic_retriever, request)
         if retriever is None:
-            raise RuntimeError("SemanticRetriever is unavailable due to model initialization failure.")
-            
+            raise RuntimeError(
+                "SemanticRetriever is unavailable due to model initialization failure."
+            )
+
         docs = await run_in_threadpool(
             retriever.semantic_search,
             payload.query,
@@ -323,7 +331,7 @@ async def retrieve_keyword(
         retriever = await run_in_threadpool(_get_keyword_retriever, request)
         if retriever is None:
             raise RuntimeError("Keyword Retriever is unavailable.")
-            
+
         docs = await run_in_threadpool(
             retriever.keyword_search,
             payload.query,

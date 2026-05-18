@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import httpx
 from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage
 
 from .base import LLMProvider, LLMResult, LLMTransientError
+
 
 class OllamaProvider(LLMProvider):
     provider_name = "ollama"
@@ -19,15 +19,15 @@ class OllamaProvider(LLMProvider):
     ) -> None:
         self._model_name = model
 
-        # PRODUCTION FIX: Removed problematic client_kwargs that caused Langchain 
-        # to swallow the extended timeout on large context loads. Passed the raw 
+        # PRODUCTION FIX: Removed problematic client_kwargs that caused Langchain
+        # to swallow the extended timeout on large context loads. Passed the raw
         # float directly to the timeout parameter to guarantee the 300s window.
         self._client = ChatOllama(
             base_url=base_url,
             model=model,
             temperature=temperature,
             num_predict=max_tokens,
-            timeout=timeout_s,  
+            timeout=timeout_s,
         )
 
     async def invoke(self, prompt: str, json_mode: bool = False) -> LLMResult:

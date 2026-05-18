@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
 from rag_service.retrieval.cache import QueryEmbeddingCache
 from rag_service.retrieval.semantic_retriever import SemanticRetriever
 from rag_service.retrieval.types import RetrievalFilters
@@ -51,16 +50,21 @@ class DummyEmbedder:
         self.calls += 1
         return [0.1, 0.2, 0.3]
 
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        self.calls += 1
+        return [[0.1, 0.2, 0.3] for _ in texts]
+
 
 def test_semantic_search_maps_payload_text_and_preserves_ranking(monkeypatch):
     cache = QueryEmbeddingCache(ttl_seconds=3600)
-    retriever = SemanticRetriever()
-
-    dummy_qdrant = DummyQdrant(text_key="content")  # pretend your payload key is "content"
     dummy_embedder = DummyEmbedder()
+    
+    monkeypatch.setattr("rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder)
+    
+    retriever = SemanticRetriever()
+    dummy_qdrant = DummyQdrant(text_key="content") 
 
     retriever.qdrant = dummy_qdrant
-    retriever.embedder = dummy_embedder
     retriever.cache = cache
 
     docs = retriever.semantic_search("bearing failure symptoms", k=2)
@@ -73,13 +77,14 @@ def test_semantic_search_maps_payload_text_and_preserves_ranking(monkeypatch):
 
 def test_semantic_search_caches_query_embedding(monkeypatch):
     cache = QueryEmbeddingCache(ttl_seconds=3600)
-    retriever = SemanticRetriever()
-
-    dummy_qdrant = DummyQdrant(text_key="text")
     dummy_embedder = DummyEmbedder()
+    
+    monkeypatch.setattr("rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder)
+    
+    retriever = SemanticRetriever()
+    dummy_qdrant = DummyQdrant(text_key="text")
 
     retriever.qdrant = dummy_qdrant
-    retriever.embedder = dummy_embedder
     retriever.cache = cache
 
     _ = retriever.semantic_search("pump maintenance procedure", k=2)
@@ -89,15 +94,16 @@ def test_semantic_search_caches_query_embedding(monkeypatch):
     assert len(dummy_qdrant.search_calls) == 2, "Qdrant is still queried, only embedding is cached"
 
 
-def test_semantic_search_applies_metadata_filters_smoke():
+def test_semantic_search_applies_metadata_filters_smoke(monkeypatch):
     cache = QueryEmbeddingCache(ttl_seconds=3600)
-    retriever = SemanticRetriever()
-
-    dummy_qdrant = DummyQdrant(text_key="text")
     dummy_embedder = DummyEmbedder()
+    
+    monkeypatch.setattr("rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder)
+    
+    retriever = SemanticRetriever()
+    dummy_qdrant = DummyQdrant(text_key="text")
 
     retriever.qdrant = dummy_qdrant
-    retriever.embedder = dummy_embedder
     retriever.cache = cache
 
     filters = RetrievalFilters(equipment_id="P-23", severity="high")

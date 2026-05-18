@@ -10,7 +10,9 @@ app = typer.Typer(no_args_is_help=True)
 
 @app.command()
 def run(
-    force: bool = typer.Option(False, "--force", "-f", help="Force re-ingestion of all files, ignoring the manifest.")
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Force re-ingestion of all files, ignoring the manifest."
+    )
 ) -> None:
     """Run the full ingestion pipeline (manuals + procedures)."""
     stats = ingest_all(force=force)

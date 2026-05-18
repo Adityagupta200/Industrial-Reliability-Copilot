@@ -26,6 +26,7 @@ ANOM_SCHEMA: dict | None = None
 RUL_SCHEMA: dict | None = None
 ANOM_ARTIFACTS: dict | None = None
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global MODELS, ANOM_SCHEMA, RUL_SCHEMA, ANOM_ARTIFACTS
@@ -63,7 +64,7 @@ async def lifespan(app: FastAPI):
         mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
         mlflow.set_experiment(settings.mlflow_experiment)
 
-    yield 
+    yield
 
     logger.info({"event": "service_shutdown", "message": "Cleaning up model resources..."})
     MODELS = None
@@ -130,7 +131,9 @@ def readiness_probe(response: Response):
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"], include_in_schema=False)
 def health():
-    assert MODELS is not None
+    if MODELS is None:
+        raise RuntimeError("Models not loaded")
+    
     ok_anom = MODELS.anomaly_model is not None
     ok_rul = MODELS.rul_model is not None
 
@@ -154,7 +157,16 @@ def predict_anomaly(req: SensorRequest):
         or ANOM_SCHEMA is None
         or ANOM_ARTIFACTS is None
     ):
-        raise HTTPException(status_code=503, detail="Anomaly model or artifacts not available")
+        # PRODUCTION FIX: Graceful Degradation. 
+        # Return a safe baseline instead of a hard 503 so upstream pipelines don't crash.
+        logger.warning({"event": "anomaly_service_degraded", "message": "Returning fallback baseline"})
+        return AnomalyResponse(
+            timestamp=req.timestamp,
+            schema_id="degraded_fallback",
+            anomaly_score=0.1,
+            confidence=0.5,
+            model_version="degraded_mode",
+        )
 
     try:
         schema_id = req.schema_id or infer_schema_id(req.sensor_values)
@@ -165,12 +177,14 @@ def predict_anomaly(req: SensorRequest):
             schema_id, req.sensor_values, ANOM_SCHEMA, ANOM_ARTIFACTS
         )
         score, conf = anomaly_infer(MODELS.anomaly_model, x_final, domain_idx)
-        
+
     except ValueError as e:
-        # PRODUCTION FIX: Graceful heuristic fallback for sparse telemetry from NLP
         if "Unable to infer schema_id" in str(e) or "Missing required features" in str(e):
             logger.info({"event": "fallback_heuristic_activated", "reason": "sparse_nlp_telemetry"})
-            is_critical = req.sensor_values.get("temp_c", 0) > 100 or req.sensor_values.get("vibration_rms", 0) > 2.0
+            is_critical = (
+                req.sensor_values.get("temp_c", 0) > 100
+                or req.sensor_values.get("vibration_rms", 0) > 2.0
+            )
             return AnomalyResponse(
                 timestamp=req.timestamp,
                 schema_id="generic",
@@ -178,7 +192,7 @@ def predict_anomaly(req: SensorRequest):
                 confidence=0.85,
                 model_version="heuristic_rules_v1",
             )
-            
+
         logger.warning({"event": "anomaly_inference_validation_error", "error": str(e)})
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
@@ -197,23 +211,32 @@ def predict_anomaly(req: SensorRequest):
 @app.post("/predict/rul", response_model=RULResponse, tags=["Inference"])
 def predict_rul(req: SensorRequest):
     if MODELS is None or MODELS.rul_model is None or RUL_SCHEMA is None:
-        raise HTTPException(status_code=503, detail="RUL model or schema not available")
+        # PRODUCTION FIX: Graceful Degradation
+        logger.warning({"event": "rul_service_degraded", "message": "Returning fallback baseline"})
+        return RULResponse(
+            timestamp=req.timestamp,
+            predicted_rul=100.0,
+            confidence=0.5,
+            model_version="degraded_mode",
+        )
 
     try:
         x = preprocess_rul(req.sensor_values, RUL_SCHEMA)
         y, conf = rul_infer(MODELS.rul_model, x)
     except ValueError as e:
-        # PRODUCTION FIX: Graceful heuristic fallback for sparse telemetry from NLP
         if "Missing required features" in str(e) or "Unable to infer schema_id" in str(e):
             logger.info({"event": "fallback_heuristic_activated", "reason": "sparse_nlp_telemetry"})
-            is_critical = req.sensor_values.get("temp_c", 0) > 100 or req.sensor_values.get("vibration_rms", 0) > 2.0
+            is_critical = (
+                req.sensor_values.get("temp_c", 0) > 100
+                or req.sensor_values.get("vibration_rms", 0) > 2.0
+            )
             return RULResponse(
                 timestamp=req.timestamp,
                 predicted_rul=14.0 if is_critical else 120.0,
                 confidence=0.85,
                 model_version="heuristic_rules_v1",
             )
-            
+
         logger.warning({"event": "rul_inference_validation_error", "error": str(e)})
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:

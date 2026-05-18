@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any, Literal, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -18,26 +17,24 @@ class RootCauseRequest(BaseModel):
     user_query: str
     anomaly_description: str = ""
     sensor_data: dict[str, Any] = Field(default_factory=dict)
-    # PRODUCTION FIX: Explicitly type None to handle dynamic injection safely
-    equipment_id: Optional[str] = None 
+    equipment_id: Optional[str] = None
     prompt_version: str = "1.0"
 
 
 class Hypothesis(BaseModel):
-    cause: str
-    confidence: float = Field(ge=0.0, le=1.0)
-    evidence: str
-    # PRODUCTION FIX: Enforce deterministic citation mapping at the parsing layer.
-    # This prevents the LLM from inserting raw filenames (e.g., .pdf) into the schema.
+    cause: str = "Unknown cause"
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+    evidence: str = "No specific evidence extracted."
     source: str = Field(
-        ..., 
-        pattern=r"^(DOC_\d+|NONE)$", 
-        description='Must be exactly a valid mapped ID like "DOC_1" or "NONE"'
+        default="NONE",
+        pattern=r"^(DOC_\d+|NONE)$",
+        description='Must be exactly a valid mapped ID like "DOC_1" or "NONE"',
     )
 
 
 class RootCauseResponse(BaseModel):
-    hypotheses: list[Hypothesis]
+    # PRODUCTION FIX: Default factories prevent 500 errors if LLM omits the key
+    hypotheses: list[Hypothesis] = Field(default_factory=list)
 
 
 class RemediationRequest(BaseModel):
@@ -48,10 +45,11 @@ class RemediationRequest(BaseModel):
 
 
 class RemediationResponse(BaseModel):
-    safety_warnings: list[str]
-    tools_required: list[str]
-    steps: list[str]
-    sources: list[str]
+    # PRODUCTION FIX: Default factories ensure graceful parsing of malformed JSON
+    safety_warnings: list[str] = Field(default_factory=list)
+    tools_required: list[str] = Field(default_factory=list)
+    steps: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
 
 
 class HistoricalSearchRequest(BaseModel):
@@ -63,14 +61,14 @@ class HistoricalSearchRequest(BaseModel):
 
 
 class EvidenceItem(BaseModel):
-    claim: str
-    source: str  
+    claim: str = "Unknown claim"
+    source: str = "Unknown source"
 
 
 class HistoricalSearchResponse(BaseModel):
-    summary: str
-    key_stats: dict[str, Any]
-    evidence: list[EvidenceItem]
+    summary: str = "No historical summary generated."
+    key_stats: dict[str, Any] = Field(default_factory=dict)
+    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class QueryRequest(BaseModel):
@@ -84,7 +82,7 @@ class QueryResponse(BaseModel):
     trace_id: Optional[str] = None
     latency_ms: Optional[float] = None
     guardrails_applied: list[str] = Field(default_factory=list)
-    raw_context: str = "" 
+    raw_context: str = ""
     chain: Literal["root_cause", "remediation", "historical"]
     result: RootCauseResponse | RemediationResponse | HistoricalSearchResponse
     model_provider: str

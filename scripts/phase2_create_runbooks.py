@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 RUNBOOKS = [
     (
         "bearing_replacement_pump_P-23.md",

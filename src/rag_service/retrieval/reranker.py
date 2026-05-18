@@ -34,12 +34,13 @@ class CrossEncoderReranker:
     def __init__(self, *, settings: Optional[RerankerSettings] = None):
         self.settings = settings or RerankerSettings.from_env()
         self._model = None
-        
+
         # PRODUCTION FIX: Prevent CPU Thread Thrashing
-        # Clamps PyTorch threads to prevent catastrophic context-switching in containerized 
+        # Clamps PyTorch threads to prevent catastrophic context-switching in containerized
         # or restricted memory environments.
         if self.settings.device is None or self.settings.device == "cpu":
             import torch
+
             torch.set_num_threads(2)
 
     def _get_model(self):

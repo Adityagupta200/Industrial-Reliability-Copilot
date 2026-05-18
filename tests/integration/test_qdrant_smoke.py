@@ -1,6 +1,14 @@
 from __future__ import annotations
 
+import os
 import uuid
+import pytest
+
+# PRODUCTION FIX: Gate integration tests behind environment variable
+pytestmark = pytest.mark.skipif(
+    os.getenv("RUN_INTEGRATION") != "1",
+    reason="Set RUN_INTEGRATION=1 to run integration tests"
+)
 
 from rag_service.vectorstore.qdrant_store import QdrantStore, VectorPoint
 

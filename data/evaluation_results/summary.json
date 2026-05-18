@@ -1,20 +1,6 @@
-[
-    {
-        "faithfulness": 0.85,
-        "answer_relevancy": 0.90,
-        "context_precision": 0.85,
-        "context_recall": 1.0
-    },
-    {
-        "faithfulness": 0.82,
-        "answer_relevancy": 0.88,
-        "context_precision": 0.75,
-        "context_recall": 1.0
-    },
-    {
-        "faithfulness": 0.90,
-        "answer_relevancy": 0.85,
-        "context_precision": 0.80,
-        "context_recall": 0.90
-    }
-]
+{
+    "faithfulness": 1.0,
+    "answer_relevancy": 0.0,
+    "context_precision": 0.0,
+    "context_recall": 0.0
+}

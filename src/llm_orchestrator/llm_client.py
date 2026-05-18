@@ -13,6 +13,7 @@ from .providers.ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
+
 class LLMClient:
     def __init__(self, settings: LLMSettings) -> None:
         self._settings = settings
@@ -28,7 +29,7 @@ class LLMClient:
     def _build_openai(self, s: LLMSettings, is_judge: bool = False) -> LLMProvider:
         api_key = s.openai_api_key.get_secret_value() if s.openai_api_key else None
         model_name = s.openai_judge_model if is_judge else s.openai_model
-        
+
         return OpenAIProvider(
             api_key=api_key,
             model=model_name,
@@ -44,7 +45,7 @@ class LLMClient:
             model=s.ollama_model,
             temperature=s.temperature,
             max_tokens=s.max_tokens,
-            timeout_s=120.0, 
+            timeout_s=120.0,
         )
 
     def _get_provider(self, name: str, is_judge: bool = False) -> LLMProvider:
@@ -64,10 +65,19 @@ class LLMClient:
         wait=wait_exponential(multiplier=0.5, min=0.5, max=2.0),
         reraise=True,
     )
-    async def _invoke_with_retry(self, provider: LLMProvider, prompt: str, json_mode: bool = False) -> LLMResult:
+    async def _invoke_with_retry(
+        self, provider: LLMProvider, prompt: str, json_mode: bool = False
+    ) -> LLMResult:
         return await provider.invoke(prompt, json_mode=json_mode)
 
-    async def invoke(self, prompt: str, *, force_provider: Optional[str] = None, json_mode: bool = False, is_judge: bool = False) -> LLMResult:
+    async def invoke(
+        self,
+        prompt: str,
+        *,
+        force_provider: Optional[str] = None,
+        json_mode: bool = False,
+        is_judge: bool = False,
+    ) -> LLMResult:
         if force_provider:
             provider = self._get_provider(force_provider, is_judge)
             return await self._invoke_with_retry(provider, prompt, json_mode=json_mode)
@@ -82,10 +92,12 @@ class LLMClient:
                 f"Primary provider '{self._settings.primary_provider}' failed: {e}. "
                 f"Initiating failover to fallback provider '{self._settings.fallback_provider}'."
             )
-            
+
             try:
                 fallback = self._get_provider(self._settings.fallback_provider, is_judge)
                 return await self._invoke_with_retry(fallback, prompt, json_mode=json_mode)
             except Exception as fallback_err:
                 logger.error(f"Fallback provider also failed: {fallback_err}")
-                raise LLMFatalError("Complete LLM orchestration failure: Both primary and fallback APIs are down.") from fallback_err
+                raise LLMFatalError(
+                    "Complete LLM orchestration failure: Both primary and fallback APIs are down."
+                ) from fallback_err

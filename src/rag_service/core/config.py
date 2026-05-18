@@ -5,9 +5,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 # PRODUCTION FIX: Universal Path Resolution
-# By dynamically anchoring to this file's location, paths resolve correctly 
+# By dynamically anchoring to this file's location, paths resolve correctly
 # regardless of the execution environment, OS, or containerization state.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -34,10 +35,10 @@ class Settings(BaseSettings):
 
     embedding_provider: str = Field(default="huggingface")
     huggingface_embedding_model: str = Field(default="BAAI/bge-large-en-v1.5")
-    
+
     openai_api_key: str | None = Field(default=None)
     openai_embedding_model: str = Field(default="text-embedding-3-small")
-    
+
     openai_timeout_s: float = Field(default=30.0)
     openai_max_retries: int = Field(default=3)
 
@@ -49,5 +50,6 @@ class Settings(BaseSettings):
     upsert_batch_size: int = Field(default=128)
 
     log_level: str = Field(default="INFO")
+
 
 settings = Settings()

@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import re
 import threading
+import json
+import tempfile
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -30,25 +32,44 @@ class _BM25Index:
 class BM25KeywordRetriever:
     def __init__(self, *, qdrant: Optional[QdrantBackend] = None, index_path: Optional[str] = None):
         self.qdrant = qdrant or QdrantBackend()
-        self.index_path = index_path or os.getenv(
-            "BM25_INDEX_PATH", "/tmp/bm25_index.pkl"
-        )
+        # PRODUCTION FIX: Eliminate hardcoded /tmp directory, use secure tempfile retrieval
+        self.index_path = index_path or os.getenv("BM25_INDEX_PATH", os.path.join(tempfile.gettempdir(), "bm25_index.json"))
         self._lock = threading.RLock()
         self._index: Optional[_BM25Index] = None
 
     def _load(self) -> Optional[_BM25Index]:
         try:
-            import pickle
-            with open(self.index_path, "rb") as f:
-                return pickle.load(f)
+            # PRODUCTION FIX: Safe JSON payload reading and dynamical recreation of BM25
+            with open(self.index_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                
+            tokenized = [_tokenize(text) for text in data["texts"]]
+            if not tokenized:
+                tokenized = [[""]]
+                
+            bm25 = BM25Okapi(tokenized)
+            
+            return _BM25Index(
+                bm25=bm25,
+                doc_ids=data["doc_ids"],
+                texts=data["texts"],
+                metadatas=data["metadatas"],
+                equipment_to_indices=data["equipment_to_indices"]
+            )
         except Exception:
             return None
 
     def _save(self, idx: _BM25Index) -> None:
         os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
-        import pickle
-        with open(self.index_path, "wb") as f:
-            pickle.dump(idx, f)
+        # PRODUCTION FIX: Serialize corpus into safe JSON instead of binary pickle
+        data = {
+            "doc_ids": idx.doc_ids,
+            "texts": idx.texts,
+            "metadatas": idx.metadatas,
+            "equipment_to_indices": idx.equipment_to_indices
+        }
+        with open(self.index_path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
 
     def build_or_load(self, *, force_rebuild: bool = False) -> None:
         with self._lock:
@@ -72,7 +93,9 @@ class BM25KeywordRetriever:
 
             for p in points:
                 # PRODUCTION FIX: Safely extract payload whether Qdrant returns a dict or an object
-                payload = p.get("payload", {}) if isinstance(p, dict) else getattr(p, "payload", {}) or {}
+                payload = (
+                    p.get("payload", {}) if isinstance(p, dict) else getattr(p, "payload", {}) or {}
+                )
                 text = str(payload.get(text_key, ""))
                 if not text.strip():
                     continue
@@ -118,7 +141,10 @@ class BM25KeywordRetriever:
         if self._index is None:
             self.build_or_load(force_rebuild=False)
 
-        assert self._index is not None
+        # PRODUCTION FIX: Replaced unsafe assert with explicit RuntimeError to resolve B101
+        if self._index is None:
+            raise RuntimeError("Index could not be loaded or built")
+            
         idx = self._index
 
         q_tokens = _tokenize(query)

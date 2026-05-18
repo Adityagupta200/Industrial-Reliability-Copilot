@@ -5,7 +5,7 @@ from typing import Optional
 from presidio_analyzer import AnalyzerEngine
 from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
-from langsmith import traceable # PRODUCTION FIX: Explicit Tracing
+from langsmith import traceable  # PRODUCTION FIX: Explicit Tracing
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class InputGuardrails:
         """PRODUCTION FIX: Eagerly loads NLP models in the background at startup to prevent mid-request SLA spikes."""
         if cls._analyzer is not None or cls._is_loading:
             return
-            
+
         cls._is_loading = True
         logger.info("Eagerly loading Presidio NLP engines to prevent latency spikes...")
         try:
@@ -64,7 +64,7 @@ class InputGuardrails:
         if cls._analyzer is None or cls._anonymizer is None:
             logger.warning("PII Guardrail skipped: NLP models are still loading in the background.")
             return text
-            
+
         results = cls._analyzer.analyze(
             text=text, entities=["EMAIL_ADDRESS", "PHONE_NUMBER", "US_SSN"], language="en"
         )
@@ -78,7 +78,7 @@ class InputGuardrails:
         return any(word in text.lower() for word in toxic_keywords)
 
     @classmethod
-    @traceable(run_type="chain", name="Input_Guardrails") # PRODUCTION FIX: Explicit Tracing
+    @traceable(run_type="chain", name="Input_Guardrails")  # PRODUCTION FIX: Explicit Tracing
     def process(cls, query: str) -> str:
         """
         Runs guardrails in optimized order.
@@ -90,6 +90,7 @@ class InputGuardrails:
             raise ValueError("Blocked: Query violates toxicity policies.")
 
         return cls.redact_pii(query)
+
 
 # Trigger the background loading immediately upon module import
 threading.Thread(target=InputGuardrails.preload_engines, daemon=True).start()
