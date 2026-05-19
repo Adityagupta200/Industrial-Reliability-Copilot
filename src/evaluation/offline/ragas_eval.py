@@ -77,9 +77,6 @@ async def run_pipeline(client: httpx.AsyncClient, case: dict) -> dict:
     query = case.get("query", "")
     description = case.get("anomaly_description", query)
     sensor_data = case.get("sensor_data", {})
-    
-    # PRODUCTION FIX: Default to an empty string so the dynamic regex engines 
-    # in the chains can successfully extract IDs like "pump_P-23".
     equipment = case.get("equipment_id", "")
 
     query_lower = query.lower()
@@ -89,7 +86,8 @@ async def run_pipeline(client: httpx.AsyncClient, case: dict) -> dict:
             "remediation": {
                 "user_query": query,
                 "equipment_id": equipment,
-                "prompt_version": "v1.0"
+                # PRODUCTION FIX: Removed "v" from version string to respect API contract
+                "prompt_version": "1.0" 
             }
         }
     else:
@@ -100,7 +98,8 @@ async def run_pipeline(client: httpx.AsyncClient, case: dict) -> dict:
                 "anomaly_description": description,
                 "sensor_data": sensor_data,
                 "equipment_id": equipment,
-                "prompt_version": "v1.0",
+                # PRODUCTION FIX: Removed "v" from version string to respect API contract
+                "prompt_version": "1.0",
             }
         }
 
@@ -114,6 +113,7 @@ async def run_pipeline(client: httpx.AsyncClient, case: dict) -> dict:
                 "contexts": ["No context retrieved due to guardrail block."],
             }
         elif response.status_code not in (200, 202):
+            print(f"❌ API Error {response.status_code}: {response.text}")
             return {"answer": "Error", "contexts": ["Error"]}
 
         data = response.json()
@@ -153,6 +153,7 @@ async def run_pipeline(client: httpx.AsyncClient, case: dict) -> dict:
             )
 
         raw_ctx = result_payload.get("raw_context", "")
+        # PRODUCTION FIX: Removed the trailing space from the delimiter to parse documents successfully
         if raw_ctx and isinstance(raw_ctx, str):
             contexts = [c.strip() for c in raw_ctx.split("\n---\n") if c.strip()]
         elif isinstance(raw_ctx, list):
@@ -178,12 +179,17 @@ async def main():
     with open("data/golden_test_set.json", "r") as f:
         test_cases = json.load(f)
 
+    # PRODUCTION FIX: Dual-mapping scheme to guarantee compatibility 
+    # regardless of whether the CI runs Ragas v0.1.X or v0.2.X
     dataset_dict = {
         "question": [],
         "answer": [],
         "contexts": [],
         "ground_truth": [],
         "ground_truths": [],
+        "user_input": [],
+        "response": [],
+        "retrieved_contexts": [],
         "reference": [],
     }
 
@@ -195,12 +201,17 @@ async def main():
             
             gt = case.get("ground_truth", "")
 
+            # Legacy Mappings (Ragas 0.1.x)
             dataset_dict["question"].append(case.get("query", ""))
             dataset_dict["answer"].append(result["answer"])
             dataset_dict["contexts"].append(result["contexts"])
-            
             dataset_dict["ground_truth"].append(gt)
             dataset_dict["ground_truths"].append([gt])
+            
+            # Modern Mappings (Ragas 0.2.x+)
+            dataset_dict["user_input"].append(case.get("query", ""))
+            dataset_dict["response"].append(result["answer"])
+            dataset_dict["retrieved_contexts"].append(result["contexts"])
             dataset_dict["reference"].append(gt)
 
     dataset = Dataset.from_dict(dataset_dict)

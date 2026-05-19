@@ -9,38 +9,51 @@ env:
   ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
 
 jobs:
+  build-and-push:
+    name: Build and Push Microservices to ECR
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [anomaly_service, api_gateway, llm_orchestrator, rag_service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push images
+        run: |
+          docker build -t ${{ matrix.service }}:${{ github.sha }} src/${{ matrix.service }}/
+          docker tag ${{ matrix.service }}:${{ github.sha }} ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+
   deploy-staging:
     name: Deploy to Staging & Smoke Test
+    needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
           
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        
-      - name: Build, tag, and push images
-        run: |
-          SERVICES=("anomaly_service" "api_gateway" "llm_orchestrator" "rag_service")
-          for SERVICE in "${SERVICES[@]}"; do
-            docker build -t $SERVICE:${{ github.sha }} src/$SERVICE/
-            docker tag $SERVICE:${{ github.sha }} ${{ env.ECR_REGISTRY }}/$SERVICE:${{ github.sha }}
-            docker push ${{ env.ECR_REGISTRY }}/$SERVICE:${{ github.sha }}
-          done
-
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         
       - name: Update K8s manifests with new images
         run: |
-          # Using sed to dynamically inject the new image hashes into the microservices manifest
           sed -i "s|image: .*/anomaly_service:.*|image: ${{ env.ECR_REGISTRY }}/anomaly_service:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
           sed -i "s|image: .*/api_gateway:.*|image: ${{ env.ECR_REGISTRY }}/api_gateway:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
           sed -i "s|image: .*/llm_orchestrator:.*|image: ${{ env.ECR_REGISTRY }}/llm_orchestrator:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
@@ -69,10 +82,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production # Triggers manual approval gate in GitHub Settings
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -84,10 +97,9 @@ jobs:
       - name: Deploy to Production
         run: |
           aws eks update-kubeconfig --name industrial-copilot-cluster --region ${{ env.AWS_REGION }}
-          # Apply config maps and secrets first
+          
           kubectl apply -f infra/kubernetes/01_config.yaml -n production
           
-          # Set images directly using kubectl set image for zero-downtime rolling update
           kubectl set image deployment/anomaly-service anomaly-service=${{ env.ECR_REGISTRY }}/anomaly_service:${{ github.sha }} -n production
           kubectl set image deployment/api-gateway api-gateway=${{ env.ECR_REGISTRY }}/api_gateway:${{ github.sha }} -n production
           kubectl set image deployment/llm-orchestrator llm-orchestrator=${{ env.ECR_REGISTRY }}/llm_orchestrator:${{ github.sha }} -n production
@@ -95,8 +107,8 @@ jobs:
           
       - name: Wait for Production Rollout
         run: |
-          kubectl rollout status deployment/api-gateway -n production
-          kubectl rollout status deployment/llm-orchestrator -n production
+          kubectl rollout status deployment/api-gateway -n production --timeout=300s
+          kubectl rollout status deployment/llm-orchestrator -n production --timeout=300s
           
       - name: Monitor Deployment (SLA & Health Check)
         run: |

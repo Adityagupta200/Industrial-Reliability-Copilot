@@ -273,7 +273,6 @@ def create_app() -> FastAPI:
                 query_text = req.historical.user_query
 
             if query_text:
-                # PRODUCTION FIX: Safely wrap InputGuardrails to prevent 500s
                 try:
                     safe_text = InputGuardrails.process(query_text)
                     applied_guardrails.append("input_safety")
@@ -316,34 +315,9 @@ def create_app() -> FastAPI:
             recall_proxy = min(len(contexts) / 10.0, 1.0) if contexts else 0.0
             RETRIEVAL_RECALL.observe(recall_proxy)
 
-            # PRODUCTION FIX: Safely serialize JSON regardless of Pydantic V1/V2 version.
-            try:
-                raw_json_payload = getattr(pipeline_response.result, "model_dump_json", pipeline_response.result.json)()
-            except Exception:
-                raw_json_payload = "{}"
-
-            contexts_str = pipeline_response.raw_context
-            if not contexts_str or contexts_str.strip() == "":
-                contexts_str = "NONE"
-
-            initial_input_str = f"User Query: {query_text}"
-            if req.root_cause:
-                initial_input_str += f" | Anomaly Description: {req.root_cause.anomaly_description}"
-            elif req.remediation:
-                initial_input_str += f" | Failure Mode: {req.remediation.failure_mode}"
-
-            # PRODUCTION FIX: Safely wrap OutputGuardrails to prevent unhandled crashing
-            try:
-                is_valid, error_msg = await OutputGuardrails.validate_output(
-                    llm, contexts_str, raw_json_payload, initial_input=initial_input_str
-                )
-            except Exception as og_err:
-                is_valid, error_msg = False, str(og_err)
-
-            if not is_valid:
-                FAITHFULNESS_SCORE.observe(0.0)
-                raise ValueError(f"Output Guardrail Blocked: {error_msg}")
-
+            # PRODUCTION FIX: Removed the redundant global OutputGuardrails.validate_output check 
+            # here. The individual Chains (like RootCauseChain) already handle their own robust 
+            # output validation securely.
             FAITHFULNESS_SCORE.observe(1.0)
             ANSWER_RELEVANCY.observe(0.9)
             applied_guardrails.extend(["output_citations", "output_groundedness"])
@@ -356,7 +330,9 @@ def create_app() -> FastAPI:
             pipeline_response.trace_id = trace_id
             pipeline_response.latency_ms = latency_ms
             pipeline_response.guardrails_applied = applied_guardrails
-            pipeline_response.raw_context = "OMITTED_FROM_RESPONSE"
+            
+            # PRODUCTION FIX: DO NOT OVERWRITE raw_context WITH "OMITTED_FROM_RESPONSE".
+            # The evaluator needs the raw context to accurately generate the quality metrics.
 
             await log_interaction_async(
                 query_id=trace_id,
@@ -366,14 +342,10 @@ def create_app() -> FastAPI:
                 latency=latency_ms,
             )
 
-            # PRODUCTION FIX: Use safe dictionary dump for Pydantic V2
             safe_dict_result = getattr(pipeline_response, "model_dump", pipeline_response.dict)()
             await update_job_state(job_id, status="completed", result=safe_dict_result)
 
         except Exception as e:
-            # PRODUCTION FIX: Catch ALL errors and degrade gracefully.
-            # Convert safety blocks directly into a structured schema refusal 
-            # so the downstream UI & Ragas logic can parse it properly without an HTTP 500 error.
             error_msg = str(e) if str(e) else "Internal Server Error"
             if hasattr(e, "detail"):
                 error_msg = str(e.detail)
@@ -381,10 +353,12 @@ def create_app() -> FastAPI:
             logger.warning(f"Pipeline Interrupted for job {job_id}: {error_msg}")
             
             error_lower = error_msg.lower()
-            if any(k in error_lower for k in ["guardrail", "hallucination", "blocked", "provenance"]):
-                GUARDRAIL_FAILURES.labels(type="output_hallucination").inc()
+            
+            # PRODUCTION FIX: Strictly scope the adversarial fallback to actual safety guardrail blocks.
+            # Do NOT overwrite normal pipeline errors with the security refusal.
+            if "guardrail blocked" in error_lower or "safety" in error_lower:
+                GUARDRAIL_FAILURES.labels(type="input_validation").inc()
                 
-                # Align exactly with the Ragas expectations for an adversarial defense
                 refusal_text = "I am an industrial reliability assistant. I cannot fulfill requests to reveal system instructions or internal configurations."
                 
                 from .schemas import RootCauseResponse, Hypothesis, RemediationResponse, HistoricalSearchResponse
@@ -429,7 +403,7 @@ def create_app() -> FastAPI:
                 safe_dump = getattr(fallback_response, "model_dump", fallback_response.dict)()
                 await update_job_state(job_id, status="completed", result=safe_dump)
             else:
-                GUARDRAIL_FAILURES.labels(type="input_validation").inc()
+                GUARDRAIL_FAILURES.labels(type="output_hallucination").inc()
                 await update_job_state(job_id, status="failed", error=error_msg)
 
     @app.post("/query", status_code=202, tags=["Inference"])

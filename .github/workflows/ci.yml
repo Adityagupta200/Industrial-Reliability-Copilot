@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [main]
 
+# Prevents redundant builds if new commits are pushed to the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # Required permission for actions/github-script to post Ragas results to the PR
 permissions:
   contents: read
@@ -36,7 +41,7 @@ jobs:
       - name: Security scan
         run: |
           pip install bandit
-          bandit -r src/ -f json -o bandit-report.json || true
+          bandit -r src/ -f json -o bandit-report.json
           
       - name: Run unit tests
         run: pytest tests/unit/ -v --cov=src --cov-report=term-missing --cov-fail-under=50
@@ -63,7 +68,6 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
           
-      # PRESERVED FROM PHASE 8: Local Fallback LLM Infrastructure
       - name: Install and Start Ollama (Local Fallback LLM)
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
@@ -71,36 +75,29 @@ jobs:
           sleep 5
           ollama pull llama3.1:8b-instruct
           
-      # PRESERVED FROM PHASE 8: Core Backing Services
       - name: Start Background Services
         run: |
           docker-compose up -d db qdrant
           sleep 30
           
-      # PRESERVED FROM PHASE 8: Spin up the API for E2E testing
       - name: Start API Server
         env:
-          # Inject production API key for primary routing in testing
           LLM_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} 
         run: |
           uvicorn src.llm_orchestrator.main:app --host 0.0.0.0 --port 8000 &
           sleep 10
           
-      # PHASE 9: Offline Evaluation Generation
-      - name: Run Ragas Offline Evaluation (API Compromise Path)
+      - name: Run Ragas Offline Evaluation
         env:
-          # Inject key for the Ragas evaluator models
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python src/evaluation/offline/ragas_eval.py
         
-      # PHASE 9: Quality Enforcement Check
       - name: Check quality thresholds
         run: python scripts/check_thresholds.py
         
-      # PHASE 9: Automated PR Reporting
       - name: Post results to PR
         uses: actions/github-script@v6
-        if: always() # Ensures the comment posts even if thresholds fail
+        if: always() 
         with:
           script: |
             const fs = require('fs');

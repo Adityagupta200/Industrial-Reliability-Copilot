@@ -25,15 +25,16 @@ class Hypothesis(BaseModel):
     cause: str = "Unknown cause"
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     evidence: str = "No specific evidence extracted."
+    # PRODUCTION FIX: Removed the brittle regex pattern. 
+    # LLMs are stochastic; forcing strict regex at the parsing layer causes fatal 500 errors.
+    # The RootCauseChain handles sanitization and grounding verification downstream.
     source: str = Field(
         default="NONE",
-        pattern=r"^(DOC_\d+|NONE)$",
-        description='Must be exactly a valid mapped ID like "DOC_1" or "NONE"',
+        description='Should ideally be a mapped ID like "DOC_1", but allows flexible fallback strings',
     )
 
 
 class RootCauseResponse(BaseModel):
-    # PRODUCTION FIX: Default factories prevent 500 errors if LLM omits the key
     hypotheses: list[Hypothesis] = Field(default_factory=list)
 
 
@@ -45,7 +46,6 @@ class RemediationRequest(BaseModel):
 
 
 class RemediationResponse(BaseModel):
-    # PRODUCTION FIX: Default factories ensure graceful parsing of malformed JSON
     safety_warnings: list[str] = Field(default_factory=list)
     tools_required: list[str] = Field(default_factory=list)
     steps: list[str] = Field(default_factory=list)
