@@ -31,8 +31,6 @@ from .chains.historical_chain import HistoricalSearchChain
 from .router import ChainOrchestrator
 from .schemas import QueryRequest, QueryResponse
 from .guardrails.input_filters import InputGuardrails
-from .guardrails.output_filters import OutputGuardrails
-from .providers.base import LLMFatalError, LLMTransientError
 
 from evaluation.online.logger import (
     log_interaction_async,
@@ -225,7 +223,7 @@ def create_app() -> FastAPI:
     async def readiness_probe() -> dict[str, str]:
         if health_check_client is None:
             raise RuntimeError("Health check client not initialized")
-            
+
         try:
             rag_req = health_check_client.get(f"{settings.services.rag_service_url}/health/live")
             anom_req = health_check_client.get(
@@ -286,7 +284,9 @@ def create_app() -> FastAPI:
                 elif req.historical:
                     req.historical.user_query = safe_text
 
-            cache_key = hashlib.sha256(query_text.encode("utf-8")).hexdigest() if query_text else None
+            cache_key = (
+                hashlib.sha256(query_text.encode("utf-8")).hexdigest() if query_text else None
+            )
 
             if cache_key and cache_key in QUERY_CACHE:
                 CACHE_EVENTS.labels(status="hit").inc()
@@ -301,10 +301,10 @@ def create_app() -> FastAPI:
 
             estimated_input_tokens = len(query_text.split()) * 1.3 if query_text else 0.0
             estimated_output_tokens = len(answer_text.split()) * 1.3
-            
+
             lbl_input = "input"
             lbl_output = "output"
-            
+
             LLM_TOKENS.labels(model=settings.llm.primary_provider, token_type=lbl_input).inc(
                 estimated_input_tokens
             )
@@ -315,8 +315,8 @@ def create_app() -> FastAPI:
             recall_proxy = min(len(contexts) / 10.0, 1.0) if contexts else 0.0
             RETRIEVAL_RECALL.observe(recall_proxy)
 
-            # PRODUCTION FIX: Removed the redundant global OutputGuardrails.validate_output check 
-            # here. The individual Chains (like RootCauseChain) already handle their own robust 
+            # PRODUCTION FIX: Removed the redundant global OutputGuardrails.validate_output check
+            # here. The individual Chains (like RootCauseChain) already handle their own robust
             # output validation securely.
             FAITHFULNESS_SCORE.observe(1.0)
             ANSWER_RELEVANCY.observe(0.9)
@@ -330,7 +330,7 @@ def create_app() -> FastAPI:
             pipeline_response.trace_id = trace_id
             pipeline_response.latency_ms = latency_ms
             pipeline_response.guardrails_applied = applied_guardrails
-            
+
             # PRODUCTION FIX: DO NOT OVERWRITE raw_context WITH "OMITTED_FROM_RESPONSE".
             # The evaluator needs the raw context to accurately generate the quality metrics.
 
@@ -351,31 +351,44 @@ def create_app() -> FastAPI:
                 error_msg = str(e.detail)
 
             logger.warning(f"Pipeline Interrupted for job {job_id}: {error_msg}")
-            
+
             error_lower = error_msg.lower()
-            
-            # PRODUCTION FIX: Strictly scope the adversarial fallback to actual safety guardrail blocks.
+
+            # PRODUCTION FIX: Scope the adversarial fallback to safety guardrail blocks.
             # Do NOT overwrite normal pipeline errors with the security refusal.
-            if "guardrail blocked" in error_lower or "safety" in error_lower:
+            if (
+                "guardrail blocked" in error_lower
+                or "prompt injection" in error_lower
+                or "violates toxicity" in error_lower
+                or "blocked:" in error_lower
+                or "safety" in error_lower
+            ):
                 GUARDRAIL_FAILURES.labels(type="input_validation").inc()
-                
-                refusal_text = "I am an industrial reliability assistant. I cannot fulfill requests to reveal system instructions or internal configurations."
-                
-                from .schemas import RootCauseResponse, Hypothesis, RemediationResponse, HistoricalSearchResponse
+
+                refusal_text = (
+                    "I am an industrial reliability assistant. I cannot fulfill this request "
+                    "or reveal system instructions or internal configurations."
+                )
+
+                from .schemas import (
+                    HistoricalSearchResponse,
+                    Hypothesis,
+                    RemediationResponse,
+                    RootCauseResponse,
+                )
+
                 chain_type = req.chain or "root_cause"
-                
+
                 if chain_type == "remediation":
                     fallback_result = RemediationResponse(
                         safety_warnings=["Request blocked by safety constraints."],
                         tools_required=[],
                         steps=[refusal_text],
-                        sources=["NONE"]
+                        sources=["NONE"],
                     )
                 elif chain_type == "historical":
                     fallback_result = HistoricalSearchResponse(
-                        summary=refusal_text,
-                        key_stats={},
-                        evidence=[]
+                        summary=refusal_text, key_stats={}, evidence=[]
                     )
                 else:
                     fallback_result = RootCauseResponse(
@@ -384,11 +397,11 @@ def create_app() -> FastAPI:
                                 cause=refusal_text,
                                 confidence=1.0,
                                 evidence="Guardrail Blocked",
-                                source="NONE"
+                                source="NONE",
                             )
                         ]
                     )
-                
+
                 fallback_response = QueryResponse(
                     trace_id=trace_id,
                     latency_ms=round((time.time() - start_time) * 1000.0, 2),
@@ -397,9 +410,9 @@ def create_app() -> FastAPI:
                     chain=chain_type,
                     result=fallback_result,
                     model_provider="system",
-                    model_name="safety-guard"
+                    model_name="safety-guard",
                 )
-                
+
                 safe_dump = getattr(fallback_response, "model_dump", fallback_response.dict)()
                 await update_job_state(job_id, status="completed", result=safe_dump)
             else:
@@ -458,5 +471,6 @@ def create_app() -> FastAPI:
                 raise HTTPException(status_code=500, detail="Internal Server Error")
 
     return app
+
 
 app = create_app()

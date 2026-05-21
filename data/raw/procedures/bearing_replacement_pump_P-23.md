@@ -8,6 +8,10 @@
 ## Tools
 - Bearing puller, torque wrench, dial indicator, grease gun.
 
+## Diagnostic indicators
+- High vibration with stable pressure and flow is a common indicator of bearing wear, insufficient lubrication, contamination, or misalignment.
+- Inspect the bearing housing for scoring, contamination, grease starvation, and abnormal temperature rise before replacing components.
+
 ## Steps
 1. Isolate pump and drain as required.
 2. Remove coupling guard and decouple drive.

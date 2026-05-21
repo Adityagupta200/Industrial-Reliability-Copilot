@@ -133,7 +133,7 @@ def readiness_probe(response: Response):
 def health():
     if MODELS is None:
         raise RuntimeError("Models not loaded")
-    
+
     ok_anom = MODELS.anomaly_model is not None
     ok_rul = MODELS.rul_model is not None
 
@@ -157,9 +157,11 @@ def predict_anomaly(req: SensorRequest):
         or ANOM_SCHEMA is None
         or ANOM_ARTIFACTS is None
     ):
-        # PRODUCTION FIX: Graceful Degradation. 
+        # PRODUCTION FIX: Graceful Degradation.
         # Return a safe baseline instead of a hard 503 so upstream pipelines don't crash.
-        logger.warning({"event": "anomaly_service_degraded", "message": "Returning fallback baseline"})
+        logger.warning(
+            {"event": "anomaly_service_degraded", "message": "Returning fallback baseline"}
+        )
         return AnomalyResponse(
             timestamp=req.timestamp,
             schema_id="degraded_fallback",

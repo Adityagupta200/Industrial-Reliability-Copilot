@@ -33,7 +33,9 @@ class BM25KeywordRetriever:
     def __init__(self, *, qdrant: Optional[QdrantBackend] = None, index_path: Optional[str] = None):
         self.qdrant = qdrant or QdrantBackend()
         # PRODUCTION FIX: Eliminate hardcoded /tmp directory, use secure tempfile retrieval
-        self.index_path = index_path or os.getenv("BM25_INDEX_PATH", os.path.join(tempfile.gettempdir(), "bm25_index.json"))
+        self.index_path = index_path or os.getenv(
+            "BM25_INDEX_PATH", os.path.join(tempfile.gettempdir(), "bm25_index.json")
+        )
         self._lock = threading.RLock()
         self._index: Optional[_BM25Index] = None
 
@@ -42,19 +44,19 @@ class BM25KeywordRetriever:
             # PRODUCTION FIX: Safe JSON payload reading and dynamical recreation of BM25
             with open(self.index_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                
+
             tokenized = [_tokenize(text) for text in data["texts"]]
             if not tokenized:
                 tokenized = [[""]]
-                
+
             bm25 = BM25Okapi(tokenized)
-            
+
             return _BM25Index(
                 bm25=bm25,
                 doc_ids=data["doc_ids"],
                 texts=data["texts"],
                 metadatas=data["metadatas"],
-                equipment_to_indices=data["equipment_to_indices"]
+                equipment_to_indices=data["equipment_to_indices"],
             )
         except Exception:
             return None
@@ -66,7 +68,7 @@ class BM25KeywordRetriever:
             "doc_ids": idx.doc_ids,
             "texts": idx.texts,
             "metadatas": idx.metadatas,
-            "equipment_to_indices": idx.equipment_to_indices
+            "equipment_to_indices": idx.equipment_to_indices,
         }
         with open(self.index_path, "w", encoding="utf-8") as f:
             json.dump(data, f)
@@ -144,7 +146,7 @@ class BM25KeywordRetriever:
         # PRODUCTION FIX: Replaced unsafe assert with explicit RuntimeError to resolve B101
         if self._index is None:
             raise RuntimeError("Index could not be loaded or built")
-            
+
         idx = self._index
 
         q_tokens = _tokenize(query)

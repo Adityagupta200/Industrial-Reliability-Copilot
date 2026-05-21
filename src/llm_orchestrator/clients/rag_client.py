@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Any, Optional
 import httpx
-from langsmith import traceable  
+from langsmith import traceable
 
 from ..schemas import RetrievedDoc
 
@@ -91,9 +91,15 @@ class RAGClient:
 
     @traceable(run_type="retriever", name="Qdrant_Procedure_Search")
     async def retrieve_procedures(
-        self, failure_mode: str, *, equipment_id: Optional[str] = None, k: int = 6
+        self,
+        failure_mode: str,
+        *,
+        equipment_id: Optional[str] = None,
+        k: int = 6,
+        query: Optional[str] = None,
     ) -> list[RetrievedDoc]:
-        payload: dict[str, Any] = {"query": f"procedure for {failure_mode}", "k": k, "filters": {}}
+        retrieval_query = query or f"procedure for {failure_mode}"
+        payload: dict[str, Any] = {"query": retrieval_query, "k": k, "filters": {}}
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
 
