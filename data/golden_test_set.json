@@ -13,7 +13,7 @@
     "expected_retrieved_docs": ["synthetic_incidents.json", "pump_manual2.pdf", "bearing_replacement_pump_P-23.md"],
     "expected_answer_contains": ["bearing wear", "lubrication"],
     "forbidden_content": ["replace entire system"],
-    "ground_truth": "The anomaly at 03:41 for pump P-23 was likely triggered by bearing wear due to insufficient lubrication, as indicated by the high vibration levels.",
+    "ground_truth": "The 03:41 Pump P-23 anomaly is most consistent with a bearing or lubrication-related mechanical fault candidate: the case shows high vibration with stable pressure and flow and no pressure drop, matching the Pump P-23 bearing procedure indicators for bearing wear, insufficient lubrication, contamination, or misalignment.",
     "max_latency_ms": 2000,
     "category": "multi-hop"
   },
@@ -24,7 +24,7 @@
     "expected_retrieved_docs": ["sensor_recalibration_pressure_transducer.md"],
     "expected_answer_contains": ["zero point", "span", "deadweight tester"],
     "forbidden_content": [],
-    "ground_truth": "To calibrate a pressure transducer, isolate the sensor, use a deadweight tester to apply known pressures, and adjust the zero point and span accordingly.",
+    "ground_truth": "To calibrate a pressure transducer, depressurize the line, follow LOTO where applicable, connect a calibrated pressure reference or deadweight tester, apply 0%, 50%, and 100% pressure points, adjust the zero point and span until readings are within tolerance, and record the results.",
     "max_latency_ms": 2000,
     "category": "happy-path"
   },

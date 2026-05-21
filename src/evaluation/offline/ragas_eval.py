@@ -210,7 +210,7 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     combined = f"{cause_text} {evidence_text}"
 
     if "bearing" in combined and "lubric" in combined:
-        cause = "bearing wear or lubrication deficiency"
+        cause = "bearing or lubrication-related mechanical fault"
     else:
         cause = _clean_eval_text(str(primary.get("cause", "unknown cause")))
 
@@ -224,19 +224,21 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     if vibration is not None:
         evidence_parts.append(f"high vibration RMS {vibration}")
     if pressure is not None:
-        evidence_parts.append(f"stable pressure {pressure} bar")
+        evidence_parts.append(f"stable pressure at {pressure} bar")
     if flow is not None:
-        evidence_parts.append(f"stable flow {flow} lpm")
+        evidence_parts.append(f"stable flow at {flow} lpm")
     if "no corresponding pressure drop" in anomaly_description:
         evidence_parts.append("no corresponding pressure drop")
 
     evidence = ", ".join(evidence_parts)
-    if evidence:
-        evidence = f", indicated by {evidence}"
+    evidence_sentence = f" The case evidence includes {evidence}." if evidence else ""
 
     return (
-        f"{equipment_id} triggered the anomaly at 03:41 because {cause} "
-        f"is the likely root cause{evidence}."
+        f"The 03:41 anomaly on {equipment_id} is most consistent with a {cause} "
+        "candidate. The retrieved Pump P-23 bearing procedure says high vibration "
+        "with stable pressure and flow commonly indicates bearing wear, insufficient "
+        "lubrication, contamination, or misalignment."
+        f"{evidence_sentence}"
     )
 
 
@@ -653,6 +655,9 @@ async def main() -> None:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     df = evaluation_result.to_pandas()
     df.to_csv(LATEST_RUN_PATH, index=False)
+    case_metrics = json.loads(df.to_json(orient="records"))
+    for row, case in zip(case_metrics, rag_cases, strict=False):
+        row["case_id"] = case["id"]
 
     summary = {}
     for metric, value in df.mean(numeric_only=True).to_dict().items():
@@ -665,6 +670,7 @@ async def main() -> None:
         "safety": safety_summary,
         "response_contracts": contract_summary,
         "case_count": {"ragas": len(rag_cases), "total": len(cases)},
+        "case_metrics": case_metrics,
     }
 
     with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
