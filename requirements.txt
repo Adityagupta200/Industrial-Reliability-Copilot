@@ -12,13 +12,13 @@ httpx>=0.27.0
 tenacity>=8.2.3
 
 # Data & ML Core
-# PRODUCTION FIX: Prevent NumPy 2.x from corrupting PyTorch 2.1.0 C-extensions
+# Keep the local embedding stack compatible with modern transformers/sentence-transformers.
 numpy>=1.26.0,<2.0.0
 joblib>=1.3.2
 scikit-learn==1.6.1
 pandas>=2.2.2
-# PRODUCTION FIX: Explicitly lock to CPU tensor bounds to prevent 400MB+ CUDA timeouts
-torch==2.1.0+cpu
+# CPU-only wheel keeps CI/developer installs deterministic without pulling CUDA images.
+torch==2.5.1+cpu
 
 # Database & Storage
 sqlalchemy>=2.0.30
@@ -33,7 +33,6 @@ boto3>=1.34.0
 
 # Document Processing
 pymupdf>=1.24.9
-langchain-text-splitters>=0.2.2
 
 # Utilities
 typer>=0.12.3
@@ -42,7 +41,8 @@ python-dotenv>=1.0.1
 # Embeddings & Search
 openai>=1.40.0
 tiktoken>=0.7.0
-sentence-transformers>=2.5.0
+transformers>=4.46.1,<5.0.0
+sentence-transformers>=3.3.1,<4.0.0
 rank-bm25>=0.2.2
 
 # LangChain (LLM orchestration)
