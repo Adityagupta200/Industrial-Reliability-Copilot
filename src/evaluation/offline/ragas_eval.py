@@ -16,10 +16,10 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"ragas\..*")
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
-import httpx
-from datasets import Dataset
-from ragas import evaluate
-from ragas.run_config import RunConfig
+import httpx  # noqa: E402
+from datasets import Dataset  # noqa: E402
+from ragas import evaluate  # noqa: E402
+from ragas.run_config import RunConfig  # noqa: E402
 
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://127.0.0.1:8000/query")
 RESULTS_DIR = Path("data/evaluation_results")
@@ -288,9 +288,7 @@ def _build_case_context(case: dict[str, Any]) -> list[str]:
     if anomaly_description:
         details.append(f"anomaly_description={anomaly_description}")
     if sensor_data:
-        sensor_values = ", ".join(
-            f"{key}={value}" for key, value in sorted(sensor_data.items())
-        )
+        sensor_values = ", ".join(f"{key}={value}" for key, value in sorted(sensor_data.items()))
         details.append(f"sensor_data={sensor_values}")
 
     if not details:

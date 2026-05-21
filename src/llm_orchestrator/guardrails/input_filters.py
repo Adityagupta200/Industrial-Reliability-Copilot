@@ -65,9 +65,7 @@ class InputGuardrails:
         """Redacts sensitive PII using Microsoft Presidio."""
         # First requests may arrive before the background NLP model load has finished.
         if cls._analyzer is None or cls._anonymizer is None:
-            logger.warning(
-                "PII Guardrail skipped: NLP models are still loading in the background."
-            )
+            logger.warning("PII Guardrail skipped: NLP models are still loading in the background.")
             return text
 
         results = cls._analyzer.analyze(

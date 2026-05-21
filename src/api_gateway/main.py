@@ -142,7 +142,7 @@ async def get_query_status(job_id: str):
     # PRODUCTION FIX: Avoid unsafe assert
     if http_client is None:
         raise RuntimeError("HTTP client not initialized")
-        
+
     try:
         response = await http_client.get(f"{ORCHESTRATOR_URL}/query/{job_id}")
 

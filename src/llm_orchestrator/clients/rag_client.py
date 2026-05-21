@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Any, Optional
 import httpx
-from langsmith import traceable  
+from langsmith import traceable
 
 from ..schemas import RetrievedDoc
 

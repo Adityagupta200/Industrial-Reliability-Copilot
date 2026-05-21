@@ -25,7 +25,7 @@ class Hypothesis(BaseModel):
     cause: str = "Unknown cause"
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     evidence: str = "No specific evidence extracted."
-    # PRODUCTION FIX: Removed the brittle regex pattern. 
+    # PRODUCTION FIX: Removed the brittle regex pattern.
     # LLMs are stochastic; forcing strict regex at the parsing layer causes fatal 500 errors.
     # The RootCauseChain handles sanitization and grounding verification downstream.
     source: str = Field(

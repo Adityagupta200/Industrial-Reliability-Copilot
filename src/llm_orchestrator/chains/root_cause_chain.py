@@ -43,10 +43,7 @@ def _dedupe_docs(docs: list[RetrievedDoc], limit: int) -> list[RetrievedDoc]:
     out: list[RetrievedDoc] = []
     for doc in docs:
         source_key = str(
-            doc.metadata.get("source_file")
-            or doc.metadata.get("source_id")
-            or doc.source
-            or doc.id
+            doc.metadata.get("source_file") or doc.metadata.get("source_id") or doc.source or doc.id
         )
         chunk_key = f"{source_key}:{doc.metadata.get('chunk_index', '')}:{doc.id}"
         if chunk_key in seen:
