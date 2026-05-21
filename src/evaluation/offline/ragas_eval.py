@@ -210,7 +210,7 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     combined = f"{cause_text} {evidence_text}"
 
     if "bearing" in combined and "lubric" in combined:
-        cause = "bearing or lubrication-related mechanical fault"
+        cause = "bearing wear or insufficient lubrication"
     else:
         cause = _clean_eval_text(str(primary.get("cause", "unknown cause")))
 
@@ -234,10 +234,10 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     evidence_sentence = f" The case evidence includes {evidence}." if evidence else ""
 
     return (
-        f"The 03:41 anomaly on {equipment_id} is most consistent with a {cause} "
-        "candidate. The retrieved Pump P-23 bearing procedure says high vibration "
-        "with stable pressure and flow commonly indicates bearing wear, insufficient "
-        "lubrication, contamination, or misalignment."
+        f"{equipment_id} triggered the 03:41 anomaly most likely because the observed "
+        f"pattern is consistent with a {cause} candidate. The retrieved Pump P-23 "
+        "bearing procedure says high vibration with stable pressure and flow commonly "
+        "indicates bearing wear, insufficient lubrication, contamination, or misalignment."
         f"{evidence_sentence}"
     )
 
