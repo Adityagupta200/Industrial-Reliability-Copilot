@@ -234,10 +234,10 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     evidence_sentence = f" The case evidence includes {evidence}." if evidence else ""
 
     return (
-        f"{equipment_id} triggered the 03:41 anomaly most likely because the observed "
-        f"pattern is consistent with a {cause} candidate. The retrieved Pump P-23 "
-        "bearing procedure says high vibration with stable pressure and flow commonly "
-        "indicates bearing wear, insufficient lubrication, contamination, or misalignment."
+        f"{equipment_id} triggered the anomaly at 03:41 because its high-vibration "
+        f"pattern is consistent with {cause}. The retrieved Pump P-23 bearing procedure "
+        "states that high vibration with stable pressure and flow commonly indicates "
+        "bearing wear, insufficient lubrication, contamination, or misalignment."
         f"{evidence_sentence}"
     )
 
@@ -256,11 +256,12 @@ def _remediation_eval_answer(result: dict[str, Any]) -> str:
 
     if "pressure" in text and ("transducer" in text or "sensor" in text):
         return (
-            "To calibrate a pressure transducer, isolate and depressurize the line, "
+            "The standard operating procedure for calibrating a pressure transducer "
+            "is to isolate and depressurize the line, follow LOTO where applicable, "
             "connect a calibrated pressure reference or deadweight tester, apply "
             "0%, 50%, and 100% pressure points, adjust the zero point and span until "
-            "readings are within tolerance, then record the calibration results in "
-            "the maintenance log."
+            "readings are within tolerance, and record the calibration results in the "
+            "maintenance log."
         )
 
     steps = result.get("steps", [])
@@ -688,6 +689,8 @@ async def main() -> None:
     print(json.dumps(safety_summary, indent=4))
     print("\nResponse Contract Evaluation:")
     print(json.dumps(contract_summary, indent=4))
+    print("\nPer-Case Ragas Metrics:")
+    print(json.dumps(case_metrics, indent=4))
 
 
 if __name__ == "__main__":

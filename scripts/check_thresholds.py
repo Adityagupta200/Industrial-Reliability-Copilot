@@ -64,6 +64,11 @@ def main() -> None:
             logger.info("PASS response contract pass rate: %.3f", pass_rate)
 
     if failed:
+        case_metrics = report.get("case_metrics", [])
+        if case_metrics:
+            logger.error("Per-case Ragas metrics for debugging:")
+            for row in case_metrics:
+                logger.error(json.dumps(row, sort_keys=True))
         logger.error("Quality gate failed. Metrics are below production thresholds.")
         sys.exit(1)
 
