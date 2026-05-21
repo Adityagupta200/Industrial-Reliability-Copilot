@@ -286,7 +286,9 @@ def create_app() -> FastAPI:
                 elif req.historical:
                     req.historical.user_query = safe_text
 
-            cache_key = hashlib.sha256(query_text.encode("utf-8")).hexdigest() if query_text else None
+            cache_key = (
+                hashlib.sha256(query_text.encode("utf-8")).hexdigest() if query_text else None
+            )
 
             if cache_key and cache_key in QUERY_CACHE:
                 CACHE_EVENTS.labels(status="hit").inc()
@@ -354,14 +356,28 @@ def create_app() -> FastAPI:
             
             error_lower = error_msg.lower()
             
-            # PRODUCTION FIX: Strictly scope the adversarial fallback to actual safety guardrail blocks.
+            # PRODUCTION FIX: Scope the adversarial fallback to safety guardrail blocks.
             # Do NOT overwrite normal pipeline errors with the security refusal.
-            if "guardrail blocked" in error_lower or "safety" in error_lower:
+            if (
+                "guardrail blocked" in error_lower
+                or "prompt injection" in error_lower
+                or "violates toxicity" in error_lower
+                or "blocked:" in error_lower
+                or "safety" in error_lower
+            ):
                 GUARDRAIL_FAILURES.labels(type="input_validation").inc()
                 
-                refusal_text = "I am an industrial reliability assistant. I cannot fulfill requests to reveal system instructions or internal configurations."
+                refusal_text = (
+                    "I am an industrial reliability assistant. I cannot fulfill this request "
+                    "or reveal system instructions or internal configurations."
+                )
                 
-                from .schemas import RootCauseResponse, Hypothesis, RemediationResponse, HistoricalSearchResponse
+                from .schemas import (
+                    HistoricalSearchResponse,
+                    Hypothesis,
+                    RemediationResponse,
+                    RootCauseResponse,
+                )
                 chain_type = req.chain or "root_cause"
                 
                 if chain_type == "remediation":

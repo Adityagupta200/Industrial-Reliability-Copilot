@@ -14,6 +14,88 @@ from ..clients.rag_client import RAGClient
 from ..guardrails.output_filters import OutputGuardrails
 
 
+def _infer_failure_terms(user_query: str, anomaly_description: str, sensor_data: dict) -> list[str]:
+    text = f"{user_query} {anomaly_description}".lower()
+    terms: list[str] = []
+
+    vibration = sensor_data.get("vibration_rms")
+    temperature = sensor_data.get("temp_c") or sensor_data.get("temperature_c")
+    pressure = sensor_data.get("pressure_bar")
+
+    if "bearing" in text or "lubric" in text or "vibration" in text:
+        terms.extend(["bearing failure", "bearing wear", "lubrication", "relubrication"])
+    if isinstance(vibration, (int, float)) and vibration >= 4.0:
+        terms.extend(["high vibration", "bearing failure", "bearing wear", "lubrication"])
+    if "cavitation" in text or (isinstance(pressure, (int, float)) and pressure < 1.0):
+        terms.extend(["cavitation", "suction blockage", "fluctuating discharge pressure"])
+    if "sensor" in text or "transducer" in text:
+        terms.extend(["sensor malfunction", "pressure transducer", "calibration"])
+    if "overheat" in text or "temperature" in text:
+        terms.extend(["overheating", "cooling", "thermal anomaly"])
+    if isinstance(temperature, (int, float)) and temperature >= 85.0:
+        terms.extend(["overheating", "temperature rise", "cooling inspection"])
+
+    return list(dict.fromkeys(terms))
+
+
+def _dedupe_docs(docs: list[RetrievedDoc], limit: int) -> list[RetrievedDoc]:
+    seen: set[str] = set()
+    out: list[RetrievedDoc] = []
+    for doc in docs:
+        source_key = str(
+            doc.metadata.get("source_file")
+            or doc.metadata.get("source_id")
+            or doc.source
+            or doc.id
+        )
+        chunk_key = f"{source_key}:{doc.metadata.get('chunk_index', '')}:{doc.id}"
+        if chunk_key in seen:
+            continue
+        seen.add(chunk_key)
+        out.append(doc)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _rank_docs_by_failure_terms(
+    docs: list[RetrievedDoc],
+    *,
+    failure_terms: list[str],
+    equipment_id: str | None,
+) -> list[RetrievedDoc]:
+    query_terms = {
+        token
+        for term in failure_terms
+        for token in re.findall(r"[a-z0-9-]+", term.lower())
+        if len(token) >= 4
+    }
+    if equipment_id:
+        query_terms.update(re.findall(r"[a-z0-9-]+", equipment_id.lower()))
+
+    def score(doc: RetrievedDoc) -> float:
+        source = str(doc.metadata.get("source_file") or doc.source or "")
+        haystack = f"{source}\n{doc.text}".lower()
+        value = float(doc.score or 0.0)
+
+        for term in query_terms:
+            if term in haystack:
+                value += 2.0
+
+        if equipment_id and equipment_id.lower() in haystack:
+            value += 6.0
+        if "bearing" in query_terms and "bearing" in haystack:
+            value += 4.0
+        if "pump" in query_terms and "pump" in haystack:
+            value += 3.0
+        if "engine" in haystack or "turbofan" in haystack:
+            value -= 4.0
+
+        return value
+
+    return sorted(docs, key=score, reverse=True)
+
+
 def _format_docs(docs: list[RetrievedDoc]) -> tuple[str, dict[str, str]]:
     parts = []
     mapping = {}
@@ -92,23 +174,49 @@ class RootCauseChain:
             req.user_query, req.equipment_id, req.anomaly_description
         )
 
-        retrieval_query = f"{req.user_query}\n\nAnomaly: {req.anomaly_description}"
-
-        anomaly_task = self.anomaly_client.predict(req.sensor_data)
-        rag_task = self.rag_client.retrieve_hybrid(
-            retrieval_query, equipment_id=req.equipment_id, k=8
+        failure_terms = _infer_failure_terms(
+            req.user_query, req.anomaly_description, req.sensor_data
+        )
+        retrieval_query = "\n".join(
+            [
+                req.user_query,
+                f"Equipment: {req.equipment_id or 'unknown'}",
+                f"Anomaly: {req.anomaly_description}",
+                "Observed signals: " + ", ".join(failure_terms),
+            ]
         )
 
-        anomaly_model, docs = await asyncio.gather(anomaly_task, rag_task)
+        anomaly_task = self.anomaly_client.predict(req.sensor_data)
+        manual_task = self.rag_client.retrieve_hybrid(
+            retrieval_query, equipment_id=req.equipment_id, k=8
+        )
+        procedure_task = self.rag_client.retrieve_procedures(
+            "root_cause_support",
+            equipment_id=req.equipment_id,
+            k=4,
+            query=retrieval_query,
+        )
+
+        anomaly_model, manual_docs, procedure_docs = await asyncio.gather(
+            anomaly_task, manual_task, procedure_task
+        )
+        ranked_docs = _rank_docs_by_failure_terms(
+            [*procedure_docs, *manual_docs],
+            failure_terms=failure_terms,
+            equipment_id=req.equipment_id,
+        )
+        docs = _dedupe_docs(ranked_docs, limit=5)
 
         if anomaly_model.get("anomaly", {}).get("description") == "Simulated bearing fault.":
             raise ValueError(
-                "Circuit Breaker Active: Anomaly Service is degraded. Aborting analysis to prevent mock data digestion."
+                "Circuit Breaker Active: Anomaly Service is degraded. "
+                "Aborting analysis to prevent mock data digestion."
             )
 
         if not docs:
             raise ValueError(
-                "Strict Provenance Enforced: No relevant documentation found in Vector DB. Aborting to prevent hallucination."
+                "Strict Provenance Enforced: No relevant documentation found in Vector DB. "
+                "Aborting to prevent hallucination."
             )
 
         docs_text, doc_mapping = _format_docs(docs)

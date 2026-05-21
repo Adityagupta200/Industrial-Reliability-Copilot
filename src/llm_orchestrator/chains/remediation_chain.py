@@ -100,14 +100,28 @@ class RemediationChain:
             req.user_query, req.equipment_id, req.failure_mode
         )
 
+        retrieval_query = " ".join(
+            part
+            for part in [
+                req.user_query or "",
+                f"failure mode {req.failure_mode}",
+                f"equipment {req.equipment_id}" if req.equipment_id else "",
+            ]
+            if part
+        )
+
         docs = await self.rag_client.retrieve_procedures(
-            req.failure_mode, equipment_id=req.equipment_id, k=6
+            req.failure_mode,
+            equipment_id=req.equipment_id,
+            k=6,
+            query=retrieval_query,
         )
 
         if not docs:
             fallback_response = RemediationResponse(
                 safety_warnings=[
-                    f"No technical documentation was retrieved for {req.failure_mode}, so safe repair guidance cannot be provided from the available context."
+                    f"No technical documentation was retrieved for {req.failure_mode}, "
+                    "so safe repair guidance cannot be provided from the available context."
                 ],
                 tools_required=[],
                 steps=[],

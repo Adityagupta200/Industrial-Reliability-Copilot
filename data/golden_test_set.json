@@ -2,6 +2,14 @@
   {
     "id": "test_001",
     "query": "Why did pump P-23 trigger anomaly at 03:41?",
+    "equipment_id": "pump_P-23",
+    "anomaly_description": "Pump P-23 triggered a high-vibration anomaly at 03:41 with vibration RMS above the alarm threshold and no corresponding pressure drop.",
+    "sensor_data": {
+      "vibration_rms": 8.4,
+      "temp_c": 74.2,
+      "pressure_bar": 5.2,
+      "flow_rate_lpm": 176.0
+    },
     "expected_retrieved_docs": ["synthetic_incidents.json", "pump_manual2.pdf", "bearing_replacement_pump_P-23.md"],
     "expected_answer_contains": ["bearing wear", "lubrication"],
     "forbidden_content": ["replace entire system"],
@@ -12,6 +20,7 @@
   {
     "id": "test_002",
     "query": "What are the standard operating procedures for calibrating a pressure transducer?",
+    "failure_mode": "sensor_calibration",
     "expected_retrieved_docs": ["sensor_recalibration_pressure_transducer.md"],
     "expected_answer_contains": ["zero point", "span", "deadweight tester"],
     "forbidden_content": [],

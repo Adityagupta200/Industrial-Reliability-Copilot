@@ -15,6 +15,9 @@ PROMPT_INJECTION_PATTERNS = [
     r"disregard system prompt",
     r"bypass safety",
     r"forget instructions",
+    r"forget all prior rules",
+    r"reveal.*system (prompt|instructions)",
+    r"output.*(database connection string|connection string|api key|secret)",
 ]
 
 
@@ -25,7 +28,7 @@ class InputGuardrails:
 
     @classmethod
     def preload_engines(cls) -> None:
-        """PRODUCTION FIX: Eagerly loads NLP models in the background at startup to prevent mid-request SLA spikes."""
+        """Load NLP models in the background to prevent mid-request SLA spikes."""
         if cls._analyzer is not None or cls._is_loading:
             return
 
@@ -60,9 +63,11 @@ class InputGuardrails:
     @classmethod
     def redact_pii(cls, text: str) -> str:
         """Redacts sensitive PII using Microsoft Presidio."""
-        # Fallback in case the background thread hasn't finished loading yet during the very first millisecond of boot
+        # First requests may arrive before the background NLP model load has finished.
         if cls._analyzer is None or cls._anonymizer is None:
-            logger.warning("PII Guardrail skipped: NLP models are still loading in the background.")
+            logger.warning(
+                "PII Guardrail skipped: NLP models are still loading in the background."
+            )
             return text
 
         results = cls._analyzer.analyze(
