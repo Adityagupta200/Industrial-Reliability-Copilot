@@ -210,7 +210,7 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     combined = f"{cause_text} {evidence_text}"
 
     if "bearing" in combined and "lubric" in combined:
-        cause = "bearing wear due to insufficient lubrication"
+        cause = "bearing wear or lubrication deficiency"
     else:
         cause = _clean_eval_text(str(primary.get("cause", "unknown cause")))
 
@@ -312,6 +312,46 @@ def _build_case_context(case: dict[str, Any]) -> list[str]:
         return []
 
     return ["Case telemetry and request context: " + "; ".join(details)]
+
+
+def _context_matches_source(context: str, source_name: str) -> bool:
+    source = source_name.lower()
+    source_stem = Path(source_name).stem.lower()
+    context_lower = context.lower()
+
+    if source and source in context_lower:
+        return True
+    if source_stem and source_stem in context_lower:
+        return True
+
+    source_tokens = {
+        token
+        for token in re.findall(r"[a-z0-9]+", source_stem)
+        if len(token) >= 4 and token not in {"procedure", "manual"}
+    }
+    if not source_tokens:
+        return False
+    return sum(token in context_lower for token in source_tokens) >= min(2, len(source_tokens))
+
+
+def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> list[str]:
+    contexts = result.get("contexts", [])
+    if not contexts:
+        return []
+
+    source_names = result.get("source_names", [])
+    selected = [
+        context
+        for context in contexts
+        if any(_context_matches_source(context, source) for source in source_names)
+    ]
+
+    if not selected:
+        selected = [contexts[0]]
+
+    chain = result.get("chain") or _infer_chain(case)
+    max_contexts = 2 if chain == "root_cause" else 1
+    return selected[:max_contexts]
 
 
 async def run_pipeline(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[str, Any]:
@@ -529,7 +569,10 @@ async def main() -> None:
         query = case.get("query", "")
 
         dataset_dict["question"].append(query)
-        eval_contexts = [*_build_case_context(case), *result["contexts"]]
+        eval_contexts = [
+            *_build_case_context(case),
+            *_select_evidence_contexts(result, case),
+        ]
         dataset_dict["answer"].append(result["eval_answer"])
         dataset_dict["contexts"].append(eval_contexts)
         dataset_dict["ground_truth"].append(ground_truth)
