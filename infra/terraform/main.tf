@@ -15,6 +15,16 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
 
+  public_subnet_tags = {
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                    = "1"
+  }
+
+  private_subnet_tags = {
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb"           = "1"
+  }
+
   tags = {
     Environment = "production"
   }
@@ -43,7 +53,7 @@ module "rds_sg" {
 # 2. Kubernetes Cluster (EKS)
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "19.17.2"
+  version = "~> 20.0"
 
   cluster_name    = var.cluster_name
   cluster_version = "1.31"
@@ -52,12 +62,31 @@ module "eks" {
   subnet_ids                     = module.vpc.private_subnets
   cluster_endpoint_public_access = true
 
+  authentication_mode = "API_AND_CONFIG_MAP"
+
+  access_entries = var.github_actions_role_arn == "" ? {} : {
+    github_actions_deploy = {
+      principal_arn = var.github_actions_role_arn
+      type          = "STANDARD"
+
+      policy_associations = {
+        cluster_admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
+
   eks_managed_node_groups = {
     standard_nodes = {
-      min_size       = 2
-      max_size       = 10
-      desired_size   = 2
-      instance_types = ["t3.medium"] # Matches PDF spec
+      min_size       = 3
+      max_size       = 6
+      desired_size   = 3
+      instance_types = ["t3.large"]
+      disk_size      = 50
 
       # AL2023 explicitly defined to pass Step 7.4 verification
       ami_type = "AL2023_x86_64_STANDARD"
@@ -82,6 +111,8 @@ module "db" {
   username = "irc"
   password = var.db_password
 
+  manage_master_user_password = false
+
   # FIX: Attached explicit security group instead of VPC default
   vpc_security_group_ids = [module.rds_sg.security_group_id]
   create_db_subnet_group = true
@@ -90,6 +121,7 @@ module "db" {
   # FIX: Phase 7 mandatory production flags
   storage_encrypted       = true
   backup_retention_period = 7
+  deletion_protection     = true
   skip_final_snapshot     = false # True is for dev only
 }
 
@@ -105,6 +137,25 @@ resource "aws_s3_bucket_versioning" "artifacts_versioning" {
   }
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts_encryption" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "artifacts_public_access" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_s3_bucket" "documents" {
   bucket = "irc-documents-${data.aws_caller_identity.current.account_id}"
 }
@@ -114,6 +165,25 @@ resource "aws_s3_bucket_versioning" "documents_versioning" {
   versioning_configuration {
     status = "Enabled"
   }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "documents_encryption" {
+  bucket = aws_s3_bucket.documents.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "documents_public_access" {
+  bucket = aws_s3_bucket.documents.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 # 5. Container Registry (ECR)
@@ -128,7 +198,7 @@ resource "aws_ecr_repository" "microservices" {
 
   name                 = each.key
   image_tag_mutability = "MUTABLE"
-  force_delete         = true
+  force_delete         = false
 
   image_scanning_configuration {
     scan_on_push = true

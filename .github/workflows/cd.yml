@@ -4,123 +4,250 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
 env:
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'industrial-copilot-cluster' }}
+  STAGING_NAMESPACE: staging
+  PRODUCTION_NAMESPACE: production
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION || 'ap-south-1' }}.amazonaws.com
 
 jobs:
+  preflight:
+    name: Validate CD Configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required repository secrets
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DSN: ${{ secrets.POSTGRES_DSN }}
+          INCIDENTS_DB_DSN: ${{ secrets.INCIDENTS_DB_DSN }}
+        run: |
+          missing=()
+          for name in AWS_ACCOUNT_ID AWS_ROLE_TO_ASSUME OPENAI_API_KEY POSTGRES_PASSWORD POSTGRES_DSN INCIDENTS_DB_DSN; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf '::error::Missing required GitHub repository secrets: %s\n' "${missing[*]}"
+            exit 1
+          fi
+
+          echo "CD secret preflight passed."
+
   build-and-push:
-    name: Build and Push Microservices to ECR
+    name: Build and Push Microservices to ECR (${{ matrix.image_repo }})
+    needs: preflight
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        service: [anomaly_service, api_gateway, llm_orchestrator, rag_service]
+        include:
+          - service_dir: anomaly_service
+            image_repo: anomaly-service
+          - service_dir: api_gateway
+            image_repo: api-gateway
+          - service_dir: llm_orchestrator
+            image_repo: llm-orchestrator
+          - service_dir: rag_service
+            image_repo: rag-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6.1.1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+
+      - name: Verify ECR repository exists
+        run: |
+          aws ecr describe-repositories --repository-names "${{ matrix.image_repo }}" >/dev/null
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push images
+      - name: Build, tag, and push image
         run: |
-          docker build -t ${{ matrix.service }}:${{ github.sha }} src/${{ matrix.service }}/
-          docker tag ${{ matrix.service }}:${{ github.sha }} ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
-          docker push ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+          image="${ECR_REGISTRY}/${{ matrix.image_repo }}:${GITHUB_SHA}"
+          docker build \
+            -f "src/${{ matrix.service_dir }}/Dockerfile" \
+            -t "$image" \
+            .
+          docker push "$image"
 
   deploy-staging:
     name: Deploy to Staging & Smoke Test
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment: staging
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v5
+
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6.1.1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
-          
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        
-      - name: Update K8s manifests with new images
+        uses: azure/setup-kubectl@v5
+        with:
+          version: latest
+
+      - name: Connect to EKS
         run: |
-          sed -i "s|image: .*/anomaly_service:.*|image: ${{ env.ECR_REGISTRY }}/anomaly_service:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
-          sed -i "s|image: .*/api_gateway:.*|image: ${{ env.ECR_REGISTRY }}/api_gateway:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
-          sed -i "s|image: .*/llm_orchestrator:.*|image: ${{ env.ECR_REGISTRY }}/llm_orchestrator:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
-          sed -i "s|image: .*/rag_service:.*|image: ${{ env.ECR_REGISTRY }}/rag_service:${{ github.sha }}|g" infra/kubernetes/03-microservices.yaml
-          
-      - name: Deploy to Staging
+          aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+          kubectl version --client=true
+          kubectl auth can-i create namespaces
+          kubectl auth can-i create deployments --namespace "$STAGING_NAMESPACE"
+          kubectl auth can-i create secrets --namespace "$STAGING_NAMESPACE"
+
+      - name: Render Kubernetes manifests for staging
         run: |
-          aws eks update-kubeconfig --name industrial-copilot-cluster --region ${{ env.AWS_REGION }}
-          kubectl apply -f infra/kubernetes/01_config.yaml -n staging
-          kubectl apply -f infra/kubernetes/02-backing-services.yaml -n staging
-          kubectl apply -f infra/kubernetes/03-microservices.yaml -n staging
-          
-      - name: Wait for Staging Rollout
+          mkdir -p rendered/staging
+          cp infra/kubernetes/*.yaml rendered/staging/
+
+          sed -i "s/namespace: industrial-copilot/namespace: ${STAGING_NAMESPACE}/g" rendered/staging/*.yaml
+          sed -i "s/name: industrial-copilot/name: ${STAGING_NAMESPACE}/g" rendered/staging/01_config.yaml
+          sed -i 's/ENVIRONMENT: "production"/ENVIRONMENT: "staging"/g' rendered/staging/01_config.yaml
+          sed -i "s|image: .*anomaly-service:.*|image: ${ECR_REGISTRY}/anomaly-service:${GITHUB_SHA}|g" rendered/staging/03-microservices.yaml
+          sed -i "s|image: .*api-gateway:.*|image: ${ECR_REGISTRY}/api-gateway:${GITHUB_SHA}|g" rendered/staging/03-microservices.yaml
+          sed -i "s|image: .*llm-orchestrator:.*|image: ${ECR_REGISTRY}/llm-orchestrator:${GITHUB_SHA}|g" rendered/staging/03-microservices.yaml
+          sed -i "s|image: .*rag-service:.*|image: ${ECR_REGISTRY}/rag-service:${GITHUB_SHA}|g" rendered/staging/03-microservices.yaml
+
+      - name: Deploy staging manifests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DSN: ${{ secrets.POSTGRES_DSN }}
+          INCIDENTS_DB_DSN: ${{ secrets.INCIDENTS_DB_DSN }}
         run: |
-          kubectl rollout status deployment/api-gateway -n staging --timeout=300s
-          kubectl rollout status deployment/llm-orchestrator -n staging --timeout=300s
-          
-      - name: Run Smoke Tests
+          kubectl create namespace "$STAGING_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f rendered/staging/01_config.yaml
+
+          kubectl -n "$STAGING_NAMESPACE" create secret generic copilot-secrets \
+            --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY" \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --from-literal=POSTGRES_DSN="$POSTGRES_DSN" \
+            --from-literal=INCIDENTS_DB_DSN="$INCIDENTS_DB_DSN" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl apply -f rendered/staging/02-backing-services.yaml
+          kubectl apply -f rendered/staging/03-microservices.yaml
+
+      - name: Wait for staging rollout
         run: |
-          pip install requests pytest
-          pytest tests/integration/test_api_contract.py --env=staging
+          kubectl rollout status deployment/qdrant -n "$STAGING_NAMESPACE" --timeout=300s
+          kubectl rollout status deployment/anomaly-service -n "$STAGING_NAMESPACE" --timeout=300s
+          kubectl rollout status deployment/rag-service -n "$STAGING_NAMESPACE" --timeout=900s
+          kubectl rollout status deployment/llm-orchestrator -n "$STAGING_NAMESPACE" --timeout=600s
+          kubectl rollout status deployment/api-gateway -n "$STAGING_NAMESPACE" --timeout=300s
+
+      - name: Run staging smoke tests
+        run: |
+          kubectl -n "$STAGING_NAMESPACE" run "smoke-${GITHUB_RUN_ID}" \
+            --rm -i --restart=Never --image=curlimages/curl:8.11.1 -- \
+            sh -c 'curl -fsS http://api-gateway/health/ready && curl -fsS http://llm-orchestrator:8000/health/ready'
 
   deploy-prod:
     name: Deploy to Production
     needs: deploy-staging
     runs-on: ubuntu-latest
-    environment: production # Triggers manual approval gate in GitHub Settings
+    environment: production
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v5
+
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6.1.1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
-          
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        
-      - name: Deploy to Production
+        uses: azure/setup-kubectl@v5
+        with:
+          version: latest
+
+      - name: Connect to EKS
         run: |
-          aws eks update-kubeconfig --name industrial-copilot-cluster --region ${{ env.AWS_REGION }}
-          
-          kubectl apply -f infra/kubernetes/01_config.yaml -n production
-          
-          kubectl set image deployment/anomaly-service anomaly-service=${{ env.ECR_REGISTRY }}/anomaly_service:${{ github.sha }} -n production
-          kubectl set image deployment/api-gateway api-gateway=${{ env.ECR_REGISTRY }}/api_gateway:${{ github.sha }} -n production
-          kubectl set image deployment/llm-orchestrator llm-orchestrator=${{ env.ECR_REGISTRY }}/llm_orchestrator:${{ github.sha }} -n production
-          kubectl set image deployment/rag-service rag-service=${{ env.ECR_REGISTRY }}/rag_service:${{ github.sha }} -n production
-          
-      - name: Wait for Production Rollout
+          aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+          kubectl auth can-i create namespaces
+          kubectl auth can-i create deployments --namespace "$PRODUCTION_NAMESPACE"
+          kubectl auth can-i create secrets --namespace "$PRODUCTION_NAMESPACE"
+
+      - name: Render Kubernetes manifests for production
         run: |
-          kubectl rollout status deployment/api-gateway -n production --timeout=300s
-          kubectl rollout status deployment/llm-orchestrator -n production --timeout=300s
-          
-      - name: Monitor Deployment (SLA & Health Check)
+          mkdir -p rendered/production
+          cp infra/kubernetes/*.yaml rendered/production/
+
+          sed -i "s/namespace: industrial-copilot/namespace: ${PRODUCTION_NAMESPACE}/g" rendered/production/*.yaml
+          sed -i "s/name: industrial-copilot/name: ${PRODUCTION_NAMESPACE}/g" rendered/production/01_config.yaml
+          sed -i "s|image: .*anomaly-service:.*|image: ${ECR_REGISTRY}/anomaly-service:${GITHUB_SHA}|g" rendered/production/03-microservices.yaml
+          sed -i "s|image: .*api-gateway:.*|image: ${ECR_REGISTRY}/api-gateway:${GITHUB_SHA}|g" rendered/production/03-microservices.yaml
+          sed -i "s|image: .*llm-orchestrator:.*|image: ${ECR_REGISTRY}/llm-orchestrator:${GITHUB_SHA}|g" rendered/production/03-microservices.yaml
+          sed -i "s|image: .*rag-service:.*|image: ${ECR_REGISTRY}/rag-service:${GITHUB_SHA}|g" rendered/production/03-microservices.yaml
+
+      - name: Deploy to production
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DSN: ${{ secrets.POSTGRES_DSN }}
+          INCIDENTS_DB_DSN: ${{ secrets.INCIDENTS_DB_DSN }}
         run: |
+          kubectl create namespace "$PRODUCTION_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f rendered/production/01_config.yaml
+
+          kubectl -n "$PRODUCTION_NAMESPACE" create secret generic copilot-secrets \
+            --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY" \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --from-literal=POSTGRES_DSN="$POSTGRES_DSN" \
+            --from-literal=INCIDENTS_DB_DSN="$INCIDENTS_DB_DSN" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl apply -f rendered/production/02-backing-services.yaml
+          kubectl apply -f rendered/production/03-microservices.yaml
+
+      - name: Wait for production rollout
+        run: |
+          kubectl rollout status deployment/anomaly-service -n "$PRODUCTION_NAMESPACE" --timeout=300s
+          kubectl rollout status deployment/rag-service -n "$PRODUCTION_NAMESPACE" --timeout=900s
+          kubectl rollout status deployment/llm-orchestrator -n "$PRODUCTION_NAMESPACE" --timeout=600s
+          kubectl rollout status deployment/api-gateway -n "$PRODUCTION_NAMESPACE" --timeout=300s
+
+      - name: Monitor deployment
+        run: |
+          kubectl -n "$PRODUCTION_NAMESPACE" port-forward svc/api-gateway 18080:80 >/tmp/api-gateway-port-forward.log 2>&1 &
+          echo "$!" > /tmp/api-gateway-port-forward.pid
+          sleep 5
+          python -m pip install --upgrade pip
           pip install requests
-          python scripts/monitor_deployment.py --duration=600 --namespace=production
-          
-      - name: Automated Rollback on Failure
+          python scripts/monitor_deployment.py \
+            --duration=600 \
+            --namespace="$PRODUCTION_NAMESPACE" \
+            --gateway-url=http://127.0.0.1:18080
+
+      - name: Automated rollback on failure
         if: failure()
         run: |
-          echo "Deployment or Monitoring failed! Initiating automated rollback..."
-          kubectl rollout undo deployment/api-gateway -n production
-          kubectl rollout undo deployment/llm-orchestrator -n production
-          kubectl rollout undo deployment/rag-service -n production
-          kubectl rollout undo deployment/anomaly-service -n production
+          echo "Deployment or monitoring failed. Initiating automated rollback."
+          kubectl rollout undo deployment/api-gateway -n "$PRODUCTION_NAMESPACE" || true
+          kubectl rollout undo deployment/llm-orchestrator -n "$PRODUCTION_NAMESPACE" || true
+          kubectl rollout undo deployment/rag-service -n "$PRODUCTION_NAMESPACE" || true
+          kubectl rollout undo deployment/anomaly-service -n "$PRODUCTION_NAMESPACE" || true
           echo "Rollback complete. Please investigate logs."
