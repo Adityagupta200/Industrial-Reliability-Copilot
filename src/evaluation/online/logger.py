@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON, select
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -11,6 +12,19 @@ logger = logging.getLogger(__name__)
 settings = load_settings()
 
 Base = declarative_base()
+
+
+def _safe_database_target(dsn: str) -> str:
+    """Return a credential-free database target for startup diagnostics."""
+    try:
+        url = make_url(dsn)
+    except Exception:
+        return "<invalid database DSN>"
+
+    host = url.host or "<missing-host>"
+    port = url.port or 5432
+    database = url.database or "<missing-database>"
+    return f"{url.drivername}://***@{host}:{port}/{database}"
 
 
 class QueryLog(Base):
@@ -44,6 +58,11 @@ class AsyncJobState(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+logger.info(
+    "Telemetry database target: %s",
+    _safe_database_target(settings.services.incidents_db_dsn),
+)
 
 engine = create_async_engine(settings.services.incidents_db_dsn, pool_pre_ping=True)
 AsyncSessionLocal = async_sessionmaker(
