@@ -20,8 +20,22 @@ Example DSNs:
 
 ```text
 POSTGRES_DSN=postgresql+psycopg://irc:<password>@<rds-endpoint>:5432/industrial_maintenance
-INCIDENTS_DB_DSN=postgresql+psycopg://irc:<password>@<rds-endpoint>:5432/industrial_maintenance
+INCIDENTS_DB_DSN=postgresql+asyncpg://irc:<password>@<rds-endpoint>:5432/industrial_maintenance
 ```
+
+Get the RDS endpoint from Terraform after `terraform apply`:
+
+```bash
+terraform -chdir=infra/terraform output -raw db_instance_endpoint
+```
+
+Use the returned RDS hostname in both DSNs. Do not leave placeholders such as
+`<rds-endpoint>`, do not use `localhost`, and do not use the in-cluster name `postgres`
+for EKS deployments. If Terraform returns an endpoint with `:5432` already appended,
+include port `5432` only once in the final DSN.
+
+If the password contains characters such as `@`, `:`, `/`, `#`, or `%`, URL-encode it
+before putting it into either DSN.
 
 ## Recommended Repository Variables
 

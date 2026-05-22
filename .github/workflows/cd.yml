@@ -47,6 +47,87 @@ jobs:
 
           echo "CD secret preflight passed."
 
+      - name: Validate runtime database DSNs
+        env:
+          POSTGRES_DSN: ${{ secrets.POSTGRES_DSN }}
+          INCIDENTS_DB_DSN: ${{ secrets.INCIDENTS_DB_DSN }}
+        run: |
+          python - <<'PY'
+          import os
+          import socket
+          import sys
+          from urllib.parse import urlparse
+
+          checks = [
+              ("POSTGRES_DSN", "postgresql+psycopg"),
+              ("INCIDENTS_DB_DSN", "postgresql+asyncpg"),
+          ]
+          invalid_cluster_hosts = {"localhost", "127.0.0.1", "postgres"}
+          failed = False
+
+          def mask_dsn(value: str) -> str:
+              if "://" not in value or "@" not in value:
+                  return value
+              scheme, rest = value.split("://", 1)
+              return f"{scheme}://***@{rest.rsplit('@', 1)[-1]}"
+
+          for name, expected_scheme in checks:
+              dsn = os.environ.get(name, "")
+              print(f"Validating {name}: {mask_dsn(dsn)}")
+
+              if not dsn or "<" in dsn or ">" in dsn:
+                  print(f"::error::{name} is missing or still contains a placeholder.")
+                  failed = True
+                  continue
+
+              parsed = urlparse(dsn)
+              if parsed.scheme != expected_scheme:
+                  print(
+                      f"::error::{name} must use scheme {expected_scheme}; "
+                      f"found {parsed.scheme!r}."
+                  )
+                  failed = True
+
+              if parsed.path != "/industrial_maintenance":
+                  print(
+                      f"::error::{name} must target /industrial_maintenance; "
+                      f"found {parsed.path!r}."
+                  )
+                  failed = True
+
+              host = parsed.hostname
+              if not host:
+                  print(f"::error::{name} is missing a hostname.")
+                  failed = True
+                  continue
+
+              try:
+                  port = parsed.port or 5432
+              except ValueError as exc:
+                  print(f"::error::{name} has an invalid port: {exc}")
+                  failed = True
+                  continue
+
+              if host in invalid_cluster_hosts:
+                  print(
+                      f"::error::{name} host {host!r} is not valid for EKS/RDS. "
+                      "Use the private RDS endpoint from Terraform output."
+                  )
+                  failed = True
+                  continue
+
+              try:
+                  socket.getaddrinfo(host, port)
+              except OSError as exc:
+                  print(f"::error::{name} hostname {host!r}:{port} does not resolve: {exc}")
+                  failed = True
+
+          if failed:
+              sys.exit(1)
+
+          print("Database DSN preflight passed.")
+          PY
+
   build-and-push:
     name: Build and Push Microservices to ECR (${{ matrix.image_repo }})
     needs: preflight
