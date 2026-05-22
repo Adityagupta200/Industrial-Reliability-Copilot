@@ -29,18 +29,3 @@ data:
   LLM_FALLBACK_PROVIDER: "ollama"
   LLM_OLLAMA_BASE_URL: "http://ollama:11434"
   LLM_OLLAMA_MODEL: "llama3.1:8b"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: copilot-secrets
-  namespace: industrial-copilot
-type: Opaque
-stringData:
-  # PRODUCTION FIX: Pointing DSN directly to AWS RDS instead of internal cluster
-  POSTGRES_PASSWORD: "ProductionPassword123!" 
-  POSTGRES_DSN: "postgresql+psycopg://irc:ProductionPassword123!${AWS_RDS_ENDPOINT}:5432/industrial_maintenance"
-  INCIDENTS_DB_DSN: "postgresql+psycopg://irc:ProductionPassword123!${AWS_RDS_ENDPOINT}:5432/industrial_maintenance"
-  
-  # Replace this with your actual OpenAI API key before running `kubectl apply`
-  OPENAI_API_KEY: ${OPENAI_API_KEY}

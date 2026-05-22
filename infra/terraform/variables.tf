@@ -19,3 +19,9 @@ variable "dynamodb_lock_table" {
   type        = string
   default     = "irc-terraform-state-lock"
 }
+
+variable "github_actions_role_arn" {
+  description = "IAM role ARN assumed by GitHub Actions for CI/CD deployment access to EKS and ECR."
+  type        = string
+  default     = ""
+}
