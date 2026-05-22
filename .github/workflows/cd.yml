@@ -231,6 +231,13 @@ jobs:
           kubectl apply -f rendered/staging/02-backing-services.yaml
           kubectl apply -f rendered/staging/03-microservices.yaml
 
+          for deployment in qdrant anomaly-service rag-service llm-orchestrator api-gateway; do
+            kubectl annotate deployment "$deployment" \
+              -n "$STAGING_NAMESPACE" \
+              kubernetes.io/change-cause="staging deploy ${GITHUB_SHA} via ${GITHUB_WORKFLOW} run ${GITHUB_RUN_ID}" \
+              --overwrite
+          done
+
       - name: Wait for staging rollout
         run: |
           kubectl rollout status deployment/qdrant -n "$STAGING_NAMESPACE" --timeout=300s
@@ -318,6 +325,13 @@ jobs:
 
           kubectl apply -f rendered/production/02-backing-services.yaml
           kubectl apply -f rendered/production/03-microservices.yaml
+
+          for deployment in qdrant anomaly-service rag-service llm-orchestrator api-gateway; do
+            kubectl annotate deployment "$deployment" \
+              -n "$PRODUCTION_NAMESPACE" \
+              kubernetes.io/change-cause="production deploy ${GITHUB_SHA} via ${GITHUB_WORKFLOW} run ${GITHUB_RUN_ID}" \
+              --overwrite
+          done
 
       - name: Wait for production rollout
         run: |
