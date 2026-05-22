@@ -6,6 +6,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX: Reduced from 2 to 1 to prevent cluster memory starvation
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 900
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: rag-service
@@ -14,6 +22,7 @@ spec:
       labels:
         app: rag-service
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
       - name: rag-service
         # PRODUCTION FIX: Point to AWS ECR instead of local Minikube cache
@@ -97,6 +106,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: anomaly-service
@@ -105,6 +122,7 @@ spec:
       labels:
         app: anomaly-service
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
       - name: anomaly-service
         image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/anomaly-service:v1.2
@@ -185,6 +203,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 900
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: llm-orchestrator
@@ -193,6 +219,7 @@ spec:
       labels:
         app: llm-orchestrator
     spec:
+      terminationGracePeriodSeconds: 45
       initContainers:
       - name: wait-for-telemetry-db
         image: python:3.11-slim
@@ -327,6 +354,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: api-gateway
@@ -335,6 +370,7 @@ spec:
       labels:
         app: api-gateway
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
       - name: api-gateway
         image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/api-gateway:v1.2

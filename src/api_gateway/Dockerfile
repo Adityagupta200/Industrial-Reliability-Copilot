@@ -68,4 +68,4 @@ HEALTHCHECK --interval=20s --timeout=5s --start-period=10s --retries=3 \
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run the API Gateway
-CMD ["uvicorn", "api_gateway.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "600"]
+CMD ["uvicorn", "api_gateway.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]
