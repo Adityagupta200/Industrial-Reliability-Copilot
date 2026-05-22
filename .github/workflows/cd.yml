@@ -168,6 +168,10 @@ jobs:
           kubectl describe deployment qdrant -n "$STAGING_NAMESPACE" || true
           kubectl describe pods -l app=qdrant -n "$STAGING_NAMESPACE" || true
           kubectl logs -l app=qdrant -n "$STAGING_NAMESPACE" --tail=200 || true
+          kubectl describe deployment llm-orchestrator -n "$STAGING_NAMESPACE" || true
+          kubectl describe pods -l app=llm-orchestrator -n "$STAGING_NAMESPACE" || true
+          kubectl logs -l app=llm-orchestrator -n "$STAGING_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=llm-orchestrator -n "$STAGING_NAMESPACE" --tail=200 || true
 
       - name: Run staging smoke tests
         run: |
@@ -252,6 +256,10 @@ jobs:
           kubectl describe deployment qdrant -n "$PRODUCTION_NAMESPACE" || true
           kubectl describe pods -l app=qdrant -n "$PRODUCTION_NAMESPACE" || true
           kubectl logs -l app=qdrant -n "$PRODUCTION_NAMESPACE" --tail=200 || true
+          kubectl describe deployment llm-orchestrator -n "$PRODUCTION_NAMESPACE" || true
+          kubectl describe pods -l app=llm-orchestrator -n "$PRODUCTION_NAMESPACE" || true
+          kubectl logs -l app=llm-orchestrator -n "$PRODUCTION_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=llm-orchestrator -n "$PRODUCTION_NAMESPACE" --tail=200 || true
 
       - name: Monitor deployment
         run: |
