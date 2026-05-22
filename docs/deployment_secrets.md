@@ -45,4 +45,16 @@ least-privilege permissions for:
   the role to update Deployments, Services, ConfigMaps, Secrets, HPAs, PVCs, and Namespaces
   in `staging` and `production`.
 
+Because the CD workflow uses GitHub Environments for `staging` and `production`, the IAM role
+trust policy must allow all three OIDC subjects used by the workflow:
+
+```text
+repo:Adityagupta200/Industrial-Reliability-Copilot:ref:refs/heads/main
+repo:Adityagupta200/Industrial-Reliability-Copilot:environment:staging
+repo:Adityagupta200/Industrial-Reliability-Copilot:environment:production
+```
+
+Use `infra/aws/github-actions-oidc-trust-policy.template.json` as the source of truth. Replace
+`<AWS_ACCOUNT_ID>` with the numeric AWS account ID before updating the IAM role trust policy.
+
 The CD workflow intentionally fails in a `preflight` job if any required secret is missing.
