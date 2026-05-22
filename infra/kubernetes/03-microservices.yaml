@@ -200,8 +200,10 @@ spec:
         envFrom:
         - configMapRef:
             name: copilot-config
+        - secretRef:
+            name: copilot-secrets
         env:
-        # STRATEGIC API COMPROMISE: Inject API Key for Production SLA
+        # Explicit alias expected by the orchestrator LLM settings.
         - name: LLM_OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
