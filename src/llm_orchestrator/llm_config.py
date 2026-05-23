@@ -13,9 +13,9 @@ class LLMSettings(BaseSettings):
     fallback_provider: Literal["openai", "ollama"] = "ollama"
 
     openai_api_key: Optional[SecretStr] = None
-    openai_model: str = "gpt-5.4-mini"
+    openai_model: str = "gpt-4o-mini"
 
-    openai_judge_model: str = "gpt-5.4-nano"
+    openai_judge_model: str = "gpt-4o-mini"
 
     openai_base_url: Optional[str] = None
 

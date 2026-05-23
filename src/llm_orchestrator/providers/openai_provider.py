@@ -54,7 +54,12 @@ class OpenAIProvider(LLMProvider):
                 or "401" in err_msg
                 or "billing" in err_msg
                 or "api_key" in err_msg
+                or "model_not_found" in err_msg
+                or "does not exist" in err_msg
+                or "invalid model" in err_msg
+                or "unsupported" in err_msg
+                or "bad request" in err_msg
             ):
-                raise LLMFatalError(f"API Authentication/Billing Failed: {e}") from e
+                raise LLMFatalError(f"OpenAI fatal configuration/API error: {e}") from e
 
             raise LLMTransientError(f"OpenAI invocation failed: {e}") from e
