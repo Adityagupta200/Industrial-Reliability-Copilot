@@ -18,8 +18,6 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 
 import httpx  # noqa: E402
 from datasets import Dataset  # noqa: E402
-from ragas import evaluate  # noqa: E402
-from ragas.run_config import RunConfig  # noqa: E402
 
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://127.0.0.1:8000/query")
 RESULTS_DIR = Path("data/evaluation_results")
@@ -29,16 +27,39 @@ PR_RESULTS_PATH = Path("ragas_results.json")
 REPORT_PATH = RESULTS_DIR / "evaluation_report.json"
 
 
+def _ragas_dependency_error(exc: ModuleNotFoundError) -> RuntimeError:
+    missing = exc.name or str(exc)
+    return RuntimeError(
+        "Ragas could not import its evaluation stack. Install the pinned Phase 9 "
+        "dependencies from requirements.txt and requirements-dev.txt; this project "
+        "uses ragas==0.1.21 with LangChain packages pinned to the compatible 0.2 "
+        f"line. Missing module: {missing}"
+    )
+
+
+def _load_ragas_runtime() -> tuple[Any, Any]:
+    try:
+        from ragas import evaluate
+        from ragas.run_config import RunConfig
+    except ModuleNotFoundError as exc:
+        raise _ragas_dependency_error(exc) from exc
+
+    return evaluate, RunConfig
+
+
 def _build_ragas_components() -> tuple[list[Any], Any, Any]:
     judge_model = os.getenv("RAGAS_JUDGE_MODEL", "gpt-4o-mini")
     embedding_model = os.getenv("RAGAS_EMBEDDING_MODEL", "text-embedding-3-small")
     base_url = os.getenv("RAGAS_OPENAI_BASE_URL") or os.getenv("OPENAI_BASE_URL")
 
-    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-    from ragas.metrics._answer_relevance import AnswerRelevancy
-    from ragas.metrics._context_precision import ContextPrecision
-    from ragas.metrics._context_recall import ContextRecall
-    from ragas.metrics._faithfulness import Faithfulness
+    try:
+        from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+        from ragas.metrics._answer_relevance import AnswerRelevancy
+        from ragas.metrics._context_precision import ContextPrecision
+        from ragas.metrics._context_recall import ContextRecall
+        from ragas.metrics._faithfulness import Faithfulness
+    except ModuleNotFoundError as exc:
+        raise _ragas_dependency_error(exc) from exc
 
     llm_kwargs: dict[str, Any] = {
         "model": judge_model,
@@ -641,6 +662,7 @@ async def main() -> None:
     dataset = Dataset.from_dict(dataset_dict)
 
     print("Initializing Ragas evaluation models...")
+    evaluate, RunConfig = _load_ragas_runtime()
     metrics, judge_llm, judge_embeddings = _build_ragas_components()
 
     print("Running Ragas metrics...")

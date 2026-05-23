@@ -100,6 +100,45 @@ def force_delete_stuck_terminating_pods(namespace: str, deployment: str) -> int:
     return deleted
 
 
+def print_pending_pod_diagnostics(namespace: str, deployment: str) -> None:
+    pods = kubectl_json(["get", "pods", "-n", namespace, "-l", f"app={deployment}"])
+
+    for item in pods.get("items", []):
+        metadata = item.get("metadata", {})
+        status = item.get("status", {})
+        pod_name = metadata.get("name")
+        if not pod_name:
+            continue
+
+        conditions = status.get("conditions", [])
+        scheduled = next(
+            (condition for condition in conditions if condition.get("type") == "PodScheduled"),
+            {},
+        )
+        phase = status.get("phase")
+        is_unscheduled = scheduled.get("status") == "False"
+        if phase != "Pending" and not is_unscheduled:
+            continue
+
+        print(
+            "pending_pod",
+            json.dumps(
+                {
+                    "deployment": deployment,
+                    "pod": pod_name,
+                    "phase": phase,
+                    "node": item.get("spec", {}).get("nodeName"),
+                    "pod_scheduled_reason": scheduled.get("reason"),
+                    "pod_scheduled_message": scheduled.get("message"),
+                },
+                sort_keys=True,
+            ),
+        )
+
+        describe = run_kubectl(["describe", "pod", pod_name, "-n", namespace])
+        print(describe.stdout)
+
+
 def wait_for_rollout(namespace: str, target: RolloutTarget) -> None:
     print(
         f"waiting for deployment/{target.name} in namespace {namespace} "
@@ -120,6 +159,7 @@ def wait_for_rollout(namespace: str, target: RolloutTarget) -> None:
         return
 
     if not deployment_is_serving_new_revision(namespace, target.name):
+        print_pending_pod_diagnostics(namespace, target.name)
         raise RuntimeError(
             f"deployment/{target.name} did not become healthy. "
             "Leaving rollout failed for diagnostics."

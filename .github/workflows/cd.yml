@@ -254,6 +254,10 @@ jobs:
           kubectl get storageclass -o wide || true
           kubectl get pvc,pv -n "$STAGING_NAMESPACE" -o wide || true
           kubectl describe pvc qdrant-storage -n "$STAGING_NAMESPACE" || true
+          kubectl get nodes -o wide || true
+          kubectl describe nodes || true
+          kubectl get events -n "$STAGING_NAMESPACE" --sort-by=.lastTimestamp || true
+          kubectl get hpa -n "$STAGING_NAMESPACE" -o wide || true
           kubectl get pods -n "$STAGING_NAMESPACE" -o wide || true
           kubectl describe deployment qdrant -n "$STAGING_NAMESPACE" || true
           kubectl describe pods -l app=qdrant -n "$STAGING_NAMESPACE" || true
@@ -363,6 +367,10 @@ jobs:
           kubectl get storageclass -o wide || true
           kubectl get pvc,pv -n "$PRODUCTION_NAMESPACE" -o wide || true
           kubectl describe pvc qdrant-storage -n "$PRODUCTION_NAMESPACE" || true
+          kubectl get nodes -o wide || true
+          kubectl describe nodes || true
+          kubectl get events -n "$PRODUCTION_NAMESPACE" --sort-by=.lastTimestamp || true
+          kubectl get hpa -n "$PRODUCTION_NAMESPACE" -o wide || true
           kubectl get pods -n "$PRODUCTION_NAMESPACE" -o wide || true
           kubectl describe deployment qdrant -n "$PRODUCTION_NAMESPACE" || true
           kubectl describe pods -l app=qdrant -n "$PRODUCTION_NAMESPACE" || true

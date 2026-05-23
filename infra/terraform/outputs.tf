@@ -15,5 +15,10 @@ output "ecr_repository_urls" {
 
 output "eks_admin_principal_arns" {
   description = "IAM principals granted Kubernetes cluster-admin access through EKS Access Entries."
-  value       = var.eks_admin_principal_arns
+  value       = local.eks_admin_principal_arns
+}
+
+output "terraform_caller_eks_admin_principal_arn" {
+  description = "Normalized IAM principal ARN for the identity that ran Terraform and was granted EKS cluster-admin access."
+  value       = local.current_caller_is_root ? null : local.current_caller_iam_principal_arn
 }

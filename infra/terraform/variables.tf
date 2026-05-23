@@ -31,3 +31,9 @@ variable "eks_admin_principal_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "enable_current_caller_cluster_admin" {
+  description = "Grant the IAM principal running Terraform cluster-admin access through an EKS Access Entry. Disable only when platform access is managed outside this stack."
+  type        = bool
+  default     = true
+}

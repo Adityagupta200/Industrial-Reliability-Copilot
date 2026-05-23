@@ -22,7 +22,7 @@ numpy>=1.26.0,<2.0.0
 rank-bm25>=0.2.2
 
 # Chunking / text split
-langchain-text-splitters>=0.2.2
+langchain-text-splitters>=0.2.2,<0.3.0
 # PRODUCTION FIX: Added tiktoken to resolve ModuleNotFoundError during ingestion chunking
 tiktoken>=0.6.0
 
@@ -35,8 +35,8 @@ tokenizers>=0.20.3
 
 # PRODUCTION FIX: Inject explicitly requested LangChain integration packages 
 # into the RAG container boundary to support local HuggingFace routing
-langchain-core>=0.2.34
-langchain-huggingface>=0.0.3
+langchain-core>=0.2.34,<0.3.0
+langchain-huggingface>=0.0.3,<0.1.0
 
 # Postgres + text-to-SQL safety (needed by your safe_sql / historical chain)
 sqlalchemy>=2.0.30
