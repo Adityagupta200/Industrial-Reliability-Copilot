@@ -697,7 +697,12 @@ async def main() -> None:
     for row, case in zip(case_metrics, rag_cases, strict=False):
         row["case_id"] = case["id"]
 
-    critical_metrics = ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]
+    critical_metrics = [
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall",
+    ]
     null_metrics = [
         metric
         for metric in critical_metrics
