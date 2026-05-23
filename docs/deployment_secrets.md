@@ -72,3 +72,52 @@ Use `infra/aws/github-actions-oidc-trust-policy.template.json` as the source of 
 `<AWS_ACCOUNT_ID>` with the numeric AWS account ID before updating the IAM role trust policy.
 
 The CD workflow intentionally fails in a `preflight` job if any required secret is missing.
+
+## Local EKS Access
+
+The Terraform stack grants GitHub Actions Kubernetes access through an EKS Access Entry. Local
+terminal access is separate and should also be managed through Terraform instead of manually
+editing the legacy `aws-auth` ConfigMap.
+
+Find the IAM principal used by your terminal:
+
+```bash
+aws sts get-caller-identity --query Arn --output text
+```
+
+If the ARN is an IAM user, pass it directly:
+
+```text
+arn:aws:iam::<account-id>:user/<user-name>
+```
+
+If the ARN is an assumed role, convert it from STS form:
+
+```text
+arn:aws:sts::<account-id>:assumed-role/<role-name>/<session-name>
+```
+
+to IAM role form:
+
+```text
+arn:aws:iam::<account-id>:role/<role-name>
+```
+
+Then include that ARN when planning/applying Terraform:
+
+```bash
+terraform -chdir=infra/terraform plan \
+  -var="aws_region=$AWS_REGION" \
+  -var="cluster_name=$EKS_CLUSTER_NAME" \
+  -var="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+  -var='eks_admin_principal_arns=["arn:aws:iam::<account-id>:user/<user-name>"]' \
+  -out=tfplan
+```
+
+After apply, refresh kubeconfig and verify authorization:
+
+```bash
+aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+kubectl auth can-i get pods --all-namespaces
+kubectl get pods,deployments,services -n staging
+```
