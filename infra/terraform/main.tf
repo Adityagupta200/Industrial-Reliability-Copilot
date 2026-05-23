@@ -1,5 +1,30 @@
 data "aws_caller_identity" "current" {}
 
+locals {
+  current_caller_arn             = data.aws_caller_identity.current.arn
+  current_caller_is_assumed_role = length(regexall("^arn:[^:]+:sts::[0-9]+:assumed-role/", local.current_caller_arn)) > 0
+  current_caller_is_root         = length(regexall("^arn:[^:]+:iam::[0-9]+:root$", local.current_caller_arn)) > 0
+
+  # EKS Access Entries require IAM principal ARNs, not STS session ARNs.
+  current_caller_iam_principal_arn = local.current_caller_is_assumed_role ? format(
+    "arn:%s:iam::%s:role/%s",
+    split(":", local.current_caller_arn)[1],
+    data.aws_caller_identity.current.account_id,
+    split("/", local.current_caller_arn)[1]
+  ) : local.current_caller_arn
+
+  terraform_caller_admin_principal_arns = (
+    var.enable_current_caller_cluster_admin && !local.current_caller_is_root
+    ? [local.current_caller_iam_principal_arn]
+    : []
+  )
+
+  eks_admin_principal_arns = distinct(compact(concat(
+    local.terraform_caller_admin_principal_arns,
+    var.eks_admin_principal_arns
+  )))
+}
+
 # 1. Networking (VPC)
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -81,7 +106,7 @@ module "eks" {
       }
     },
     {
-      for idx, principal_arn in var.eks_admin_principal_arns :
+      for idx, principal_arn in local.eks_admin_principal_arns :
       "platform_admin_${idx}" => {
         principal_arn = principal_arn
         type          = "STANDARD"
@@ -100,10 +125,15 @@ module "eks" {
 
   eks_managed_node_groups = {
     standard_nodes = {
+      # Phase 9 runs staging and production side-by-side and uses maxUnavailable=0
+      # rolling updates. Keep min_size at the current baseline so EKS can expand
+      # desired capacity first; raising min above the live desired size can make
+      # UpdateNodegroupConfig fail before new nodes are added.
       min_size       = 3
-      max_size       = 6
-      desired_size   = 3
+      max_size       = 8
+      desired_size   = 5
       instance_types = ["t3.large"]
+      capacity_type  = "ON_DEMAND"
       disk_size      = 50
 
       # AL2023 explicitly defined to pass Step 7.4 verification

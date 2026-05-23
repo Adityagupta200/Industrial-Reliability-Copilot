@@ -75,11 +75,28 @@ The CD workflow intentionally fails in a `preflight` job if any required secret 
 
 ## Local EKS Access
 
-The Terraform stack grants GitHub Actions Kubernetes access through an EKS Access Entry. Local
-terminal access is separate and should also be managed through Terraform instead of manually
-editing the legacy `aws-auth` ConfigMap.
+The Terraform stack grants GitHub Actions Kubernetes access through an EKS Access Entry. It also
+grants the IAM principal running Terraform cluster-admin access by default through
+`enable_current_caller_cluster_admin = true`. This keeps local terminal access managed through
+Terraform instead of manual edits to the legacy `aws-auth` ConfigMap.
 
-Find the IAM principal used by your terminal:
+After `terraform apply`, confirm which local principal was authorized:
+
+```bash
+terraform -chdir=infra/terraform output terraform_caller_eks_admin_principal_arn
+terraform -chdir=infra/terraform output eks_admin_principal_arns
+```
+
+Then refresh kubeconfig and verify authorization:
+
+```bash
+aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+kubectl auth can-i get pods --all-namespaces
+kubectl get pods,deployments,services -n staging
+```
+
+If additional engineers or CI/platform roles need local operational access, add them with
+`eks_admin_principal_arns`. Find the IAM principal to add:
 
 ```bash
 aws sts get-caller-identity --query Arn --output text
@@ -112,12 +129,4 @@ terraform -chdir=infra/terraform plan \
   -var="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
   -var='eks_admin_principal_arns=["arn:aws:iam::<account-id>:user/<user-name>"]' \
   -out=tfplan
-```
-
-After apply, refresh kubeconfig and verify authorization:
-
-```bash
-aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
-kubectl auth can-i get pods --all-namespaces
-kubectl get pods,deployments,services -n staging
 ```
