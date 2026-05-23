@@ -89,4 +89,4 @@ ENTRYPOINT ["/usr/bin/tini", "--"]
 ENV HF_HOME=/tmp/huggingface
 # Start the Orchestrator service. 
 # Explicitly setting --workers 1 because Kubernetes HPA handles concurrency scaling in production.
-CMD ["uvicorn", "llm_orchestrator.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "600"]
+CMD ["uvicorn", "llm_orchestrator.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]

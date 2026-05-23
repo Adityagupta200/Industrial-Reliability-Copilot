@@ -240,11 +240,13 @@ jobs:
 
       - name: Wait for staging rollout
         run: |
-          kubectl rollout status deployment/qdrant -n "$STAGING_NAMESPACE" --timeout=300s
-          kubectl rollout status deployment/anomaly-service -n "$STAGING_NAMESPACE" --timeout=300s
-          kubectl rollout status deployment/rag-service -n "$STAGING_NAMESPACE" --timeout=900s
-          kubectl rollout status deployment/llm-orchestrator -n "$STAGING_NAMESPACE" --timeout=600s
-          kubectl rollout status deployment/api-gateway -n "$STAGING_NAMESPACE" --timeout=300s
+          python scripts/k8s_rollout_guard.py \
+            --namespace "$STAGING_NAMESPACE" \
+            --deployment qdrant:300 \
+            --deployment anomaly-service:600 \
+            --deployment rag-service:900 \
+            --deployment llm-orchestrator:900 \
+            --deployment api-gateway:600
 
       - name: Collect staging diagnostics on failure
         if: failure()
@@ -256,10 +258,22 @@ jobs:
           kubectl describe deployment qdrant -n "$STAGING_NAMESPACE" || true
           kubectl describe pods -l app=qdrant -n "$STAGING_NAMESPACE" || true
           kubectl logs -l app=qdrant -n "$STAGING_NAMESPACE" --tail=200 || true
+          kubectl describe deployment anomaly-service -n "$STAGING_NAMESPACE" || true
+          kubectl describe pods -l app=anomaly-service -n "$STAGING_NAMESPACE" || true
+          kubectl logs -l app=anomaly-service -n "$STAGING_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=anomaly-service -n "$STAGING_NAMESPACE" --tail=200 || true
+          kubectl describe deployment rag-service -n "$STAGING_NAMESPACE" || true
+          kubectl describe pods -l app=rag-service -n "$STAGING_NAMESPACE" || true
+          kubectl logs -l app=rag-service -n "$STAGING_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=rag-service -n "$STAGING_NAMESPACE" --tail=200 || true
           kubectl describe deployment llm-orchestrator -n "$STAGING_NAMESPACE" || true
           kubectl describe pods -l app=llm-orchestrator -n "$STAGING_NAMESPACE" || true
           kubectl logs -l app=llm-orchestrator -n "$STAGING_NAMESPACE" --previous --tail=200 || true
           kubectl logs -l app=llm-orchestrator -n "$STAGING_NAMESPACE" --tail=200 || true
+          kubectl describe deployment api-gateway -n "$STAGING_NAMESPACE" || true
+          kubectl describe pods -l app=api-gateway -n "$STAGING_NAMESPACE" || true
+          kubectl logs -l app=api-gateway -n "$STAGING_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=api-gateway -n "$STAGING_NAMESPACE" --tail=200 || true
 
       - name: Run staging smoke tests
         run: |
@@ -335,11 +349,13 @@ jobs:
 
       - name: Wait for production rollout
         run: |
-          kubectl rollout status deployment/qdrant -n "$PRODUCTION_NAMESPACE" --timeout=300s
-          kubectl rollout status deployment/anomaly-service -n "$PRODUCTION_NAMESPACE" --timeout=300s
-          kubectl rollout status deployment/rag-service -n "$PRODUCTION_NAMESPACE" --timeout=900s
-          kubectl rollout status deployment/llm-orchestrator -n "$PRODUCTION_NAMESPACE" --timeout=600s
-          kubectl rollout status deployment/api-gateway -n "$PRODUCTION_NAMESPACE" --timeout=300s
+          python scripts/k8s_rollout_guard.py \
+            --namespace "$PRODUCTION_NAMESPACE" \
+            --deployment qdrant:300 \
+            --deployment anomaly-service:600 \
+            --deployment rag-service:900 \
+            --deployment llm-orchestrator:900 \
+            --deployment api-gateway:600
 
       - name: Collect production diagnostics on failure
         if: failure()
@@ -351,10 +367,22 @@ jobs:
           kubectl describe deployment qdrant -n "$PRODUCTION_NAMESPACE" || true
           kubectl describe pods -l app=qdrant -n "$PRODUCTION_NAMESPACE" || true
           kubectl logs -l app=qdrant -n "$PRODUCTION_NAMESPACE" --tail=200 || true
+          kubectl describe deployment anomaly-service -n "$PRODUCTION_NAMESPACE" || true
+          kubectl describe pods -l app=anomaly-service -n "$PRODUCTION_NAMESPACE" || true
+          kubectl logs -l app=anomaly-service -n "$PRODUCTION_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=anomaly-service -n "$PRODUCTION_NAMESPACE" --tail=200 || true
+          kubectl describe deployment rag-service -n "$PRODUCTION_NAMESPACE" || true
+          kubectl describe pods -l app=rag-service -n "$PRODUCTION_NAMESPACE" || true
+          kubectl logs -l app=rag-service -n "$PRODUCTION_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=rag-service -n "$PRODUCTION_NAMESPACE" --tail=200 || true
           kubectl describe deployment llm-orchestrator -n "$PRODUCTION_NAMESPACE" || true
           kubectl describe pods -l app=llm-orchestrator -n "$PRODUCTION_NAMESPACE" || true
           kubectl logs -l app=llm-orchestrator -n "$PRODUCTION_NAMESPACE" --previous --tail=200 || true
           kubectl logs -l app=llm-orchestrator -n "$PRODUCTION_NAMESPACE" --tail=200 || true
+          kubectl describe deployment api-gateway -n "$PRODUCTION_NAMESPACE" || true
+          kubectl describe pods -l app=api-gateway -n "$PRODUCTION_NAMESPACE" || true
+          kubectl logs -l app=api-gateway -n "$PRODUCTION_NAMESPACE" --previous --tail=200 || true
+          kubectl logs -l app=api-gateway -n "$PRODUCTION_NAMESPACE" --tail=200 || true
 
       - name: Monitor deployment
         run: |
