@@ -206,6 +206,15 @@ jobs:
           kubectl auth can-i create deployments --namespace "$STAGING_NAMESPACE"
           kubectl auth can-i create secrets --namespace "$STAGING_NAMESPACE"
 
+      - name: Verify staging rollout capacity
+        run: |
+          python scripts/k8s_capacity_guard.py \
+            --min-ready-nodes 3 \
+            --min-free-cpu-millicores 2000 \
+            --min-free-memory-mib 2048 \
+            --min-node-free-cpu-millicores 500 \
+            --min-node-free-memory-mib 1536
+
       - name: Render Kubernetes manifests for staging
         run: |
           mkdir -p rendered/staging
@@ -327,6 +336,15 @@ jobs:
           }
           kubectl auth can-i create deployments --namespace "$PRODUCTION_NAMESPACE"
           kubectl auth can-i create secrets --namespace "$PRODUCTION_NAMESPACE"
+
+      - name: Verify production rollout capacity
+        run: |
+          python scripts/k8s_capacity_guard.py \
+            --min-ready-nodes 3 \
+            --min-free-cpu-millicores 2000 \
+            --min-free-memory-mib 2048 \
+            --min-node-free-cpu-millicores 500 \
+            --min-node-free-memory-mib 1536
 
       - name: Render Kubernetes manifests for production
         run: |
