@@ -25,3 +25,9 @@ variable "github_actions_role_arn" {
   type        = string
   default     = ""
 }
+
+variable "eks_admin_principal_arns" {
+  description = "IAM user or role ARNs that should receive cluster-admin access through EKS Access Entries for local operations."
+  type        = list(string)
+  default     = []
+}

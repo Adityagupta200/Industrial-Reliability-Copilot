@@ -12,3 +12,8 @@ output "ecr_repository_urls" {
   description = "The URIs for the deployed ECR repositories"
   value       = { for k, v in aws_ecr_repository.microservices : k => v.repository_url }
 }
+
+output "eks_admin_principal_arns" {
+  description = "IAM principals granted Kubernetes cluster-admin access through EKS Access Entries."
+  value       = var.eks_admin_principal_arns
+}

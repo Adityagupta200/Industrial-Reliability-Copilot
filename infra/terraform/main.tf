@@ -64,21 +64,39 @@ module "eks" {
 
   authentication_mode = "API_AND_CONFIG_MAP"
 
-  access_entries = var.github_actions_role_arn == "" ? {} : {
-    github_actions_deploy = {
-      principal_arn = var.github_actions_role_arn
-      type          = "STANDARD"
+  access_entries = merge(
+    var.github_actions_role_arn == "" ? {} : {
+      github_actions_deploy = {
+        principal_arn = var.github_actions_role_arn
+        type          = "STANDARD"
 
-      policy_associations = {
-        cluster_admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
+        policy_associations = {
+          cluster_admin = {
+            policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+            access_scope = {
+              type = "cluster"
+            }
+          }
+        }
+      }
+    },
+    {
+      for idx, principal_arn in var.eks_admin_principal_arns :
+      "platform_admin_${idx}" => {
+        principal_arn = principal_arn
+        type          = "STANDARD"
+
+        policy_associations = {
+          cluster_admin = {
+            policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+            access_scope = {
+              type = "cluster"
+            }
           }
         }
       }
     }
-  }
+  )
 
   eks_managed_node_groups = {
     standard_nodes = {
