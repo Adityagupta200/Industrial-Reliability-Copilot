@@ -33,7 +33,7 @@ def _install_dummy_sentence_transformers(monkeypatch) -> None:
     dummy_mod = types.ModuleType("sentence_transformers")
     dummy_mod.CrossEncoder = DummyCrossEncoder  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "sentence_transformers", dummy_mod)
-    
+
     # PRODUCTION FIX: Flush the global model cache to prevent test state leakage
     monkeypatch.setattr("rag_service.core.model_cache._cross_models", {})
 
@@ -56,10 +56,10 @@ def test_reranker_batches_predict_and_returns_top_n(monkeypatch):
 
     settings = RerankerSettings(
         model_name="cross-encoder/ms-marco-MiniLM-L-12-v2",
-        max_rerank=10, 
-        top_n=5, 
-        batch_size=16, 
-        device="cpu"
+        max_rerank=10,
+        top_n=5,
+        batch_size=16,
+        device="cpu",
     )
     rr = CrossEncoderReranker(settings=settings)
 
@@ -90,11 +90,11 @@ def test_reranker_handles_less_than_max_rerank(monkeypatch):
         max_rerank=10,
         top_n=5,
         batch_size=8,
-        device="cpu"
+        device="cpu",
     )
     rr = CrossEncoderReranker(settings=settings)
 
-    docs = _mk_docs(3) 
+    docs = _mk_docs(3)
     out = rr.rerank("bearing failure symptoms", docs)
 
     assert len(out) == 3, "Should return all docs if fewer than top_n"
@@ -114,7 +114,7 @@ def test_reranker_scores_are_written_to_documents(monkeypatch):
         max_rerank=10,
         top_n=5,
         batch_size=4,
-        device="cpu"
+        device="cpu",
     )
     rr = CrossEncoderReranker(settings=settings)
 

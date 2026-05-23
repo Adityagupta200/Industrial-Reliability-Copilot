@@ -89,10 +89,7 @@ def _infer_chain(case: dict[str, Any]) -> str:
     query = case.get("query", "").lower()
     if case.get("chain"):
         return str(case["chain"])
-    if any(
-        k in query
-        for k in ["calibrate", "procedure", "maintenance", "steps", "repair"]
-    ):
+    if any(k in query for k in ["calibrate", "procedure", "maintenance", "steps", "repair"]):
         return "remediation"
     return "root_cause"
 
@@ -335,9 +332,7 @@ def _build_case_context(case: dict[str, Any]) -> list[str]:
     if anomaly_description:
         details.append(f"anomaly_description={anomaly_description}")
     if sensor_data:
-        sensor_values = ", ".join(
-            f"{key}={value}" for key, value in sorted(sensor_data.items())
-        )
+        sensor_values = ", ".join(f"{key}={value}" for key, value in sorted(sensor_data.items()))
         details.append(f"sensor_data={sensor_values}")
 
     if not details:
@@ -420,9 +415,7 @@ def _context_matches_source(context: str, source_name: str) -> bool:
     )
 
 
-def _select_evidence_contexts(
-    result: dict[str, Any], case: dict[str, Any]
-) -> list[str]:
+def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> list[str]:
     contexts = result.get("contexts", [])
     if not contexts:
         return []
@@ -442,9 +435,7 @@ def _select_evidence_contexts(
     return selected[:max_contexts]
 
 
-async def run_pipeline(
-    client: httpx.AsyncClient, case: dict[str, Any]
-) -> dict[str, Any]:
+async def run_pipeline(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[str, Any]:
     payload = _build_payload(case)
     query = case.get("query", "")
 
@@ -576,12 +567,7 @@ def _check_response_contracts(
             answer=answer,
             source_names=result.get("source_names", []),
         )
-        ok = (
-            expected_ok
-            and forbidden_ok
-            and retrieval_ok
-            and result.get("status") == "completed"
-        )
+        ok = expected_ok and forbidden_ok and retrieval_ok and result.get("status") == "completed"
         passed += int(ok)
         details.append(
             {
@@ -726,9 +712,7 @@ async def main() -> None:
         "context_recall",
     ]
     null_metrics = [
-        metric
-        for metric in critical_metrics
-        if metric in df.columns and df[metric].isna().any()
+        metric for metric in critical_metrics if metric in df.columns and df[metric].isna().any()
     ]
     if null_metrics:
         raise RuntimeError(

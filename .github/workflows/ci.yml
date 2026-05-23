@@ -36,8 +36,8 @@ jobs:
           
       - name: Lint code
         run: |
-          black --check src/
-          ruff check src/
+          python -m black --check src/ tests/ scripts/
+          python -m ruff check src/ tests/ scripts/
           
       - name: Security scan
         run: |

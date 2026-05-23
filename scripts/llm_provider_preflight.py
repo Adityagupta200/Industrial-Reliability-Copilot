@@ -61,7 +61,9 @@ def main() -> int:
     parser.add_argument("--api-key-env", default="LLM_OPENAI_API_KEY")
     parser.add_argument(
         "--base-url",
-        default=os.getenv("LLM_OPENAI_BASE_URL") or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1",
+        default=os.getenv("LLM_OPENAI_BASE_URL")
+        or os.getenv("OPENAI_BASE_URL")
+        or "https://api.openai.com/v1",
     )
     parser.add_argument("--timeout-seconds", type=float, default=30.0)
     args = parser.parse_args()
@@ -80,7 +82,9 @@ def main() -> int:
         return 1
 
     if _is_placeholder(args.model):
-        print("::error::LLM_OPENAI_MODEL must be configured to a deployable model.", file=sys.stderr)
+        print(
+            "::error::LLM_OPENAI_MODEL must be configured to a deployable model.", file=sys.stderr
+        )
         return 1
 
     try:

@@ -5,8 +5,7 @@ import asyncio
 
 # PRODUCTION FIX: Gate integration tests behind environment variable
 pytestmark = pytest.mark.skipif(
-    os.getenv("RUN_INTEGRATION") != "1",
-    reason="Set RUN_INTEGRATION=1 to run integration tests"
+    os.getenv("RUN_INTEGRATION") != "1", reason="Set RUN_INTEGRATION=1 to run integration tests"
 )
 
 ORCHESTRATOR_URL = "http://127.0.0.1:8080"

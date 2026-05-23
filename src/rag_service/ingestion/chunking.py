@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
+import logging
 from typing import Any
 import uuid
 
@@ -8,12 +10,42 @@ import tiktoken
 
 from rag_service.core.config import settings
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class Chunk:
     chunk_id: str
     text: str
     metadata: dict[str, Any]
+
+
+class _ConservativeCharEncoding:
+    """Offline fallback when tiktoken's remote encoding cache is unavailable."""
+
+    _TOKEN_CHARS = 4
+
+    def encode(self, text: str) -> list[str]:
+        return [
+            text[start : start + self._TOKEN_CHARS]
+            for start in range(0, len(text), self._TOKEN_CHARS)
+        ]
+
+    def decode(self, tokens: list[Any]) -> str:
+        return "".join(str(token) for token in tokens)
+
+
+@lru_cache(maxsize=1)
+def _get_token_encoding() -> Any:
+    try:
+        return tiktoken.get_encoding("cl100k_base")
+    except Exception as exc:
+        logger.warning(
+            "Falling back to conservative local tokenizer because tiktoken encoding "
+            "cl100k_base could not be loaded: %s",
+            exc,
+        )
+        return _ConservativeCharEncoding()
 
 
 def _token_len(text: str, enc) -> int:
@@ -148,7 +180,7 @@ def chunk_text(
     doc_type: str,
     extra_meta: dict[str, Any],
 ) -> list[Chunk]:
-    enc = tiktoken.get_encoding("cl100k_base")
+    enc = _get_token_encoding()
     pieces = _recursive_split_text(
         text,
         chunk_size=settings.chunk_size_tokens,
