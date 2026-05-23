@@ -90,7 +90,7 @@ module "eks" {
   authentication_mode = "API_AND_CONFIG_MAP"
 
   access_entries = merge(
-    var.github_actions_role_arn == "" ? {} : {
+    {
       github_actions_deploy = {
         principal_arn = var.github_actions_role_arn
         type          = "STANDARD"

@@ -23,7 +23,11 @@ variable "dynamodb_lock_table" {
 variable "github_actions_role_arn" {
   description = "IAM role ARN assumed by GitHub Actions for CI/CD deployment access to EKS and ECR."
   type        = string
-  default     = ""
+
+  validation {
+    condition     = can(regex("^arn:[^:]+:iam::[0-9]{12}:role/.+", var.github_actions_role_arn))
+    error_message = "github_actions_role_arn must be the IAM role ARN used by the GitHub AWS_ROLE_TO_ASSUME secret, for example arn:aws:iam::<account-id>:role/GitHubActionsIndustrialCopilotDeploy. Do not use an STS assumed-role ARN."
+  }
 }
 
 variable "eks_admin_principal_arns" {
