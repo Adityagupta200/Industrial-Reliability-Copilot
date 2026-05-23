@@ -65,7 +65,6 @@ def _build_ragas_components() -> tuple[list[Any], Any, Any]:
         "model": judge_model,
         "temperature": 0.0,
         "timeout": 60.0,
-        "model_kwargs": {"response_format": {"type": "json_object"}},
     }
     if base_url:
         llm_kwargs["base_url"] = base_url
@@ -697,6 +696,20 @@ async def main() -> None:
     case_metrics = json.loads(df.to_json(orient="records"))
     for row, case in zip(case_metrics, rag_cases, strict=False):
         row["case_id"] = case["id"]
+
+    critical_metrics = ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]
+    null_metrics = [
+        metric
+        for metric in critical_metrics
+        if metric in df.columns and df[metric].isna().any()
+    ]
+    if null_metrics:
+        raise RuntimeError(
+            "Ragas returned null values for critical metrics "
+            f"{null_metrics}. This indicates evaluator parsing/provider failure, not a "
+            "valid low score. Inspect data/evaluation_results/latest_run.csv and the "
+            f"per-case rows: {json.dumps(case_metrics, ensure_ascii=False)}"
+        )
 
     summary = {}
     for metric, value in df.mean(numeric_only=True).to_dict().items():

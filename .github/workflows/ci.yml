@@ -87,7 +87,13 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Validate LLM provider
-        run: python scripts/llm_provider_preflight.py --provider "$LLM_PRIMARY_PROVIDER" --model "$LLM_OPENAI_MODEL"
+        run: |
+          python scripts/llm_provider_preflight.py \
+            --provider "$LLM_PRIMARY_PROVIDER" \
+            --model "$LLM_OPENAI_MODEL"
+          python scripts/llm_provider_preflight.py \
+            --provider openai \
+            --model "$RAGAS_JUDGE_MODEL"
 
       - name: Start backing services
         run: |
