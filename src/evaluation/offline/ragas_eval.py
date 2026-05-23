@@ -89,7 +89,10 @@ def _infer_chain(case: dict[str, Any]) -> str:
     query = case.get("query", "").lower()
     if case.get("chain"):
         return str(case["chain"])
-    if any(k in query for k in ["calibrate", "procedure", "maintenance", "steps", "repair"]):
+    if any(
+        k in query
+        for k in ["calibrate", "procedure", "maintenance", "steps", "repair"]
+    ):
         return "remediation"
     return "root_cause"
 
@@ -189,7 +192,11 @@ def _extract_sources(result: dict[str, Any], chain: str) -> list[str]:
 
 
 def _clean_eval_text(text: str) -> str:
-    cleaned = re.sub(r"the '[^']+' document", "the retrieved maintenance procedure", text)
+    cleaned = re.sub(
+        r"the '[^']+' document",
+        "the retrieved maintenance procedure",
+        text,
+    )
     cleaned = re.sub(r"\(source:[^)]+\)", "", cleaned, flags=re.IGNORECASE)
     return re.sub(r"\s+", " ", cleaned).strip()
 
@@ -328,7 +335,9 @@ def _build_case_context(case: dict[str, Any]) -> list[str]:
     if anomaly_description:
         details.append(f"anomaly_description={anomaly_description}")
     if sensor_data:
-        sensor_values = ", ".join(f"{key}={value}" for key, value in sorted(sensor_data.items()))
+        sensor_values = ", ".join(
+            f"{key}={value}" for key, value in sorted(sensor_data.items())
+        )
         details.append(f"sensor_data={sensor_values}")
 
     if not details:
@@ -405,10 +414,15 @@ def _context_matches_source(context: str, source_name: str) -> bool:
     }
     if not source_tokens:
         return False
-    return sum(token in context_lower for token in source_tokens) >= min(2, len(source_tokens))
+    return sum(token in context_lower for token in source_tokens) >= min(
+        2,
+        len(source_tokens),
+    )
 
 
-def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> list[str]:
+def _select_evidence_contexts(
+    result: dict[str, Any], case: dict[str, Any]
+) -> list[str]:
     contexts = result.get("contexts", [])
     if not contexts:
         return []
@@ -428,7 +442,9 @@ def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> l
     return selected[:max_contexts]
 
 
-async def run_pipeline(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[str, Any]:
+async def run_pipeline(
+    client: httpx.AsyncClient, case: dict[str, Any]
+) -> dict[str, Any]:
     payload = _build_payload(case)
     query = case.get("query", "")
 
@@ -560,7 +576,12 @@ def _check_response_contracts(
             answer=answer,
             source_names=result.get("source_names", []),
         )
-        ok = expected_ok and forbidden_ok and retrieval_ok and result.get("status") == "completed"
+        ok = (
+            expected_ok
+            and forbidden_ok
+            and retrieval_ok
+            and result.get("status") == "completed"
+        )
         passed += int(ok)
         details.append(
             {
@@ -653,7 +674,8 @@ async def main() -> None:
         if not result["contexts"]:
             raise ValueError(
                 f"Case {case['id']} retrieved no context; failing quality gate early. "
-                f"status={result.get('status')!r}; answer={result.get('answer', '')[:500]!r}"
+                f"status={result.get('status')!r}; "
+                f"answer={result.get('answer', '')[:500]!r}"
             )
         ground_truth = case.get("ground_truth", "")
         query = case.get("query", "")
@@ -721,7 +743,10 @@ async def main() -> None:
         score = float(value)
         summary[metric] = 0.0 if math.isnan(score) else score
     safety_summary = _check_safety_cases(_safety_cases(cases), case_results)
-    contract_summary = _check_response_contracts(_response_contract_cases(cases), case_results)
+    contract_summary = _check_response_contracts(
+        _response_contract_cases(cases),
+        case_results,
+    )
     report = {
         "ragas": summary,
         "safety": safety_summary,
