@@ -80,11 +80,36 @@ grants the IAM principal running Terraform cluster-admin access by default throu
 `enable_current_caller_cluster_admin = true`. This keeps local terminal access managed through
 Terraform instead of manual edits to the legacy `aws-auth` ConfigMap.
 
+The `github_actions_role_arn` Terraform variable is required and must exactly match the
+`AWS_ROLE_TO_ASSUME` GitHub secret:
+
+```bash
+export GITHUB_ACTIONS_ROLE_ARN="$(aws iam get-role \
+  --role-name GitHubActionsIndustrialCopilotDeploy \
+  --query Role.Arn \
+  --output text)"
+
+terraform -chdir=infra/terraform plan \
+  -var="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+  -out=tfplan
+terraform -chdir=infra/terraform apply tfplan
+```
+
 After `terraform apply`, confirm which local principal was authorized:
 
 ```bash
 terraform -chdir=infra/terraform output terraform_caller_eks_admin_principal_arn
+terraform -chdir=infra/terraform output github_actions_eks_admin_principal_arn
 terraform -chdir=infra/terraform output eks_admin_principal_arns
+```
+
+Verify the GitHub deploy role Access Entry before rerunning CD:
+
+```bash
+aws eks describe-access-entry \
+  --cluster-name "$EKS_CLUSTER_NAME" \
+  --region "$AWS_REGION" \
+  --principal-arn "$GITHUB_ACTIONS_ROLE_ARN"
 ```
 
 Then refresh kubeconfig and verify authorization:
