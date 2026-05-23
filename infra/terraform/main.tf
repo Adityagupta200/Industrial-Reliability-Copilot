@@ -126,13 +126,12 @@ module "eks" {
   eks_managed_node_groups = {
     standard_nodes = {
       # Phase 9 runs staging and production side-by-side and uses maxUnavailable=0
-      # rolling updates. Keep min_size at the current baseline so EKS can expand
-      # desired capacity first; raising min above the live desired size can make
-      # UpdateNodegroupConfig fail before new nodes are added.
+      # rolling updates. The EKS module intentionally ignores desired_size drift,
+      # so use a worker size with enough per-node CPU headroom for surge pods.
       min_size       = 3
-      max_size       = 8
-      desired_size   = 5
-      instance_types = ["t3.large"]
+      max_size       = 6
+      desired_size   = 3
+      instance_types = ["t3.xlarge"]
       capacity_type  = "ON_DEMAND"
       disk_size      = 50
 

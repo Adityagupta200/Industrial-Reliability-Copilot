@@ -112,6 +112,18 @@ aws eks describe-access-entry \
   --principal-arn "$GITHUB_ACTIONS_ROLE_ARN"
 ```
 
+Phase 9 deploys staging and production side-by-side with zero-downtime rolling updates
+(`maxUnavailable=0`). The EKS worker group therefore uses `t3.xlarge` instances so that
+surge pods can schedule while the previous replicas are still serving. Before rerunning CD,
+verify the replacement node group is active:
+
+```bash
+kubectl get nodes -L node.kubernetes.io/instance-type
+```
+
+The nodes should report `t3.xlarge`. If they still report `t3.large`, wait for the
+Terraform-managed EKS node group replacement to finish before rerunning CD.
+
 Then refresh kubeconfig and verify authorization:
 
 ```bash
