@@ -38,3 +38,4 @@ class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     anomaly_model_loaded: bool
     rul_model_loaded: bool
+    fallback_active: bool = False
