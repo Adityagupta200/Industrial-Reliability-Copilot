@@ -110,11 +110,22 @@ jobs:
           uvicorn anomaly_service.main:app --host 0.0.0.0 --port 8001 &
           uvicorn rag_service.main:app --host 0.0.0.0 --port 8002 &
           uvicorn llm_orchestrator.main:app --host 0.0.0.0 --port 8000 &
-          for i in {1..60}; do
-            curl -sf http://127.0.0.1:8000/health/ready && break
-            if [ "$i" = "60" ]; then exit 1; fi
-            sleep 2
+          for url in \
+            http://127.0.0.1:8001/health/ready \
+            http://127.0.0.1:8002/health/ready \
+            http://127.0.0.1:8000/health/ready; do
+            for i in {1..60}; do
+              curl -sf "$url" && break
+              if [ "$i" = "60" ]; then
+                echo "::error::Service did not become ready: $url"
+                exit 1
+              fi
+              sleep 2
+            done
           done
+
+      - name: Verify evaluation retrieval stores
+        run: python scripts/wait_for_eval_stores.py
           
       - name: Run Ragas Offline Evaluation
         run: python src/evaluation/offline/ragas_eval.py

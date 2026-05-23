@@ -298,9 +298,66 @@ jobs:
 
       - name: Run staging smoke tests
         run: |
-          kubectl -n "$STAGING_NAMESPACE" run "smoke-${GITHUB_RUN_ID}" \
-            --rm -i --restart=Never --image=curlimages/curl:8.11.1 -- \
-            sh -c 'curl -fsS http://api-gateway/health/ready && curl -fsS http://llm-orchestrator:8000/health/ready'
+          smoke_pod="smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          cleanup_smoke() {
+            kubectl -n "$STAGING_NAMESPACE" delete pod "$smoke_pod" \
+              --ignore-not-found=true --wait=false >/dev/null 2>&1 || true
+          }
+
+          dump_smoke() {
+            kubectl -n "$STAGING_NAMESPACE" get pod "$smoke_pod" -o wide || true
+            kubectl -n "$STAGING_NAMESPACE" describe pod "$smoke_pod" || true
+            kubectl -n "$STAGING_NAMESPACE" logs "$smoke_pod" --tail=200 || true
+          }
+
+          trap cleanup_smoke EXIT
+          cleanup_smoke
+
+          kubectl -n "$STAGING_NAMESPACE" run "$smoke_pod" \
+            --restart=Never \
+            --image=curlimages/curl:8.11.1 \
+            --command -- sh -c '
+              set -eu
+              for i in $(seq 1 36); do
+                if curl -fsS --connect-timeout 3 --max-time 10 http://api-gateway/health/ready \
+                  && curl -fsS --connect-timeout 3 --max-time 10 http://llm-orchestrator:8000/health/ready; then
+                  echo "Smoke checks passed."
+                  exit 0
+                fi
+                echo "Smoke attempt ${i}/36 failed; retrying..."
+                sleep 5
+              done
+              echo "Smoke checks failed after retries."
+              exit 1
+            '
+
+          for i in {1..90}; do
+            phase="$(kubectl -n "$STAGING_NAMESPACE" get pod "$smoke_pod" \
+              -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+            case "$phase" in
+              Succeeded)
+                kubectl -n "$STAGING_NAMESPACE" logs "$smoke_pod" --tail=200 || true
+                exit 0
+                ;;
+              Failed)
+                echo "::error::Staging smoke pod failed."
+                dump_smoke
+                exit 1
+                ;;
+              Pending|Running|"")
+                sleep 4
+                ;;
+              *)
+                echo "Smoke pod phase: $phase"
+                sleep 4
+                ;;
+            esac
+          done
+
+          echo "::error::Timed out waiting for staging smoke pod to finish."
+          dump_smoke
+          exit 1
 
   deploy-prod:
     name: Deploy to Production

@@ -453,6 +453,19 @@ async def run_pipeline(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[
 
     if data.get("status") == "failed":
         answer = str(data.get("error", "Pipeline failed"))
+        print(
+            json.dumps(
+                {
+                    "case_id": case.get("id"),
+                    "query": query,
+                    "chain": _infer_chain(case),
+                    "contexts": 0,
+                    "status": "failed",
+                    "error": answer[:500],
+                }
+            ),
+            flush=True,
+        )
         return {
             "answer": answer,
             "eval_answer": answer,
@@ -639,7 +652,10 @@ async def main() -> None:
     for case in rag_cases:
         result = case_results[case["id"]]
         if not result["contexts"]:
-            raise ValueError(f"Case {case['id']} retrieved no context; failing quality gate early.")
+            raise ValueError(
+                f"Case {case['id']} retrieved no context; failing quality gate early. "
+                f"status={result.get('status')!r}; answer={result.get('answer', '')[:500]!r}"
+            )
         ground_truth = case.get("ground_truth", "")
         query = case.get("query", "")
 
