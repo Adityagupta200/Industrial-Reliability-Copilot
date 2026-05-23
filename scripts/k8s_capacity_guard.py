@@ -8,7 +8,6 @@ import sys
 from dataclasses import dataclass
 from typing import Any
 
-
 CPU_MILLI = 1000
 MEMORY_MULTIPLIERS = {
     "Ki": 1 / 1024,
@@ -173,13 +172,9 @@ def check_capacity(args: argparse.Namespace) -> int:
     if len(ready_nodes) < args.min_ready_nodes:
         failures.append(f"ready nodes {len(ready_nodes)} < {args.min_ready_nodes}")
     if total_free.cpu_millicores < args.min_free_cpu_millicores:
-        failures.append(
-            f"free CPU {total_free.cpu_millicores}m < {args.min_free_cpu_millicores}m"
-        )
+        failures.append(f"free CPU {total_free.cpu_millicores}m < {args.min_free_cpu_millicores}m")
     if total_free.memory_mib < args.min_free_memory_mib:
-        failures.append(
-            f"free memory {total_free.memory_mib}Mi < {args.min_free_memory_mib}Mi"
-        )
+        failures.append(f"free memory {total_free.memory_mib}Mi < {args.min_free_memory_mib}Mi")
     if max_node_free.cpu_millicores < args.min_node_free_cpu_millicores:
         failures.append(
             "largest schedulable node free CPU "

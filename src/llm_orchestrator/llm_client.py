@@ -93,6 +93,13 @@ class LLMClient:
                 f"Initiating failover to fallback provider '{self._settings.fallback_provider}'."
             )
 
+            if self._settings.fallback_provider == self._settings.primary_provider:
+                raise LLMFatalError(
+                    f"Primary provider '{self._settings.primary_provider}' failed and the "
+                    "fallback provider is identical. Configure a distinct fallback provider "
+                    "or fix the primary provider/model/API key."
+                ) from e
+
             try:
                 fallback = self._get_provider(self._settings.fallback_provider, is_judge)
                 return await self._invoke_with_retry(fallback, prompt, json_mode=json_mode)

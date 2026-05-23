@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import sys
 
-import tiktoken
-
-from rag_service.ingestion.chunking import chunk_text
+from rag_service.ingestion.chunking import _get_token_encoding, chunk_text
 
 
 def test_chunk_text_is_token_bounded_and_dependency_light(monkeypatch):
@@ -25,7 +23,7 @@ def test_chunk_text_is_token_bounded_and_dependency_light(monkeypatch):
         extra_meta={"source_file": "bearing_replacement_pump_P-23.md"},
     )
 
-    enc = tiktoken.get_encoding("cl100k_base")
+    enc = _get_token_encoding()
     assert len(chunks) > 1
     assert all(len(enc.encode(chunk.text)) <= 24 for chunk in chunks)
     assert (

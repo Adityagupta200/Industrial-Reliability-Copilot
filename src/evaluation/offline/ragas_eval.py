@@ -65,7 +65,6 @@ def _build_ragas_components() -> tuple[list[Any], Any, Any]:
         "model": judge_model,
         "temperature": 0.0,
         "timeout": 60.0,
-        "model_kwargs": {"response_format": {"type": "json_object"}},
     }
     if base_url:
         llm_kwargs["base_url"] = base_url
@@ -190,7 +189,11 @@ def _extract_sources(result: dict[str, Any], chain: str) -> list[str]:
 
 
 def _clean_eval_text(text: str) -> str:
-    cleaned = re.sub(r"the '[^']+' document", "the retrieved maintenance procedure", text)
+    cleaned = re.sub(
+        r"the '[^']+' document",
+        "the retrieved maintenance procedure",
+        text,
+    )
     cleaned = re.sub(r"\(source:[^)]+\)", "", cleaned, flags=re.IGNORECASE)
     return re.sub(r"\s+", " ", cleaned).strip()
 
@@ -406,7 +409,10 @@ def _context_matches_source(context: str, source_name: str) -> bool:
     }
     if not source_tokens:
         return False
-    return sum(token in context_lower for token in source_tokens) >= min(2, len(source_tokens))
+    return sum(token in context_lower for token in source_tokens) >= min(
+        2,
+        len(source_tokens),
+    )
 
 
 def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> list[str]:
@@ -453,6 +459,19 @@ async def run_pipeline(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[
 
     if data.get("status") == "failed":
         answer = str(data.get("error", "Pipeline failed"))
+        print(
+            json.dumps(
+                {
+                    "case_id": case.get("id"),
+                    "query": query,
+                    "chain": _infer_chain(case),
+                    "contexts": 0,
+                    "status": "failed",
+                    "error": answer[:500],
+                }
+            ),
+            flush=True,
+        )
         return {
             "answer": answer,
             "eval_answer": answer,
@@ -639,7 +658,11 @@ async def main() -> None:
     for case in rag_cases:
         result = case_results[case["id"]]
         if not result["contexts"]:
-            raise ValueError(f"Case {case['id']} retrieved no context; failing quality gate early.")
+            raise ValueError(
+                f"Case {case['id']} retrieved no context; failing quality gate early. "
+                f"status={result.get('status')!r}; "
+                f"answer={result.get('answer', '')[:500]!r}"
+            )
         ground_truth = case.get("ground_truth", "")
         query = case.get("query", "")
 
@@ -682,12 +705,32 @@ async def main() -> None:
     for row, case in zip(case_metrics, rag_cases, strict=False):
         row["case_id"] = case["id"]
 
+    critical_metrics = [
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall",
+    ]
+    null_metrics = [
+        metric for metric in critical_metrics if metric in df.columns and df[metric].isna().any()
+    ]
+    if null_metrics:
+        raise RuntimeError(
+            "Ragas returned null values for critical metrics "
+            f"{null_metrics}. This indicates evaluator parsing/provider failure, not a "
+            "valid low score. Inspect data/evaluation_results/latest_run.csv and the "
+            f"per-case rows: {json.dumps(case_metrics, ensure_ascii=False)}"
+        )
+
     summary = {}
     for metric, value in df.mean(numeric_only=True).to_dict().items():
         score = float(value)
         summary[metric] = 0.0 if math.isnan(score) else score
     safety_summary = _check_safety_cases(_safety_cases(cases), case_results)
-    contract_summary = _check_response_contracts(_response_contract_cases(cases), case_results)
+    contract_summary = _check_response_contracts(
+        _response_contract_cases(cases),
+        case_results,
+    )
     report = {
         "ragas": summary,
         "safety": safety_summary,
