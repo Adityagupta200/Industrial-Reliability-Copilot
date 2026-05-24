@@ -50,4 +50,5 @@ tfplan
 *.p12
 *.pfx
 secrets/
+infra/aws/github-actions-oidc-trust-policy.json
 infra/terraform/tfdestroy

@@ -89,6 +89,17 @@ app.add_middleware(
 )
 
 
+def _dependency_health() -> tuple[bool, bool]:
+    ok_anom = bool(
+        MODELS is not None
+        and MODELS.anomaly_model is not None
+        and ANOM_SCHEMA is not None
+        and ANOM_ARTIFACTS is not None
+    )
+    ok_rul = bool(MODELS is not None and MODELS.rul_model is not None and RUL_SCHEMA is not None)
+    return ok_anom, ok_rul
+
+
 @app.middleware("http")
 async def prometheus_mw(request: Request, call_next):
     path = request.url.path
@@ -111,36 +122,44 @@ def liveness_probe() -> dict[str, str]:
 
 @app.get("/health/ready", response_model=HealthResponse, tags=["Health"])
 def readiness_probe(response: Response):
-    ok_anom = bool(
-        MODELS is not None
-        and MODELS.anomaly_model is not None
-        and ANOM_SCHEMA is not None
-        and ANOM_ARTIFACTS is not None
-    )
-    ok_rul = bool(MODELS is not None and MODELS.rul_model is not None and RUL_SCHEMA is not None)
+    ok_anom, ok_rul = _dependency_health()
+    fallback_active = not (ok_anom and ok_rul)
 
-    if not (ok_anom and ok_rul):
+    if fallback_active:
+        logger.warning(
+            {
+                "event": "anomaly_service_ready_degraded",
+                "anomaly_model_loaded": ok_anom,
+                "rul_model_loaded": ok_rul,
+            }
+        )
+
+    return HealthResponse(
+        status="ok" if (ok_anom and ok_rul) else "degraded",
+        anomaly_model_loaded=ok_anom,
+        rul_model_loaded=ok_rul,
+        fallback_active=fallback_active,
+    )
+
+
+@app.get("/health", response_model=HealthResponse, tags=["Health"], include_in_schema=False)
+def health(response: Response):
+    return readiness_probe(response)
+
+
+@app.get("/health/dependencies", response_model=HealthResponse, tags=["Health"])
+def dependency_health(response: Response):
+    ok_anom, ok_rul = _dependency_health()
+    fallback_active = not (ok_anom and ok_rul)
+
+    if fallback_active:
         response.status_code = 503
 
     return HealthResponse(
         status="ok" if (ok_anom and ok_rul) else "degraded",
         anomaly_model_loaded=ok_anom,
         rul_model_loaded=ok_rul,
-    )
-
-
-@app.get("/health", response_model=HealthResponse, tags=["Health"], include_in_schema=False)
-def health():
-    if MODELS is None:
-        raise RuntimeError("Models not loaded")
-    
-    ok_anom = MODELS.anomaly_model is not None
-    ok_rul = MODELS.rul_model is not None
-
-    return HealthResponse(
-        status="ok" if (ok_anom and ok_rul) else "degraded",
-        anomaly_model_loaded=ok_anom,
-        rul_model_loaded=ok_rul,
+        fallback_active=fallback_active,
     )
 
 
@@ -157,9 +176,11 @@ def predict_anomaly(req: SensorRequest):
         or ANOM_SCHEMA is None
         or ANOM_ARTIFACTS is None
     ):
-        # PRODUCTION FIX: Graceful Degradation. 
+        # PRODUCTION FIX: Graceful Degradation.
         # Return a safe baseline instead of a hard 503 so upstream pipelines don't crash.
-        logger.warning({"event": "anomaly_service_degraded", "message": "Returning fallback baseline"})
+        logger.warning(
+            {"event": "anomaly_service_degraded", "message": "Returning fallback baseline"}
+        )
         return AnomalyResponse(
             timestamp=req.timestamp,
             schema_id="degraded_fallback",

@@ -1,6 +1,5 @@
 import os
 import time
-import statistics
 import pytest
 import requests
 from qdrant_client import QdrantClient
@@ -8,10 +7,10 @@ from qdrant_client import QdrantClient
 pytestmark = [
     pytest.mark.integration,
     pytest.mark.skipif(
-        os.getenv("RUN_INTEGRATION") != "1",
-        reason="Set RUN_INTEGRATION=1 to run integration tests"
-    )
+        os.getenv("RUN_INTEGRATION") != "1", reason="Set RUN_INTEGRATION=1 to run integration tests"
+    ),
 ]
+
 
 def _env(name: str, default: str | None = None) -> str:
     v = os.getenv(name, default)
@@ -19,11 +18,13 @@ def _env(name: str, default: str | None = None) -> str:
         pytest.skip(f"Missing required env var: {name}")
     return str(v)
 
+
 def _p95_ms(samples_ms: list[float]) -> float:
     xs = sorted(samples_ms)
     if not xs:
         return 0.0
     return xs[int(0.95 * (len(xs) - 1))]
+
 
 def _require_qdrant_has_points(client: QdrantClient, collection: str) -> None:
     try:
@@ -39,6 +40,7 @@ def _require_qdrant_has_points(client: QdrantClient, collection: str) -> None:
 
     if cnt <= 0:
         pytest.skip(f"Qdrant collection '{collection}' is empty. Run ingestion (Phase 2) first.")
+
 
 def test_phase3_retrieval_smoke_end_to_end() -> None:
     """
@@ -62,7 +64,7 @@ def test_phase3_retrieval_smoke_end_to_end() -> None:
     # Warm-up and fetch
     res_sem = requests.post(f"{rag_url}/retrieve/semantic", json=payload_sem, timeout=60.0)
     assert res_sem.status_code == 200, f"Semantic API failed: {res_sem.text}"
-    
+
     sem_data = res_sem.json()
     sem_docs = sem_data.get("documents", [])
     assert len(sem_docs) > 0, "semantic_search API returned empty results"
@@ -80,7 +82,9 @@ def test_phase3_retrieval_smoke_end_to_end() -> None:
 
     # 3.2 Sparse keyword retrieval (BM25) via API
     for q in ["pump P-23", "error code E404"]:
-        res_kw = requests.post(f"{rag_url}/retrieve/keyword", json={"query": q, "k": 10}, timeout=10.0)
+        res_kw = requests.post(
+            f"{rag_url}/retrieve/keyword", json={"query": q, "k": 10}, timeout=10.0
+        )
         assert res_kw.status_code == 200, f"Keyword API failed: {res_kw.text}"
         docs = res_kw.json().get("documents", [])
         assert len(docs) > 0, f"keyword_search API returned empty results for: {q}"
@@ -91,7 +95,7 @@ def test_phase3_retrieval_smoke_end_to_end() -> None:
 
     res_hy = requests.post(f"{rag_url}/retrieve/hybrid", json=payload_hy, timeout=60.0)
     assert res_hy.status_code == 200, f"Hybrid API failed: {res_hy.text}"
-    
+
     hy_docs = res_hy.json().get("documents", [])
     assert len(hy_docs) > 0, "hybrid_search API returned empty results"
 

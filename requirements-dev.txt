@@ -12,8 +12,8 @@ respx>=0.21.1
 # ----------------------------------------
 # Linting, Formatting & Type Checking
 # ----------------------------------------
-ruff>=0.4.0
-black>=24.4.0
+ruff==0.15.14
+black==26.5.1
 mypy>=1.10.0
 pre-commit>=3.7.0
 
@@ -26,6 +26,6 @@ bandit>=1.7.8
 # ----------------------------------------
 # Phase 6: Offline Evaluation & Monitoring
 # ----------------------------------------
-ragas>=0.1.10
-datasets>=2.20.0
+ragas==0.1.21
+datasets>=2.20.0,<3.0.0
 schedule>=1.2.1

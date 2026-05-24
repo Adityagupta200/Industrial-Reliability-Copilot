@@ -58,11 +58,13 @@ class DummyEmbedder:
 def test_semantic_search_maps_payload_text_and_preserves_ranking(monkeypatch):
     cache = QueryEmbeddingCache(ttl_seconds=3600)
     dummy_embedder = DummyEmbedder()
-    
-    monkeypatch.setattr("rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder)
-    
+
+    monkeypatch.setattr(
+        "rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder
+    )
+
     retriever = SemanticRetriever()
-    dummy_qdrant = DummyQdrant(text_key="content") 
+    dummy_qdrant = DummyQdrant(text_key="content")
 
     retriever.qdrant = dummy_qdrant
     retriever.cache = cache
@@ -78,9 +80,11 @@ def test_semantic_search_maps_payload_text_and_preserves_ranking(monkeypatch):
 def test_semantic_search_caches_query_embedding(monkeypatch):
     cache = QueryEmbeddingCache(ttl_seconds=3600)
     dummy_embedder = DummyEmbedder()
-    
-    monkeypatch.setattr("rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder)
-    
+
+    monkeypatch.setattr(
+        "rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder
+    )
+
     retriever = SemanticRetriever()
     dummy_qdrant = DummyQdrant(text_key="text")
 
@@ -97,9 +101,11 @@ def test_semantic_search_caches_query_embedding(monkeypatch):
 def test_semantic_search_applies_metadata_filters_smoke(monkeypatch):
     cache = QueryEmbeddingCache(ttl_seconds=3600)
     dummy_embedder = DummyEmbedder()
-    
-    monkeypatch.setattr("rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder)
-    
+
+    monkeypatch.setattr(
+        "rag_service.retrieval.semantic_retriever.get_embedding_provider", lambda: dummy_embedder
+    )
+
     retriever = SemanticRetriever()
     dummy_qdrant = DummyQdrant(text_key="text")
 

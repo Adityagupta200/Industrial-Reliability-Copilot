@@ -14,6 +14,7 @@ Analyze the root cause of this anomaly. Provide:
 2) Confidence score (0.0-1.0) for each.
 3) Evidence supporting the claim. Make sure to embed the document tags (e.g. DOC_1) in your evidence string to prove your claim.
 4) Source ID: You MUST cite specific sources using ONLY the exact string from this allowed list: [{valid_doc_ids}].
+5) Prefer the most specific equipment procedure over generic manuals when both are relevant.
 
 --- DUMMY FEW-SHOT EXAMPLE (DO NOT COPY) ---
 If retrieved documentation contains:

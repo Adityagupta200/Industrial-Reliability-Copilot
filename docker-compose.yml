@@ -111,8 +111,10 @@ services:
       HOST: 0.0.0.0
       PORT: "8002"
       PYTHONPATH: /app/src
-      EMBEDDING_PROVIDER: huggingface
-      HUGGINGFACE_EMBEDDING_MODEL: BAAI/bge-large-en-v1.5
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-huggingface}
+      HUGGINGFACE_EMBEDDING_MODEL: ${HUGGINGFACE_EMBEDDING_MODEL:-BAAI/bge-large-en-v1.5}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       EMBEDDING_NORMALIZE: "true"
       HF_HOME: /app/data/hf_cache
     ports:

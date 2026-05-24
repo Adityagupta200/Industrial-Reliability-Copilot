@@ -111,4 +111,4 @@ ENTRYPOINT ["/usr/bin/tini", "--"]
 ENV HF_HOME=/app/data/hf_cache
 
 # 5. Lock workers to 1 (Rely on Kubernetes HPA for scaling) and set log-level to info for production
-CMD ["uvicorn", "rag_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8002", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "600"]
+CMD ["uvicorn", "rag_service.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8002", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]

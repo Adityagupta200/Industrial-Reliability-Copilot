@@ -272,7 +272,9 @@ def load_rul_model():
 
 def load_anomaly_model():
     # PRODUCTION FIX: Enforce weights_only=True to prevent arbitrary code execution attacks
-    ckpt = torch.load(settings.anomaly_ckpt_path, map_location=settings.torch_device, weights_only=True)
+    ckpt = torch.load(
+        settings.anomaly_ckpt_path, map_location=settings.torch_device, weights_only=True
+    )
     version = _sha256_of_file(settings.anomaly_ckpt_path)
 
     state_dict, meta = _extract_state_dict_and_meta(ckpt)

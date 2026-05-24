@@ -18,7 +18,7 @@ for missing_type, fallback_type in [
     ("float8_e5m2", "float32"),
     ("float8_e4m3fnuz", "float32"),
     ("float8_e5m2fnuz", "float32"),
-    ("bfloat16", "float16")
+    ("bfloat16", "float16"),
 ]:
     if not hasattr(torch, missing_type):
         setattr(torch, missing_type, getattr(torch, fallback_type, torch.float32))

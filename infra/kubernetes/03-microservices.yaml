@@ -6,6 +6,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX: Reduced from 2 to 1 to prevent cluster memory starvation
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 900
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: rag-service
@@ -14,6 +22,7 @@ spec:
       labels:
         app: rag-service
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
       - name: rag-service
         # PRODUCTION FIX: Point to AWS ECR instead of local Minikube cache
@@ -97,6 +106,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: anomaly-service
@@ -105,6 +122,7 @@ spec:
       labels:
         app: anomaly-service
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
       - name: anomaly-service
         image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/anomaly-service:v1.2
@@ -185,6 +203,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 900
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: llm-orchestrator
@@ -193,6 +219,52 @@ spec:
       labels:
         app: llm-orchestrator
     spec:
+      terminationGracePeriodSeconds: 45
+      initContainers:
+      - name: wait-for-telemetry-db
+        image: python:3.11-slim
+        envFrom:
+        - secretRef:
+            name: copilot-secrets
+        command:
+        - /bin/sh
+        - -c
+        - |
+          python - <<'PY'
+          import os
+          import socket
+          import time
+          from urllib.parse import urlparse
+
+          dsn = os.environ.get("INCIDENTS_DB_DSN", "")
+          parsed = urlparse(dsn)
+          host = parsed.hostname
+
+          try:
+              port = parsed.port or 5432
+          except ValueError as exc:
+              raise SystemExit(f"Invalid INCIDENTS_DB_DSN port: {exc}") from exc
+
+          if not host or host in {"localhost", "127.0.0.1", "postgres"}:
+              raise SystemExit(
+                  f"Invalid INCIDENTS_DB_DSN host for EKS/RDS deployment: {host!r}"
+              )
+
+          for attempt in range(1, 31):
+              try:
+                  with socket.create_connection((host, port), timeout=5):
+                      print(f"Telemetry DB reachable at {host}:{port}")
+                      raise SystemExit(0)
+              except OSError as exc:
+                  print(
+                      f"Waiting for telemetry DB {host}:{port} "
+                      f"attempt {attempt}/30: {exc}",
+                      flush=True,
+                  )
+                  time.sleep(10)
+
+          raise SystemExit(f"Telemetry DB not reachable at {host}:{port}")
+          PY
       containers:
       - name: llm-orchestrator
         image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/llm-orchestrator:v1.2
@@ -200,8 +272,10 @@ spec:
         envFrom:
         - configMapRef:
             name: copilot-config
+        - secretRef:
+            name: copilot-secrets
         env:
-        # STRATEGIC API COMPROMISE: Inject API Key for Production SLA
+        # Explicit alias expected by the orchestrator LLM settings.
         - name: LLM_OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
@@ -280,6 +354,14 @@ metadata:
   namespace: industrial-copilot
 spec:
   replicas: 1 # PRODUCTION FIX
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: api-gateway
@@ -288,6 +370,7 @@ spec:
       labels:
         app: api-gateway
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
       - name: api-gateway
         image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/api-gateway:v1.2

@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Any, Optional
 import httpx
-from langsmith import traceable  
+from langsmith import traceable
 
 from ..schemas import RetrievedDoc
 
@@ -71,6 +71,39 @@ class RAGClient:
 
         return docs
 
+    async def _post_retrieve(
+        self,
+        *,
+        path: str,
+        payload: dict[str, Any],
+        retrieval_name: str,
+    ) -> list[RetrievedDoc]:
+        client = self._get_client()
+        r = await client.post(path, json=payload)
+        r.raise_for_status()
+        raw_docs = self._extract_docs(r.json())
+        docs = [RetrievedDoc.model_validate(d) for d in raw_docs]
+
+        filters = payload.get("filters") or {}
+        if docs or not filters.get("equipment_id"):
+            return docs
+
+        retry_payload = dict(payload)
+        retry_filters = dict(filters)
+        removed_equipment_id = retry_filters.pop("equipment_id", None)
+        retry_payload["filters"] = retry_filters
+
+        logger.warning(
+            "%s returned no documents for equipment_id=%r; retrying without the "
+            "equipment filter while preserving security/tenant filters.",
+            retrieval_name,
+            removed_equipment_id,
+        )
+        retry = await client.post(path, json=retry_payload)
+        retry.raise_for_status()
+        retry_docs = self._extract_docs(retry.json())
+        return [RetrievedDoc.model_validate(d) for d in retry_docs]
+
     @traceable(run_type="retriever", name="Qdrant_Hybrid_Search")
     async def retrieve_hybrid(
         self, query: str, *, equipment_id: Optional[str] = None, k: int = 8
@@ -79,30 +112,36 @@ class RAGClient:
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
 
-        client = self._get_client()
         try:
-            r = await client.post(self.hybrid_path, json=payload)
-            r.raise_for_status()
-            raw_docs = self._extract_docs(r.json())
-            return [RetrievedDoc.model_validate(d) for d in raw_docs]
+            return await self._post_retrieve(
+                path=self.hybrid_path,
+                payload=payload,
+                retrieval_name="Hybrid retrieval",
+            )
         except Exception as e:
             logger.error(f"RAG Service Hybrid Retrieval failed: {type(e).__name__} - {e}")
             return []
 
     @traceable(run_type="retriever", name="Qdrant_Procedure_Search")
     async def retrieve_procedures(
-        self, failure_mode: str, *, equipment_id: Optional[str] = None, k: int = 6
+        self,
+        failure_mode: str,
+        *,
+        equipment_id: Optional[str] = None,
+        k: int = 6,
+        query: Optional[str] = None,
     ) -> list[RetrievedDoc]:
-        payload: dict[str, Any] = {"query": f"procedure for {failure_mode}", "k": k, "filters": {}}
+        retrieval_query = query or f"procedure for {failure_mode}"
+        payload: dict[str, Any] = {"query": retrieval_query, "k": k, "filters": {}}
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
 
-        client = self._get_client()
         try:
-            r = await client.post(self.procedures_path, json=payload)
-            r.raise_for_status()
-            raw_docs = self._extract_docs(r.json())
-            return [RetrievedDoc.model_validate(d) for d in raw_docs]
+            return await self._post_retrieve(
+                path=self.procedures_path,
+                payload=payload,
+                retrieval_name="Procedure retrieval",
+            )
         except Exception as e:
             logger.error(f"RAG Service Procedure Retrieval failed: {type(e).__name__} - {e}")
             return []
@@ -115,12 +154,12 @@ class RAGClient:
         if equipment_id:
             payload["filters"]["equipment_id"] = equipment_id
 
-        client = self._get_client()
         try:
-            r = await client.post(self.semantic_path, json=payload)
-            r.raise_for_status()
-            raw_docs = self._extract_docs(r.json())
-            return [RetrievedDoc.model_validate(d) for d in raw_docs]
+            return await self._post_retrieve(
+                path=self.semantic_path,
+                payload=payload,
+                retrieval_name="Semantic retrieval",
+            )
         except Exception as e:
             logger.error(f"RAG Service Semantic Retrieval failed: {type(e).__name__} - {e}")
             return []

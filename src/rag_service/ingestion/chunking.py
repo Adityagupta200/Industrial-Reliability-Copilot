@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
+import logging
 from typing import Any
 import uuid
 
 import tiktoken
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from rag_service.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -15,6 +18,34 @@ class Chunk:
     chunk_id: str
     text: str
     metadata: dict[str, Any]
+
+
+class _ConservativeCharEncoding:
+    """Offline fallback when tiktoken's remote encoding cache is unavailable."""
+
+    _TOKEN_CHARS = 4
+
+    def encode(self, text: str) -> list[str]:
+        return [
+            text[start : start + self._TOKEN_CHARS]
+            for start in range(0, len(text), self._TOKEN_CHARS)
+        ]
+
+    def decode(self, tokens: list[Any]) -> str:
+        return "".join(str(token) for token in tokens)
+
+
+@lru_cache(maxsize=1)
+def _get_token_encoding() -> Any:
+    try:
+        return tiktoken.get_encoding("cl100k_base")
+    except Exception as exc:
+        logger.warning(
+            "Falling back to conservative local tokenizer because tiktoken encoding "
+            "cl100k_base could not be loaded: %s",
+            exc,
+        )
+        return _ConservativeCharEncoding()
 
 
 def _token_len(text: str, enc) -> int:
@@ -29,6 +60,119 @@ def _stable_chunk_uuid(*, source_id: str, doc_type: str, chunk_index: int) -> st
     return str(uuid.uuid5(uuid.NAMESPACE_URL, name))
 
 
+def _join(parts: list[str]) -> str:
+    return "".join(parts).strip()
+
+
+def _token_tail(text: str, overlap_tokens: int, enc) -> str:
+    if overlap_tokens <= 0:
+        return ""
+    tokens = enc.encode(text)
+    if len(tokens) <= overlap_tokens:
+        return text
+    return enc.decode(tokens[-overlap_tokens:])
+
+
+def _hard_token_split(text: str, chunk_size: int, enc) -> list[str]:
+    tokens = enc.encode(text)
+    return [
+        enc.decode(tokens[start : start + chunk_size])
+        for start in range(0, len(tokens), chunk_size)
+    ]
+
+
+def _split_to_bounded_pieces(
+    text: str,
+    *,
+    chunk_size: int,
+    separators: list[str],
+    enc,
+) -> list[str]:
+    text = text.strip()
+    if not text:
+        return []
+    if _token_len(text, enc) <= chunk_size:
+        return [text]
+    if not separators:
+        return _hard_token_split(text, chunk_size, enc)
+
+    separator = separators[0]
+    remaining = separators[1:]
+
+    if separator == "":
+        return _hard_token_split(text, chunk_size, enc)
+
+    raw_parts = text.split(separator)
+    pieces: list[str] = []
+    for idx, part in enumerate(raw_parts):
+        if not part:
+            continue
+        unit = part if idx == len(raw_parts) - 1 else f"{part}{separator}"
+        if _token_len(unit, enc) <= chunk_size:
+            pieces.append(unit)
+        else:
+            pieces.extend(
+                _split_to_bounded_pieces(
+                    unit,
+                    chunk_size=chunk_size,
+                    separators=remaining,
+                    enc=enc,
+                )
+            )
+
+    return pieces
+
+
+def _merge_with_overlap(
+    pieces: list[str],
+    *,
+    chunk_size: int,
+    chunk_overlap: int,
+    enc,
+) -> list[str]:
+    chunks: list[str] = []
+    current: list[str] = []
+
+    for piece in pieces:
+        candidate = _join([*current, piece])
+        if current and _token_len(candidate, enc) > chunk_size:
+            emitted = _join(current)
+            if emitted:
+                chunks.append(emitted)
+
+            overlap = _token_tail(emitted, chunk_overlap, enc)
+            candidate_with_overlap = _join([overlap, piece])
+            current = (
+                [overlap, piece]
+                if _token_len(candidate_with_overlap, enc) <= chunk_size
+                else [piece]
+            )
+        else:
+            current.append(piece)
+
+    emitted = _join(current)
+    if emitted:
+        chunks.append(emitted)
+
+    return chunks
+
+
+def _recursive_split_text(text: str, *, chunk_size: int, chunk_overlap: int, enc) -> list[str]:
+    separators = ["\n\n", "\n", ". ", " ", ""]
+    bounded_pieces = _split_to_bounded_pieces(
+        text,
+        chunk_size=chunk_size,
+        separators=separators,
+        enc=enc,
+    )
+    return _merge_with_overlap(
+        bounded_pieces,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        enc=enc,
+    )
+
+
 def chunk_text(
     text: str,
     *,
@@ -36,16 +180,13 @@ def chunk_text(
     doc_type: str,
     extra_meta: dict[str, Any],
 ) -> list[Chunk]:
-    enc = tiktoken.get_encoding("cl100k_base")
-
-    splitter = RecursiveCharacterTextSplitter(
+    enc = _get_token_encoding()
+    pieces = _recursive_split_text(
+        text,
         chunk_size=settings.chunk_size_tokens,
         chunk_overlap=settings.chunk_overlap_tokens,
-        length_function=lambda s: _token_len(s, enc),
-        separators=["\n\n", "\n", ". ", " ", ""],
+        enc=enc,
     )
-
-    pieces = splitter.split_text(text)
     chunks: list[Chunk] = []
 
     for idx, piece in enumerate(pieces):

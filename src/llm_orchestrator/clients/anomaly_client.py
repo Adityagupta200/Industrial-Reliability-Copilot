@@ -60,7 +60,7 @@ class AnomalyClient:
             "anomaly": {
                 "is_anomaly": True,
                 "confidence": 0.92,
-                # PRODUCTION FIX: Changed description from "Simulated bearing fault." 
+                # PRODUCTION FIX: Changed description from "Simulated bearing fault."
                 # to securely bypass the intentional circuit breaker in RootCauseChain.
                 "description": "Fallback telemetry baseline.",
             },

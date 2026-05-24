@@ -10,19 +10,19 @@ logger = logging.getLogger(__name__)
 
 def check_health(gateway_url):
     try:
-        response = requests.get(f"{gateway_url}/health", timeout=5)
+        response = requests.get(f"{gateway_url.rstrip('/')}/health/ready", timeout=5)
         return response.status_code == 200
     except requests.RequestException:
         return False
 
 
-def monitor(duration, namespace):
+def monitor(duration, namespace, gateway_url=None):
     # In a real environment, this would hit your Prometheus service
     # e.g., PROMETHEUS_URL = "http://prometheus-service.monitoring.svc.cluster.local:9090"
     logger.info(f"Starting post-deployment monitoring for {duration} seconds in {namespace}...")
 
-    # Simulating the internal cluster URL for the API gateway
-    gateway_url = f"http://api-gateway.{namespace}.svc.cluster.local:8000"
+    if gateway_url is None:
+        gateway_url = f"http://api-gateway.{namespace}.svc.cluster.local:80"
 
     end_time = time.time() + duration
     error_count = 0
@@ -55,6 +55,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--namespace", type=str, default="production", help="K8s namespace to monitor"
     )
+    parser.add_argument(
+        "--gateway-url",
+        type=str,
+        default=None,
+        help="Reachable API gateway URL. Use localhost when the workflow opens a port-forward.",
+    )
     args = parser.parse_args()
 
-    monitor(args.duration, args.namespace)
+    monitor(args.duration, args.namespace, args.gateway_url)
