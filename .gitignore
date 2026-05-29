@@ -11,6 +11,7 @@ tmp/pytest-of-*/
 .ruff_cache/
 .coverage
 htmlcov/
+data/evaluation_results/pr_comment.md
 dist/
 build/
 *.egg-info/
