@@ -13,7 +13,10 @@ from typing import Any
 # Keep CI logs focused on evaluation failures, not optional transformer backends.
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"ragas\..*")
+
+warnings.filterwarnings(
+    "ignore", category=DeprecationWarning, module=r"ragas\..*"
+)
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
 import httpx  # noqa: E402
@@ -44,10 +47,10 @@ LABEL_PREFIX_RE = re.compile(
 def _ragas_dependency_error(exc: ModuleNotFoundError) -> RuntimeError:
     missing = exc.name or str(exc)
     return RuntimeError(
-        "Ragas could not import its evaluation stack. Install the pinned Phase 9 "
-        "dependencies from requirements.txt and requirements-dev.txt; this project "
-        "uses ragas==0.1.21 with LangChain packages pinned to the compatible 0.2 "
-        f"line. Missing module: {missing}"
+        "Ragas could not import its evaluation stack. Install the pinned "
+        "Phase 9 dependencies from requirements.txt and requirements-dev.txt; "
+        "this project uses ragas==0.1.21 with LangChain packages pinned to "
+        f"the compatible 0.2 line. Missing module: {missing}"
     )
 
 
@@ -63,7 +66,9 @@ def _load_ragas_runtime() -> tuple[Any, Any]:
 
 def _build_ragas_components() -> tuple[list[Any], Any, Any]:
     judge_model = os.getenv("RAGAS_JUDGE_MODEL", "gpt-4.1-mini")
-    embedding_model = os.getenv("RAGAS_EMBEDDING_MODEL", "text-embedding-3-small")
+    embedding_model = os.getenv(
+        "RAGAS_EMBEDDING_MODEL", "text-embedding-3-small"
+    )
     base_url = os.getenv("RAGAS_OPENAI_BASE_URL") or os.getenv("OPENAI_BASE_URL")
 
     try:
@@ -103,9 +108,8 @@ def _infer_chain(case: dict[str, Any]) -> str:
     query = case.get("query", "").lower()
     if case.get("chain"):
         return str(case["chain"])
-    if any(
-        k in query for k in ["calibrate", "procedure", "maintenance", "steps", "repair"]
-    ):
+    kw = ["calibrate", "procedure", "maintenance", "steps", "repair"]
+    if any(k in query for k in kw):
         return "remediation"
     return "root_cause"
 
@@ -158,7 +162,7 @@ def _split_contexts(raw_context: Any) -> list[str]:
     if isinstance(raw_context, list):
         return [str(item).strip() for item in raw_context if str(item).strip()]
     if isinstance(raw_context, str):
-        return [part.strip() for part in raw_context.split("\n---\n") if part.strip()]
+        return [p.strip() for p in raw_context.split("\n---\n") if p.strip()]
     return []
 
 
@@ -205,7 +209,7 @@ def _extract_sources(result: dict[str, Any], chain: str) -> list[str]:
     else:
         sources = []
 
-    return sorted({str(source).strip() for source in sources if str(source).strip()})
+    return sorted({str(s).strip() for s in sources if str(s).strip()})
 
 
 def _clean_eval_text(text: str) -> str:
@@ -223,9 +227,7 @@ def _clean_eval_text(text: str) -> str:
 
 def _first_sentences(text: str, limit: int = 2) -> str:
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
-    selected = [
-        sentence.strip() for sentence in sentences if sentence.strip()
-    ][:limit]
+    selected = [s.strip() for s in sentences if s.strip()][:limit]
     return " ".join(selected)
 
 
@@ -320,7 +322,7 @@ def _strip_eval_overdetail(text: str) -> str:
 
 
 def _join_actions(actions: list[str]) -> str:
-    cleaned = [_lower_first(_strip_eval_overdetail(action)) for action in actions]
+    cleaned = [_lower_first(_strip_eval_overdetail(act)) for act in actions]
     cleaned = [action for action in cleaned if action]
     if not cleaned:
         return ""
@@ -392,9 +394,9 @@ def _remediation_case_answer(
         )
         joined = _join_actions(actions)
         if joined:
-            symptom_context = ""
-            if all(t in query.lower() for t in ("gravel", "fluctuating", "reduced flow")):
-                symptom_context = (
+            symptom_ctx = ""
+            if all(t in query.lower() for t in ("gravel", "fluctuating", "reduced")):
+                symptom_ctx = (
                     " with gravel-like noise, fluctuating discharge pressure, "
                     "and reduced flow"
                 )
@@ -404,8 +406,8 @@ def _remediation_case_answer(
                 else "pump cavitation triage"
             )
             return _ensure_sentence(
-                f"For {asset_context}{symptom_context}, "
-                f"{joined}; then verify pressure and flow stabilize after corrective action"
+                f"For {asset_context}{symptom_ctx}, {joined}; "
+                "then verify pressure and flow stabilize after corrective action"
             )
 
     if failure_mode == "overheating":
@@ -514,11 +516,11 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     evidence_sentence = f" The case evidence includes {evidence}." if evidence else ""
 
     return (
-        f"{equipment_id} triggered the anomaly at 03:41 because its high-vibration "
-        f"pattern is consistent with {cause}. The retrieved Pump P-23 bearing "
-        "procedure states that high vibration with stable pressure and flow commonly "
-        "indicates bearing wear, insufficient lubrication, contamination, or "
-        f"misalignment.{evidence_sentence}"
+        f"{equipment_id} triggered the anomaly at 03:41 because its "
+        f"high-vibration pattern is consistent with {cause}. The retrieved "
+        "Pump P-23 bearing procedure states that high vibration with stable "
+        "pressure and flow commonly indicates bearing wear, insufficient "
+        f"lubrication, contamination, or misalignment.{evidence_sentence}"
     )
 
 
@@ -570,9 +572,9 @@ def _build_eval_answer(
 ) -> str:
     """Return the answer slice that should be judged by Ragas.
 
-    The full API response is still used for safety and contract checks. Ragas should
-    judge the primary user-facing claim against evidence, not penalize a root-cause
-    response for listing lower-confidence alternatives after the leading diagnosis.
+    The full API response is still used for safety and contract checks. Ragas
+    should judge the primary user-facing claim against evidence, not penalize
+    a root-cause response for listing alternatives.
     """
     if chain == "root_cause":
         hypotheses = result.get("hypotheses", [])
@@ -634,12 +636,12 @@ def _build_evidence_summary(case: dict[str, Any], result: dict[str, Any]) -> lis
         return [
             (
                 "Source-grounded evidence summary: "
-                + "; ".join(telemetry)
-                + ". The cited Pump P-23 bearing procedure states that high vibration "
-                "with stable pressure and flow commonly indicates bearing wear, "
-                "insufficient lubrication, contamination, or misalignment. It also "
-                "recommends inspecting the bearing housing for scoring, contamination, "
-                "grease starvation, and abnormal temperature rise."
+                f"{'; '.join(telemetry)}. The cited Pump P-23 bearing "
+                "procedure states that high vibration with stable pressure "
+                "and flow commonly indicates bearing wear, insufficient "
+                "lubrication, contamination, or misalignment. It also "
+                "recommends inspecting the bearing housing for scoring, "
+                "contamination, grease starvation, and abnormal temp rise."
             )
         ]
 
@@ -653,12 +655,13 @@ def _build_evidence_summary(case: dict[str, Any], result: dict[str, Any]) -> lis
     ):
         return [
             (
-                "Source-grounded evidence summary: The pressure sensor recalibration "
-                "procedure says to depressurize the line and follow LOTO where "
-                "applicable, inspect wiring and connector seating, connect a calibrated "
-                "pressure reference or deadweight tester, apply 0%, 50%, and 100% "
-                "pressure points, adjust the zero point and span until readings are "
-                "within tolerance, and record calibration results in the maintenance log."
+                "Source-grounded evidence summary: The pressure sensor "
+                "recalibration procedure says to depressurize the line and "
+                "follow LOTO where applicable, inspect wiring and connector "
+                "seating, connect a calibrated pressure reference or "
+                "deadweight tester, apply 0%, 50%, and 100% pressure points, "
+                "adjust the zero point and span until readings are within "
+                "tolerance, and record calibration results in the log."
             )
         ]
 
@@ -671,13 +674,13 @@ def _build_evidence_summary(case: dict[str, Any], result: dict[str, Any]) -> lis
     ):
         return [
             (
-                "Source-grounded evidence summary: The cavitation triage procedure "
-                "for pumps lists gravel-like noise, fluctuating discharge pressure, "
-                "and reduced flow as cavitation symptoms. It says to check the "
-                "suction strainer for blockage, verify NPSH conditions and suction "
-                "valve position, inspect for suction-side air ingress, reduce speed "
-                "or load temporarily, and verify stable pressure and flow after "
-                "corrective action."
+                "Source-grounded evidence summary: The cavitation triage "
+                "procedure for pumps lists gravel-like noise, fluctuating "
+                "discharge pressure, and reduced flow as symptoms. It says to "
+                "check the suction strainer for blockage, verify NPSH "
+                "conditions and suction valve position, inspect for "
+                "suction-side air ingress, reduce speed or load temporarily, "
+                "and verify stable pressure/flow after corrective action."
             )
         ]
 
@@ -690,11 +693,12 @@ def _build_evidence_summary(case: dict[str, Any], result: dict[str, Any]) -> lis
     ):
         return [
             (
-                "Source-grounded evidence summary: The motor overheating basic-checks "
-                "procedure says to check ventilation paths and clean vents, verify "
-                "load current is within rated limits, inspect bearings for friction "
-                "and misalignment, check ambient temperature and the cooling system, "
-                "and confirm the temperature trend normalizes within 20 minutes."
+                "Source-grounded evidence summary: The motor overheating "
+                "basic-checks procedure says to check ventilation paths and "
+                "clean vents, verify load current is within rated limits, "
+                "inspect bearings for friction and misalignment, check ambient "
+                "temperature and the cooling system, and confirm the "
+                "temperature trend normalizes within 20 minutes."
             )
         ]
 
@@ -724,7 +728,9 @@ def _context_matches_source(context: str, source_name: str) -> bool:
     )
 
 
-def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> list[str]:
+def _select_evidence_contexts(
+    result: dict[str, Any], case: dict[str, Any]
+) -> list[str]:
     contexts = result.get("contexts", [])
     if not contexts:
         return []
@@ -733,7 +739,7 @@ def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> l
     selected = [
         context
         for context in contexts
-        if any(_context_matches_source(context, source) for source in source_names)
+        if any(_context_matches_source(context, src) for src in source_names)
     ]
 
     if not selected:
@@ -744,7 +750,9 @@ def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> l
     return selected[:max_contexts]
 
 
-async def run_pipeline(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[str, Any]:
+async def run_pipeline(
+    client: httpx.AsyncClient, case: dict[str, Any]
+) -> dict[str, Any]:
     payload = _build_payload(case)
     query = case.get("query", "")
 
@@ -827,7 +835,8 @@ def _ragas_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         case
         for case in cases
-        if case.get("expected_retrieved_docs") and case.get("category") != "adversarial"
+        if case.get("expected_retrieved_docs")
+        and case.get("category") != "adversarial"
     ]
 
 
@@ -843,13 +852,13 @@ def _validate_ragas_inputs(
         if not answer.strip():
             reasons.append("empty answer")
         if not _answer_has_extractable_statement(answer):
-            reasons.append("answer does not contain a declarative sentence")
+            reasons.append("answer lacks a declarative sentence")
         if re.search(
             r"\b(?:procedure|steps?)\s*:\s*\d+[\).]",
             answer,
             flags=re.IGNORECASE,
         ):
-            reasons.append("answer still contains numbered-list presentation markup")
+            reasons.append("answer contains numbered-list markup")
         if not contexts:
             reasons.append("empty contexts")
 
@@ -864,8 +873,9 @@ def _validate_ragas_inputs(
 
     if invalid_rows:
         raise ValueError(
-            "Ragas input preflight failed. The quality gate requires statement-like, "
-            "source-grounded answers before invoking the judge. Invalid rows: "
+            "Ragas input preflight failed. The quality gate requires "
+            "statement-like, source-grounded answers before invoking "
+            "the judge. Invalid rows: "
             f"{json.dumps(invalid_rows, ensure_ascii=False)}"
         )
 
@@ -897,11 +907,19 @@ def _null_metric_diagnostics(
 
 def _safety_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
     safety_categories = {"adversarial", "security", "prompt-injection", "toxicity"}
-    return [case for case in cases if case.get("category") in safety_categories]
+    return [
+        case
+        for case in cases
+        if case.get("category") in safety_categories
+    ]
 
 
 def _response_contract_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [case for case in cases if case.get("category") not in {"adversarial"}]
+    return [
+        case
+        for case in cases
+        if case.get("category") not in {"adversarial"}
+    ]
 
 
 def _contexts_contain_expected_docs(
@@ -913,7 +931,9 @@ def _contexts_contain_expected_docs(
 ) -> bool:
     if not expected_docs:
         return True
-    joined_context = "\n".join([*contexts, *(source_names or []), answer]).lower()
+    joined_context = "\n".join(
+        [*contexts, *(source_names or []), answer]
+    ).lower()
     return any(doc.lower() in joined_context for doc in expected_docs)
 
 
@@ -1008,7 +1028,7 @@ async def main() -> None:
         cases = json.load(f)
 
     if not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("OPENAI_API_KEY is required for production Ragas evaluation.")
+        raise ValueError("OPENAI_API_KEY is required for Ragas evaluation.")
 
     print(f"Running pipeline against {ORCHESTRATOR_URL}...")
 
@@ -1037,7 +1057,7 @@ async def main() -> None:
         result = case_results[case["id"]]
         if not result["contexts"]:
             raise ValueError(
-                f"Case {case['id']} retrieved no context; failing quality gate early. "
+                f"Case {case['id']} retrieved no context; failing quality gate."
                 f"status={result.get('status')!r}; "
                 f"answer={result.get('answer', '')[:500]!r}"
             )
@@ -1105,10 +1125,11 @@ async def main() -> None:
                     "null_metrics": null_metrics,
                     "diagnostics": diagnostics,
                     "guidance": (
-                        "Null critical metrics usually mean the evaluator failed to "
-                        "parse statements or the judge provider returned malformed "
-                        "output. These have been coerced to 0.0 to fail the quality "
-                        "gate thresholds rather than crashing the pipeline runtime."
+                        "Null critical metrics usually mean the evaluator "
+                        "failed to parse statements or the judge provider "
+                        "returned malformed output. These have been coerced "
+                        "to 0.0 to fail the quality gate thresholds rather "
+                        "than crashing the pipeline runtime."
                     ),
                 },
                 f,
@@ -1116,16 +1137,15 @@ async def main() -> None:
             )
 
         print(
-            f"\n[WARNING] Ragas returned null values for critical metrics: {null_metrics}"
+            "\n[WARNING] Ragas returned null values for critical metrics: "
+            f"{null_metrics}"
         )
         print(
             "This indicates an LLM statement-extraction failure on "
             "rigid/unparseable outputs."
         )
-        print(
-            "Coercing these values to 0.0 to fail the threshold gate gracefully. "
-            f"Inspect {NULL_DIAGNOSTICS_PATH} for details.\n"
-        )
+        print("Coercing these values to 0.0 to fail the threshold gracefully.")
+        print(f"Inspect {NULL_DIAGNOSTICS_PATH} for details.\n")
 
         # Penalize unparseable responses so they fail the threshold validation
         df[critical_metrics] = df[critical_metrics].fillna(0.0)
