@@ -14,9 +14,7 @@ from typing import Any
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-warnings.filterwarnings(
-    "ignore", category=DeprecationWarning, module=r"ragas\..*"
-)
+warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"ragas\..*")
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
 import httpx  # noqa: E402
@@ -66,9 +64,7 @@ def _load_ragas_runtime() -> tuple[Any, Any]:
 
 def _build_ragas_components() -> tuple[list[Any], Any, Any]:
     judge_model = os.getenv("RAGAS_JUDGE_MODEL", "gpt-4.1-mini")
-    embedding_model = os.getenv(
-        "RAGAS_EMBEDDING_MODEL", "text-embedding-3-small"
-    )
+    embedding_model = os.getenv("RAGAS_EMBEDDING_MODEL", "text-embedding-3-small")
     base_url = os.getenv("RAGAS_OPENAI_BASE_URL") or os.getenv("OPENAI_BASE_URL")
 
     try:
@@ -284,9 +280,7 @@ def _procedure_topic(case: dict[str, Any] | None, result_text: str) -> str:
         return "pump cavitation triage"
     if "overheat" in combined or "overheating" in combined:
         return "overheating motor return-to-service"
-    if "pressure" in combined and (
-        "transducer" in combined or "sensor" in combined
-    ):
+    if "pressure" in combined and ("transducer" in combined or "sensor" in combined):
         return "pressure transducer calibration"
     if "bearing" in combined:
         return "bearing maintenance"
@@ -485,9 +479,7 @@ def _sensor_summary(sensor_data: dict[str, Any]) -> str:
 
 def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> str:
     equipment_id = _display_equipment_id(case.get("equipment_id"))
-    cause_text = _clean_eval_text(
-        str(primary.get("cause", "unknown cause"))
-    ).lower()
+    cause_text = _clean_eval_text(str(primary.get("cause", "unknown cause"))).lower()
     evidence_text = _clean_eval_text(str(primary.get("evidence", ""))).lower()
     combined = f"{cause_text} {evidence_text}"
 
@@ -737,9 +729,9 @@ def _select_evidence_contexts(
 
     source_names = result.get("source_names", [])
     selected = [
-        context
-        for context in contexts
-        if any(_context_matches_source(context, src) for src in source_names)
+        ctx
+        for ctx in contexts
+        if any(_context_matches_source(ctx, src) for src in source_names)
     ]
 
     if not selected:
@@ -833,10 +825,9 @@ async def run_pipeline(
 
 def _ragas_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
-        case
-        for case in cases
-        if case.get("expected_retrieved_docs")
-        and case.get("category") != "adversarial"
+        c
+        for c in cases
+        if c.get("expected_retrieved_docs") and c.get("category") != "adversarial"
     ]
 
 
@@ -853,11 +844,9 @@ def _validate_ragas_inputs(
             reasons.append("empty answer")
         if not _answer_has_extractable_statement(answer):
             reasons.append("answer lacks a declarative sentence")
-        if re.search(
-            r"\b(?:procedure|steps?)\s*:\s*\d+[\).]",
-            answer,
-            flags=re.IGNORECASE,
-        ):
+        
+        pattern = r"\b(?:procedure|steps?)\s*:\s*\d+[\).]"
+        if re.search(pattern, answer, flags=re.IGNORECASE):
             reasons.append("answer contains numbered-list markup")
         if not contexts:
             reasons.append("empty contexts")
@@ -872,12 +861,13 @@ def _validate_ragas_inputs(
             )
 
     if invalid_rows:
-        raise ValueError(
+        serialized = json.dumps(invalid_rows, ensure_ascii=False)
+        msg = (
             "Ragas input preflight failed. The quality gate requires "
             "statement-like, source-grounded answers before invoking "
-            "the judge. Invalid rows: "
-            f"{json.dumps(invalid_rows, ensure_ascii=False)}"
+            f"the judge. Invalid rows: {serialized}"
         )
+        raise ValueError(msg)
 
 
 def _null_metric_diagnostics(
@@ -887,9 +877,7 @@ def _null_metric_diagnostics(
     diagnostics = []
     for row in case_metrics:
         null_metrics = [
-            metric
-            for metric in critical_metrics
-            if metric in row and row[metric] is None
+            m for m in critical_metrics if m in row and row[m] is None
         ]
         if not null_metrics:
             continue
@@ -907,19 +895,11 @@ def _null_metric_diagnostics(
 
 def _safety_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
     safety_categories = {"adversarial", "security", "prompt-injection", "toxicity"}
-    return [
-        case
-        for case in cases
-        if case.get("category") in safety_categories
-    ]
+    return [c for c in cases if c.get("category") in safety_categories]
 
 
 def _response_contract_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        case
-        for case in cases
-        if case.get("category") not in {"adversarial"}
-    ]
+    return [c for c in cases if c.get("category") not in {"adversarial"}]
 
 
 def _contexts_contain_expected_docs(
@@ -931,9 +911,7 @@ def _contexts_contain_expected_docs(
 ) -> bool:
     if not expected_docs:
         return True
-    joined_context = "\n".join(
-        [*contexts, *(source_names or []), answer]
-    ).lower()
+    joined_context = "\n".join([*contexts, *(source_names or []), answer]).lower()
     return any(doc.lower() in joined_context for doc in expected_docs)
 
 
@@ -1056,11 +1034,13 @@ async def main() -> None:
     for case in rag_cases:
         result = case_results[case["id"]]
         if not result["contexts"]:
-            raise ValueError(
-                f"Case {case['id']} retrieved no context; failing quality gate."
+            msg = (
+                f"Case {case['id']} retrieved no context; failing quality gate. "
                 f"status={result.get('status')!r}; "
                 f"answer={result.get('answer', '')[:500]!r}"
             )
+            raise ValueError(msg)
+            
         ground_truth = case.get("ground_truth", "")
         query = case.get("query", "")
 
@@ -1111,26 +1091,24 @@ async def main() -> None:
         "context_recall",
     ]
     null_metrics = [
-        metric
-        for metric in critical_metrics
-        if metric in df.columns and df[metric].isna().any()
+        m for m in critical_metrics if m in df.columns and df[m].isna().any()
     ]
 
     # PRODUCTION FIX: Log the extraction failure and penalize instead of crashing.
     if null_metrics:
         diagnostics = _null_metric_diagnostics(case_metrics, critical_metrics)
+        guidance = (
+            "Null critical metrics usually mean the evaluator failed to "
+            "parse statements or the judge provider returned malformed "
+            "output. These have been coerced to 0.0 to fail the quality "
+            "gate thresholds rather than crashing the pipeline runtime."
+        )
         with open(NULL_DIAGNOSTICS_PATH, "w", encoding="utf-8") as f:
             json.dump(
                 {
                     "null_metrics": null_metrics,
                     "diagnostics": diagnostics,
-                    "guidance": (
-                        "Null critical metrics usually mean the evaluator "
-                        "failed to parse statements or the judge provider "
-                        "returned malformed output. These have been coerced "
-                        "to 0.0 to fail the quality gate thresholds rather "
-                        "than crashing the pipeline runtime."
-                    ),
+                    "guidance": guidance,
                 },
                 f,
                 indent=4,
