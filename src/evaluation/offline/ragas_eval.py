@@ -103,7 +103,9 @@ def _infer_chain(case: dict[str, Any]) -> str:
     query = case.get("query", "").lower()
     if case.get("chain"):
         return str(case["chain"])
-    if any(k in query for k in ["calibrate", "procedure", "maintenance", "steps", "repair"]):
+    if any(
+        k in query for k in ["calibrate", "procedure", "maintenance", "steps", "repair"]
+    ):
         return "remediation"
     return "root_cause"
 
@@ -221,7 +223,9 @@ def _clean_eval_text(text: str) -> str:
 
 def _first_sentences(text: str, limit: int = 2) -> str:
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
-    selected = [sentence.strip() for sentence in sentences if sentence.strip()][:limit]
+    selected = [
+        sentence.strip() for sentence in sentences if sentence.strip()
+    ][:limit]
     return " ".join(selected)
 
 
@@ -278,7 +282,9 @@ def _procedure_topic(case: dict[str, Any] | None, result_text: str) -> str:
         return "pump cavitation triage"
     if "overheat" in combined or "overheating" in combined:
         return "overheating motor return-to-service"
-    if "pressure" in combined and ("transducer" in combined or "sensor" in combined):
+    if "pressure" in combined and (
+        "transducer" in combined or "sensor" in combined
+    ):
         return "pressure transducer calibration"
     if "bearing" in combined:
         return "bearing maintenance"
@@ -300,7 +306,12 @@ def _lower_first(text: str) -> str:
 
 def _strip_eval_overdetail(text: str) -> str:
     cleaned = _strip_procedure_markup(text)
-    cleaned = re.sub(r"\s+using\s+(?:a\s+|an\s+)?[^.;,]+", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\s+using\s+(?:a\s+|an\s+)?[^.;,]+",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
     cleaned = re.sub(r"\s+to ensure\s+[^.;,]+", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\s+functionality\b", "", cleaned, flags=re.IGNORECASE)
     cleaned = cleaned.replace("speed/load", "speed or load")
@@ -370,8 +381,8 @@ def _remediation_case_answer(
         joined = _join_actions(actions)
         if joined:
             return _ensure_sentence(
-                "The standard operating procedure for calibrating a pressure transducer is to "
-                + joined
+                "The standard operating procedure for calibrating a pressure "
+                f"transducer is to {joined}"
             )
 
     if failure_mode == "cavitation":
@@ -382,9 +393,10 @@ def _remediation_case_answer(
         joined = _join_actions(actions)
         if joined:
             symptom_context = ""
-            if all(token in query.lower() for token in ("gravel", "fluctuating", "reduced flow")):
+            if all(t in query.lower() for t in ("gravel", "fluctuating", "reduced flow")):
                 symptom_context = (
-                    " with gravel-like noise, fluctuating discharge pressure, and reduced flow"
+                    " with gravel-like noise, fluctuating discharge pressure, "
+                    "and reduced flow"
                 )
             asset_context = (
                 f"{equipment_id} cavitation triage"
@@ -444,7 +456,10 @@ def _statement_from_procedure_item(item: str, topic: str = "maintenance") -> str
 
 def _answer_has_extractable_statement(answer: str) -> bool:
     sentences = re.findall(r"[^.!?]+[.!?]", answer)
-    return any(len(re.findall(r"[A-Za-z][A-Za-z0-9%/-]*", sentence)) >= 4 for sentence in sentences)
+    return any(
+        len(re.findall(r"[A-Za-z][A-Za-z0-9%/-]*", sentence)) >= 4
+        for sentence in sentences
+    )
 
 
 def _sensor_summary(sensor_data: dict[str, Any]) -> str:
@@ -468,7 +483,9 @@ def _sensor_summary(sensor_data: dict[str, Any]) -> str:
 
 def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> str:
     equipment_id = _display_equipment_id(case.get("equipment_id"))
-    cause_text = _clean_eval_text(str(primary.get("cause", "unknown cause"))).lower()
+    cause_text = _clean_eval_text(
+        str(primary.get("cause", "unknown cause"))
+    ).lower()
     evidence_text = _clean_eval_text(str(primary.get("evidence", ""))).lower()
     combined = f"{cause_text} {evidence_text}"
 
@@ -498,10 +515,10 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
 
     return (
         f"{equipment_id} triggered the anomaly at 03:41 because its high-vibration "
-        f"pattern is consistent with {cause}. The retrieved Pump P-23 bearing procedure "
-        "states that high vibration with stable pressure and flow commonly indicates "
-        "bearing wear, insufficient lubrication, contamination, or misalignment."
-        f"{evidence_sentence}"
+        f"pattern is consistent with {cause}. The retrieved Pump P-23 bearing "
+        "procedure states that high vibration with stable pressure and flow commonly "
+        "indicates bearing wear, insufficient lubrication, contamination, or "
+        f"misalignment.{evidence_sentence}"
     )
 
 
@@ -579,7 +596,9 @@ def _build_case_context(case: dict[str, Any]) -> list[str]:
     if anomaly_description:
         details.append(f"anomaly_description={anomaly_description}")
     if sensor_data:
-        sensor_values = ", ".join(f"{key}={value}" for key, value in sorted(sensor_data.items()))
+        sensor_values = ", ".join(
+            f"{key}={value}" for key, value in sorted(sensor_data.items())
+        )
         details.append(f"sensor_data={sensor_values}")
 
     if not details:
@@ -825,7 +844,11 @@ def _validate_ragas_inputs(
             reasons.append("empty answer")
         if not _answer_has_extractable_statement(answer):
             reasons.append("answer does not contain a declarative sentence")
-        if re.search(r"\b(?:procedure|steps?)\s*:\s*\d+[\).]", answer, flags=re.IGNORECASE):
+        if re.search(
+            r"\b(?:procedure|steps?)\s*:\s*\d+[\).]",
+            answer,
+            flags=re.IGNORECASE,
+        ):
             reasons.append("answer still contains numbered-list presentation markup")
         if not contexts:
             reasons.append("empty contexts")
@@ -854,7 +877,9 @@ def _null_metric_diagnostics(
     diagnostics = []
     for row in case_metrics:
         null_metrics = [
-            metric for metric in critical_metrics if metric in row and row[metric] is None
+            metric
+            for metric in critical_metrics
+            if metric in row and row[metric] is None
         ]
         if not null_metrics:
             continue
@@ -915,7 +940,12 @@ def _check_response_contracts(
             answer=answer,
             source_names=result.get("source_names", []),
         )
-        ok = expected_ok and forbidden_ok and retrieval_ok and result.get("status") == "completed"
+        ok = (
+            expected_ok
+            and forbidden_ok
+            and retrieval_ok
+            and result.get("status") == "completed"
+        )
         passed += int(ok)
         details.append(
             {
@@ -1061,7 +1091,9 @@ async def main() -> None:
         "context_recall",
     ]
     null_metrics = [
-        metric for metric in critical_metrics if metric in df.columns and df[metric].isna().any()
+        metric
+        for metric in critical_metrics
+        if metric in df.columns and df[metric].isna().any()
     ]
 
     # PRODUCTION FIX: Log the extraction failure and penalize instead of crashing.
@@ -1084,8 +1116,7 @@ async def main() -> None:
             )
 
         print(
-            f"\n[WARNING] Ragas returned null values for critical metrics: "
-            f"{null_metrics}"
+            f"\n[WARNING] Ragas returned null values for critical metrics: {null_metrics}"
         )
         print(
             "This indicates an LLM statement-extraction failure on "
