@@ -1063,7 +1063,7 @@ async def main() -> None:
     null_metrics = [
         metric for metric in critical_metrics if metric in df.columns and df[metric].isna().any()
     ]
-    
+
     # PRODUCTION FIX: Log the extraction failure and penalize instead of crashing.
     if null_metrics:
         diagnostics = _null_metric_diagnostics(case_metrics, critical_metrics)
@@ -1082,14 +1082,23 @@ async def main() -> None:
                 f,
                 indent=4,
             )
-            
-        print(f"\n[WARNING] Ragas returned null values for critical metrics: {null_metrics}")
-        print(f"This indicates an LLM statement-extraction failure on rigid/unparseable outputs.")
-        print(f"Coercing these values to 0.0 to fail the threshold gate gracefully. Inspect {NULL_DIAGNOSTICS_PATH} for details.\n")
-        
-        # Penalize the unparseable responses so they fail the threshold validation downstream
+
+        print(
+            f"\n[WARNING] Ragas returned null values for critical metrics: "
+            f"{null_metrics}"
+        )
+        print(
+            "This indicates an LLM statement-extraction failure on "
+            "rigid/unparseable outputs."
+        )
+        print(
+            "Coercing these values to 0.0 to fail the threshold gate gracefully. "
+            f"Inspect {NULL_DIAGNOSTICS_PATH} for details.\n"
+        )
+
+        # Penalize unparseable responses so they fail the threshold validation
         df[critical_metrics] = df[critical_metrics].fillna(0.0)
-        
+
         # Update the per-case metric dictionary to reflect the coerced values
         for row in case_metrics:
             for metric in critical_metrics:
