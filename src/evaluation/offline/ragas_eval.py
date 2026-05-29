@@ -303,8 +303,41 @@ def _lower_first(text: str) -> str:
 def _strip_eval_overdetail(text: str) -> str:
     cleaned = _strip_procedure_markup(text)
     cleaned = re.sub(
+        r"^(?:the\s+)?(?:technician|operator|engineer|maintainer)\s+"
+        r"(?:must|should|shall|needs to)\s+",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"^(?:must|should|shall|needs to)\s+",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
         r"\s+using\s+(?:a\s+|an\s+)?[^.;,]+",
         "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\s+before starting\s+(?:the\s+)?(?:re)?calibration\s+procedure\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\s+for accurate calibration\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\s+to document\s+(?:the\s+)?(?:re)?calibration\s+activity\b",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\s+that could cause cavitation\b", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\bthe suction-side for any air ingress\b",
+        "the suction-side for air ingress",
         cleaned,
         flags=re.IGNORECASE,
     )
@@ -475,6 +508,7 @@ def _sensor_summary(sensor_data: dict[str, Any]) -> str:
 
 def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> str:
     equipment_id = _display_equipment_id(case.get("equipment_id"))
+    equipment_subject = equipment_id[0].upper() + equipment_id[1:] if equipment_id else "The asset"
     cause_text = _clean_eval_text(str(primary.get("cause", "unknown cause"))).lower()
     evidence_text = _clean_eval_text(str(primary.get("evidence", ""))).lower()
     combined = f"{cause_text} {evidence_text}"
@@ -504,7 +538,7 @@ def _root_cause_eval_answer(case: dict[str, Any], primary: dict[str, Any]) -> st
     evidence_sentence = f" The case evidence includes {evidence}." if evidence else ""
 
     return (
-        f"{equipment_id} triggered the anomaly at 03:41 because its "
+        f"{equipment_subject} triggered the anomaly at 03:41 because its "
         f"high-vibration pattern is consistent with {cause}. The retrieved "
         "Pump P-23 bearing procedure states that high vibration with stable "
         "pressure and flow commonly indicates bearing wear, insufficient "

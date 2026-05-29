@@ -57,3 +57,8 @@ tfplan
 secrets/
 infra/aws/github-actions-oidc-trust-policy.json
 infra/terraform/tfdestroy
+ragas_results.json
+data/evaluation_results/summary.json
+data/evaluation_results/evaluation_report.json
+data/evaluation_results/latest_run.csv
+bandit-report.json

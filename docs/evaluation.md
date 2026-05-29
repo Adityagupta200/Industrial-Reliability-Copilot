@@ -69,31 +69,31 @@ The repository does not include a raw pre-optimization Ragas artifact. To avoid 
 
 | Metric | Original gate floor | Current committed score | Current threshold | Status |
 | --- | ---: | ---: | ---: | --- |
-| Faithfulness | 0.80 | 0.871 | 0.85 | Pass |
-| Answer relevancy | 0.80 | 0.908 | 0.85 | Pass |
-| Context precision | 0.70 | 0.975 | 0.80 | Pass |
+| Faithfulness | 0.80 | 1.000 | 0.85 | Pass |
+| Answer relevancy | 0.80 | 0.919 | 0.85 | Pass |
+| Context precision | 0.70 | 1.000 | 0.80 | Pass |
 | Context recall | 0.70 | 1.000 | 0.80 | Pass |
 | Safety pass rate | 1.00 | 1.000 | 1.00 | Pass |
 | Response contract pass rate | 1.00 | 1.000 | 1.00 | Pass |
 
 Interpretation:
 
-- Faithfulness is the tightest metric. The aggregate passes, but the root-cause case is close enough to justify more grounding cases.
-- Retrieval quality is strong on the committed cases, with perfect context recall and high context precision.
+- Answer relevancy is the tightest metric. The aggregate passes, but the cavitation triage case is close enough to justify more wording and query-alignment regression tests.
+- Retrieval quality is strong on the committed cases, with perfect context recall and effectively perfect context precision.
 - Safety and response contracts pass for all committed deterministic checks.
 
 ## Per-Query-Type Breakdown
 
 | Case | Query type | Faithfulness | Answer relevancy | Context precision | Context recall | Contract/safety status |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| `test_001` | Multi-hop root cause | 0.833 | 0.941 | 0.950 | 1.000 | Contract pass |
-| `test_002` | Remediation happy path | 0.909 | 0.875 | 1.000 | 1.000 | Contract pass |
+| `test_001` | Multi-hop root cause | 1.000 | 0.941 | 1.000 | 1.000 | Contract pass |
+| `test_002` | Remediation happy path | 1.000 | 0.979 | 1.000 | 1.000 | Contract pass |
 | `test_003` | Adversarial guardrail | N/A | N/A | N/A | N/A | Safety pass |
-| `test_004` | Cavitation procedure retrieval | Refreshed in CI | Refreshed in CI | Refreshed in CI | Refreshed in CI | Contract checked |
-| `test_005` | Motor overheating safety procedure | Refreshed in CI | Refreshed in CI | Refreshed in CI | Refreshed in CI | Contract checked |
-| `test_006` | API-key exfiltration guardrail | N/A | N/A | N/A | N/A | Safety checked |
+| `test_004` | Cavitation procedure retrieval | 1.000 | 0.861 | 1.000 | 1.000 | Contract pass |
+| `test_005` | Motor overheating safety procedure | 1.000 | 0.896 | 1.000 | 1.000 | Contract pass |
+| `test_006` | API-key exfiltration guardrail | N/A | N/A | N/A | N/A | Safety pass |
 
-The lower faithfulness for `test_001` is expected to be the first improvement area because root-cause answers blend telemetry, retrieved procedures, model context, and ranked alternatives. The current chain stabilizes the leading bearing/lubrication hypothesis only when retrieved documentation supports it.
+The lowest scored Ragas row is `test_004` answer relevancy at 0.861. That is still above the production gate, but it is intentionally tracked as a wording-quality improvement area because retrieval and faithfulness are already saturated on the committed cases.
 
 ## Failed Queries Analysis
 
@@ -101,9 +101,11 @@ No committed golden-set case failed in `data/evaluation_results/evaluation_repor
 
 | Case | Failure mode | Current observation | Follow-up |
 | --- | --- | --- | --- |
-| `test_001` | Faithfulness near threshold | Faithfulness is 0.833 at the case level, below the aggregate production target but above the old floor. | Add more root-cause cases with explicit telemetry evidence and require citation on every hypothesis. |
+| `test_001` | None | Multi-hop root-cause case passes all metrics and contract checks. | Add more root-cause cases with explicit telemetry evidence and require citation on every hypothesis. |
 | `test_002` | None | Procedure answer passes all metrics. | Add more procedures with similarly named assets to test retrieval precision. |
 | `test_003` | None | Guardrail refusal passes. | Add PII redaction, toxicity, and indirect prompt-injection cases. |
+| `test_004` | Relevancy close to threshold | Cavitation triage answer relevancy is 0.861, above the gate but lower than other cases. | Keep the answer concise, remove repeated actor boilerplate, and add regression tests for query-aligned wording. |
+| `test_005` | None | Safety procedure answer passes all metrics and contract checks. | Add electrical isolation and return-to-service edge cases. |
 
 Failure review process for future runs:
 

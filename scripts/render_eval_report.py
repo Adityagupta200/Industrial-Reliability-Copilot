@@ -90,8 +90,43 @@ def _gate_failures(report: dict[str, Any]) -> list[str]:
     return failures
 
 
+def _review_notes(report: dict[str, Any]) -> list[str]:
+    notes: list[str] = []
+    case_count = report.get("case_count", {})
+    ragas_cases = int(case_count.get("ragas", 0) or 0)
+    total_cases = int(case_count.get("total", 0) or 0)
+    if ragas_cases == min_ragas_cases() or total_cases == min_total_cases():
+        notes.append(
+            "Golden-set coverage is exactly at the CI minimum; expand it before claiming broad "
+            "industrial-domain coverage."
+        )
+
+    closest: tuple[float, str, str, float, float] | None = None
+    for row in report.get("case_metrics", []):
+        case_id = str(row.get("case_id", "unknown"))
+        for metric, threshold in RAGAS_THRESHOLDS.items():
+            if metric not in row:
+                continue
+            score = _score(row.get(metric))
+            margin = score - threshold
+            candidate = (margin, case_id, metric, score, threshold)
+            if closest is None or margin < closest[0]:
+                closest = candidate
+
+    if closest is not None and closest[0] < 0.05:
+        margin, case_id, metric, score, threshold = closest
+        relation = "below" if margin < 0 else "above"
+        notes.append(
+            f"Closest per-case quality margin: `{case_id}` `{metric}` is {score:.3f}, "
+            f"{abs(margin):.3f} {relation} the {threshold:.2f} production threshold."
+        )
+
+    return notes
+
+
 def render_markdown(report: dict[str, Any], golden_cases: list[dict[str, Any]]) -> str:
     failures = _gate_failures(report)
+    review_notes = _review_notes(report)
     gate_status = "PASS" if not failures else "FAIL"
     case_count = report.get("case_count", {})
     cases_by_id = _case_lookup(golden_cases)
@@ -208,6 +243,15 @@ def render_markdown(report: dict[str, Any], golden_cases: list[dict[str, Any]]) 
                 "",
             ]
         )
+        if review_notes:
+            lines.extend(
+                [
+                    "### Review Notes",
+                    "",
+                    *[f"- {note}" for note in review_notes],
+                    "",
+                ]
+            )
 
     lines.append(
         "*Full artifacts: `ragas_results.json`, `data/evaluation_results/latest_run.csv`, "

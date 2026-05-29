@@ -140,6 +140,69 @@ def test_pressure_transducer_eval_answer_is_concise_and_question_aligned() -> No
     assert "replace cable" not in answer
 
 
+def test_eval_answer_removes_actor_boilerplate_from_generated_steps() -> None:
+    case = {
+        "failure_mode": "sensor_calibration",
+        "query": "What are the standard operating procedures for calibrating a pressure transducer?",
+    }
+    result = {
+        "safety_warnings": [
+            "The technician must depressurize the line and confirm zero pressure with a gauge "
+            "before starting the recalibration procedure.",
+            "The technician must follow lockout/tagout (LOTO) procedures where applicable.",
+        ],
+        "steps": [
+            "The technician must connect a calibrated pressure reference or deadweight tester "
+            "to the pressure sensor for accurate calibration.",
+            "The technician must apply pressure points at 0%, 50%, and 100%.",
+            "The technician must adjust the zero point and span of the pressure sensor until "
+            "the readings are within the specified tolerance.",
+            "The technician must record the calibration results and update the maintenance log "
+            "to document the recalibration activity.",
+        ],
+    }
+
+    answer = _build_eval_answer("", result, "remediation", case)
+
+    assert answer.startswith(
+        "The standard operating procedure for calibrating a pressure transducer is to "
+        "depressurize"
+    )
+    assert "the technician must" not in answer.lower()
+    assert "is to the" not in answer.lower()
+    assert "for accurate calibration" not in answer
+    assert "to document the recalibration activity" not in answer
+
+
+def test_cavitation_eval_answer_removes_actor_boilerplate() -> None:
+    case = {
+        "equipment_id": "pump_P-23",
+        "failure_mode": "cavitation",
+        "query": (
+            "What triage steps should I follow when pump P-23 has gravel-like noise, "
+            "fluctuating discharge pressure, and reduced flow?"
+        ),
+    }
+    result = {
+        "steps": [
+            "The technician must check the suction strainer for blockage.",
+            "The technician must verify the Net Positive Suction Head (NPSH) conditions and "
+            "confirm the suction valve position is correct.",
+            "The technician must inspect the suction-side for any air ingress that could cause "
+            "cavitation.",
+            "The technician must reduce the pump speed or load temporarily and observe any "
+            "changes in noise, pressure, or flow.",
+        ]
+    }
+
+    answer = _build_eval_answer("", result, "remediation", case)
+
+    assert answer.startswith("For pump P-23 cavitation triage")
+    assert "the technician must" not in answer.lower()
+    assert "suction-side for air ingress" in answer
+    assert "that could cause cavitation" not in answer
+
+
 def test_generic_procedure_projection_removes_list_markup_and_sources() -> None:
     case = {"query": "How should I inspect a gearbox after an alarm?"}
     result = {

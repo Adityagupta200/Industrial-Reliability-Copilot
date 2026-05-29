@@ -53,12 +53,14 @@ Quality scores are from the committed `ragas_results.json` artifact.
 
 | Area | Metric | Current value | Gate or target | Evidence |
 | --- | --- | ---: | ---: | --- |
-| RAG quality | Faithfulness | 0.871 | >= 0.85 | `ragas_results.json` |
-| RAG quality | Answer relevancy | 0.908 | >= 0.85 | `ragas_results.json` |
-| Retrieval | Context precision | 0.975 | >= 0.80 | `ragas_results.json` |
+| RAG quality | Faithfulness | 1.000 | >= 0.85 | `ragas_results.json` |
+| RAG quality | Answer relevancy | 0.919 | >= 0.85 | `ragas_results.json` |
+| Retrieval | Context precision | 1.000 | >= 0.80 | `ragas_results.json` |
 | Retrieval | Context recall | 1.000 | >= 0.80 | `ragas_results.json` |
 | Safety | Adversarial pass rate | 1.000 | 1.000 | `data/evaluation_results/evaluation_report.json` |
 | Contracts | Response contract pass rate | 1.000 | 1.000 | `data/evaluation_results/evaluation_report.json` |
+| Evaluation coverage | Golden set | 4 Ragas / 6 total | >= 4 / >= 6 | `ragas_results.json` |
+| Security | Bandit findings | 0 | 0 high/medium/low | `bandit-report.json` |
 | Tests | Coverage | 53 percent | >= 50 percent CI floor | local `.coverage` report |
 
 Operational targets are documented separately from measured artifacts:

@@ -48,6 +48,7 @@ def test_render_markdown_summarizes_quality_gate() -> None:
     assert "- Ragas cases: `4` (minimum `4`)" in markdown
     assert "`adversarial`=2" in markdown
     assert "| `test_001` | multi-hop | Why did pump P-23 trigger anomaly at 03:41?" in markdown
+    assert "Golden-set coverage is exactly at the CI minimum" in markdown
 
 
 def test_render_markdown_flags_small_or_failing_gate() -> None:
@@ -70,3 +71,32 @@ def test_render_markdown_flags_small_or_failing_gate() -> None:
     assert "faithfulness 0.720 < 0.85" in markdown
     assert "safety pass rate below 1.00" in markdown
     assert "Ragas case count 2 < 4" in markdown
+
+
+def test_render_markdown_notes_near_threshold_case_metric() -> None:
+    report = {
+        "ragas": {
+            "faithfulness": 1.0,
+            "answer_relevancy": 0.92,
+            "context_precision": 1.0,
+            "context_recall": 1.0,
+        },
+        "safety": {"passed": 2, "total": 2, "pass_rate": 1.0},
+        "response_contracts": {"passed": 4, "total": 4, "pass_rate": 1.0},
+        "case_count": {"ragas": 6, "total": 8},
+        "case_metrics": [
+            {
+                "case_id": "test_004",
+                "question": "What triage steps should I follow?",
+                "faithfulness": 1.0,
+                "answer_relevancy": 0.861,
+                "context_precision": 1.0,
+                "context_recall": 1.0,
+            }
+        ],
+    }
+
+    markdown = render_markdown(report, [{"id": "test_004", "category": "retrieval-edge"}])
+
+    assert "Closest per-case quality margin" in markdown
+    assert "`test_004` `answer_relevancy` is 0.861" in markdown
