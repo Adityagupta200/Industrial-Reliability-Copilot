@@ -7,6 +7,7 @@ import asyncio
 import hashlib
 import json
 from contextlib import asynccontextmanager
+from typing import Final
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks
@@ -56,6 +57,8 @@ if os.getenv("LANGCHAIN_API_KEY"):
 limiter = Limiter(key_func=get_remote_address)
 
 QUERY_CACHE: dict[str, QueryResponse] = {}
+LLM_USAGE_INPUT_LABEL: Final = "input"
+LLM_USAGE_OUTPUT_LABEL: Final = "output"
 
 REQUEST_COUNT = Counter(
     "orchestrator_requests_total",
@@ -365,10 +368,14 @@ def create_app() -> FastAPI:
 
             if _is_billable_llm_provider(model_provider):
                 LLM_TOKENS.labels(
-                    provider=model_provider, model=model_name, token_type="input"
+                    provider=model_provider,
+                    model=model_name,
+                    token_type=LLM_USAGE_INPUT_LABEL,
                 ).inc(estimated_input_tokens)
                 LLM_TOKENS.labels(
-                    provider=model_provider, model=model_name, token_type="output"
+                    provider=model_provider,
+                    model=model_name,
+                    token_type=LLM_USAGE_OUTPUT_LABEL,
                 ).inc(estimated_output_tokens)
 
             recall_proxy = min(len(contexts) / 10.0, 1.0) if contexts else 0.0

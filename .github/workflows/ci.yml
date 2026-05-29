@@ -42,7 +42,23 @@ jobs:
       - name: Security scan
         run: |
           pip install bandit
+          set +e
           bandit -r src/ -f json -o bandit-report.json
+          bandit_status=$?
+          if [ "$bandit_status" -ne 0 ]; then
+            echo "::group::Bandit findings"
+            bandit -r src/
+            echo "::endgroup::"
+          fi
+          exit "$bandit_status"
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+          if-no-files-found: ignore
           
       - name: Run unit tests
         run: pytest tests/unit/ -v --cov=src --cov-report=term-missing --cov-fail-under=50
