@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload Bandit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bandit-report
           path: bandit-report.json
@@ -174,7 +174,7 @@ jobs:
         run: python scripts/check_thresholds.py
 
       - name: Upload evaluation artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: ragas-evaluation-artifacts
@@ -183,6 +183,7 @@ jobs:
             data/evaluation_results/summary.json
             data/evaluation_results/latest_run.csv
             data/evaluation_results/evaluation_report.json
+            data/evaluation_results/null_metric_diagnostics.json
             data/evaluation_results/pr_comment.md
           if-no-files-found: ignore
         
