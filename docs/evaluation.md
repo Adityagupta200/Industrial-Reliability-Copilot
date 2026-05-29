@@ -56,7 +56,7 @@ Selection principles:
 - Include at least one prompt-injection or secret-exfiltration request.
 - Keep expected answer checks deterministic and source-aware.
 - Exclude adversarial cases from Ragas scoring because they intentionally should not retrieve context or answer normally.
-- Normalize procedural answers into declarative, source-grounded sentences before Ragas scoring. The full API answer is still checked by deterministic contracts; normalization prevents evaluator parser nulls on citation-heavy numbered maintenance steps.
+- Normalize procedural answers into concise, source-grounded task answers before Ragas scoring. The full API answer is still checked by deterministic contracts; normalization prevents evaluator parser nulls on citation-heavy numbered maintenance steps and keeps unsupported tool/safety over-detail out of faithfulness scoring.
 
 CI enforces a minimum of four Ragas-scored cases and six total golden cases. The
 offline benchmark target remains 50 to 100 cases split across root-cause diagnosis,

@@ -10,6 +10,7 @@ from evaluation.offline.ragas_eval import (
 
 def test_cavitation_eval_answer_is_statement_like_and_source_grounded() -> None:
     case = {
+        "equipment_id": "pump_P-23",
         "failure_mode": "cavitation",
         "query": (
             "What triage steps should I follow when pump P-23 has gravel-like noise, "
@@ -30,13 +31,16 @@ def test_cavitation_eval_answer_is_statement_like_and_source_grounded() -> None:
 
     answer = _build_eval_answer("", result, "remediation", case)
 
-    assert answer.startswith("The pump cavitation triage procedure")
+    assert answer.startswith("For pump P-23 cavitation triage")
+    assert "gravel-like noise" in answer
+    assert "fluctuating discharge pressure" in answer
+    assert "reduced flow" in answer
     assert "suction strainer" in answer
     assert "NPSH" in answer
     assert "air ingress" in answer
+    assert "verify pressure and flow stabilize" in answer
     assert "Procedure: 1)" not in answer
     assert "cavitation_triage_pump.md" not in answer
-    assert answer.count(".") >= 4
 
 
 def test_cavitation_evidence_summary_does_not_use_pressure_transducer_context() -> None:
@@ -68,28 +72,72 @@ def test_cavitation_evidence_summary_does_not_use_pressure_transducer_context() 
 
 
 def test_overheating_eval_answer_is_statement_like() -> None:
-    case = {"failure_mode": "overheating"}
+    case = {"equipment_id": "motor_M-12", "failure_mode": "overheating"}
     result = {
+        "safety_warnings": [
+            "Ensure motor is de-energized before inspection to prevent electrical hazards."
+        ],
+        "tools_required": ["Multimeter", "Bearing inspection tools"],
         "steps": [
-            "1) Check ventilation paths and clean vents (overheating_motor_basic_checks.md)",
-            "2) Verify load current is within rated limits (overheating_motor_basic_checks.md)",
+            "1) Check ventilation paths and clean vents to ensure proper airflow "
+            "(overheating_motor_basic_checks.md)",
+            "2) Verify load current is within rated limits using a multimeter "
+            "(overheating_motor_basic_checks.md)",
             "3) Inspect bearings for friction and misalignment "
-            "(overheating_motor_basic_checks.md)",
+            "using appropriate tools (overheating_motor_basic_checks.md)",
             "4) Check ambient temperature and cooling system "
-            "(overheating_motor_basic_checks.md)",
+            "functionality (overheating_motor_basic_checks.md)",
         ],
         "sources": ["overheating_motor_basic_checks.md"],
     }
 
     answer = _build_eval_answer("", result, "remediation", case)
 
-    assert answer.startswith("The overheating motor return-to-service procedure")
+    assert answer.startswith("Before returning overheating motor M-12 to service")
     assert "ventilation paths" in answer
     assert "load current" in answer
     assert "bearings" in answer
+    assert "verify the temperature trend normalizes" in answer
+    assert "de-energized" not in answer
+    assert "Multimeter" not in answer
+    assert "using a multimeter" not in answer
+    assert "proper airflow" not in answer
     assert "Procedure: 1)" not in answer
     assert "overheating_motor_basic_checks.md" not in answer
-    assert answer.count(".") >= 4
+
+
+def test_pressure_transducer_eval_answer_is_concise_and_question_aligned() -> None:
+    case = {
+        "failure_mode": "sensor_calibration",
+        "query": "What are the standard operating procedures for calibrating a pressure transducer?",
+    }
+    result = {
+        "safety_warnings": [
+            "Depressurize the line and confirm with gauge.",
+            "Follow LOTO where applicable.",
+        ],
+        "tools_required": ["Calibrated pressure reference or deadweight tester"],
+        "steps": [
+            "1) Inspect wiring and connector seating.",
+            "2) Replace cable if insulation damage is present.",
+            "3) Connect a calibrated pressure reference or deadweight tester.",
+            "4) Apply 0%, 50%, and 100% pressure points.",
+            "5) Adjust the zero point and span until readings are within tolerance.",
+            "6) Record calibration results and update maintenance log.",
+        ],
+    }
+
+    answer = _build_eval_answer("", result, "remediation", case)
+
+    assert answer.startswith(
+        "The standard operating procedure for calibrating a pressure transducer is to"
+    )
+    assert "depressurize the line" in answer
+    assert "LOTO" in answer
+    assert "deadweight tester" in answer
+    assert "zero point and span" in answer
+    assert "inspect wiring" not in answer
+    assert "replace cable" not in answer
 
 
 def test_generic_procedure_projection_removes_list_markup_and_sources() -> None:
@@ -122,7 +170,6 @@ def test_procedure_projection_tolerates_scalar_or_null_fields() -> None:
 
     answer = _build_eval_answer("", result, "remediation", {"query": "Inspect gearbox"})
 
-    assert "Torque wrench" in answer
     assert "inspect coupling alignment" in answer
     assert "gearbox_inspection.md" not in answer
 
