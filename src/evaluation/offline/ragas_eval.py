@@ -391,8 +391,7 @@ def _remediation_case_answer(
             symptom_ctx = ""
             if all(t in query.lower() for t in ("gravel", "fluctuating", "reduced")):
                 symptom_ctx = (
-                    " with gravel-like noise, fluctuating discharge pressure, "
-                    "and reduced flow"
+                    " with gravel-like noise, fluctuating discharge pressure, " "and reduced flow"
                 )
             asset_context = (
                 f"{equipment_id} cavitation triage"
@@ -452,10 +451,7 @@ def _statement_from_procedure_item(item: str, topic: str = "maintenance") -> str
 
 def _answer_has_extractable_statement(answer: str) -> bool:
     sentences = re.findall(r"[^.!?]+[.!?]", answer)
-    return any(
-        len(re.findall(r"[A-Za-z][A-Za-z0-9%/-]*", sentence)) >= 4
-        for sentence in sentences
-    )
+    return any(len(re.findall(r"[A-Za-z][A-Za-z0-9%/-]*", sentence)) >= 4 for sentence in sentences)
 
 
 def _sensor_summary(sensor_data: dict[str, Any]) -> str:
@@ -590,9 +586,7 @@ def _build_case_context(case: dict[str, Any]) -> list[str]:
     if anomaly_description:
         details.append(f"anomaly_description={anomaly_description}")
     if sensor_data:
-        sensor_values = ", ".join(
-            f"{key}={value}" for key, value in sorted(sensor_data.items())
-        )
+        sensor_values = ", ".join(f"{key}={value}" for key, value in sorted(sensor_data.items()))
         details.append(f"sensor_data={sensor_values}")
 
     if not details:
@@ -720,18 +714,14 @@ def _context_matches_source(context: str, source_name: str) -> bool:
     )
 
 
-def _select_evidence_contexts(
-    result: dict[str, Any], case: dict[str, Any]
-) -> list[str]:
+def _select_evidence_contexts(result: dict[str, Any], case: dict[str, Any]) -> list[str]:
     contexts = result.get("contexts", [])
     if not contexts:
         return []
 
     source_names = result.get("source_names", [])
     selected = [
-        ctx
-        for ctx in contexts
-        if any(_context_matches_source(ctx, src) for src in source_names)
+        ctx for ctx in contexts if any(_context_matches_source(ctx, src) for src in source_names)
     ]
 
     if not selected:
@@ -742,9 +732,7 @@ def _select_evidence_contexts(
     return selected[:max_contexts]
 
 
-async def run_pipeline(
-    client: httpx.AsyncClient, case: dict[str, Any]
-) -> dict[str, Any]:
+async def run_pipeline(client: httpx.AsyncClient, case: dict[str, Any]) -> dict[str, Any]:
     payload = _build_payload(case)
     query = case.get("query", "")
 
@@ -825,9 +813,7 @@ async def run_pipeline(
 
 def _ragas_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
-        c
-        for c in cases
-        if c.get("expected_retrieved_docs") and c.get("category") != "adversarial"
+        c for c in cases if c.get("expected_retrieved_docs") and c.get("category") != "adversarial"
     ]
 
 
@@ -844,7 +830,7 @@ def _validate_ragas_inputs(
             reasons.append("empty answer")
         if not _answer_has_extractable_statement(answer):
             reasons.append("answer lacks a declarative sentence")
-        
+
         pattern = r"\b(?:procedure|steps?)\s*:\s*\d+[\).]"
         if re.search(pattern, answer, flags=re.IGNORECASE):
             reasons.append("answer contains numbered-list markup")
@@ -876,9 +862,7 @@ def _null_metric_diagnostics(
 ) -> list[dict[str, Any]]:
     diagnostics = []
     for row in case_metrics:
-        null_metrics = [
-            m for m in critical_metrics if m in row and row[m] is None
-        ]
+        null_metrics = [m for m in critical_metrics if m in row and row[m] is None]
         if not null_metrics:
             continue
         diagnostics.append(
@@ -938,12 +922,7 @@ def _check_response_contracts(
             answer=answer,
             source_names=result.get("source_names", []),
         )
-        ok = (
-            expected_ok
-            and forbidden_ok
-            and retrieval_ok
-            and result.get("status") == "completed"
-        )
+        ok = expected_ok and forbidden_ok and retrieval_ok and result.get("status") == "completed"
         passed += int(ok)
         details.append(
             {
@@ -1040,7 +1019,7 @@ async def main() -> None:
                 f"answer={result.get('answer', '')[:500]!r}"
             )
             raise ValueError(msg)
-            
+
         ground_truth = case.get("ground_truth", "")
         query = case.get("query", "")
 
@@ -1090,9 +1069,7 @@ async def main() -> None:
         "context_precision",
         "context_recall",
     ]
-    null_metrics = [
-        m for m in critical_metrics if m in df.columns and df[m].isna().any()
-    ]
+    null_metrics = [m for m in critical_metrics if m in df.columns and df[m].isna().any()]
 
     # PRODUCTION FIX: Log the extraction failure and penalize instead of crashing.
     if null_metrics:
@@ -1114,14 +1091,8 @@ async def main() -> None:
                 indent=4,
             )
 
-        print(
-            "\n[WARNING] Ragas returned null values for critical metrics: "
-            f"{null_metrics}"
-        )
-        print(
-            "This indicates an LLM statement-extraction failure on "
-            "rigid/unparseable outputs."
-        )
+        print("\n[WARNING] Ragas returned null values for critical metrics: " f"{null_metrics}")
+        print("This indicates an LLM statement-extraction failure on " "rigid/unparseable outputs.")
         print("Coercing these values to 0.0 to fail the threshold gracefully.")
         print(f"Inspect {NULL_DIAGNOSTICS_PATH} for details.\n")
 
