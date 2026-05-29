@@ -1,8 +1,9 @@
 import re
 import asyncio
 import logging
-from typing import Tuple
-from langsmith import traceable  # PRODUCTION FIX: Explicit Tracing
+import os
+from typing import Any, Tuple
+from langsmith import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,75 @@ UNSAFE_PATTERNS = [
     r"skip inspection",
     r"override emergency",
 ]
+
+GROUNDING_STOPWORDS = {
+    "answer",
+    "based",
+    "cause",
+    "claim",
+    "claims",
+    "confidence",
+    "current",
+    "document",
+    "evidence",
+    "hypotheses",
+    "hypothesis",
+    "json",
+    "likely",
+    "model",
+    "provided",
+    "source",
+    "states",
+    "supported",
+    "technical",
+}
+
+
+def _llm_judge_mode() -> str:
+    """Resolve the groundedness judge policy.
+
+    fallback: deterministic pass/fail first; LLM judge only for inconclusive cases.
+    audit: deterministic pass still records a real LLM judge trace for evidence.
+    strict: deterministic pass and LLM judge must both pass.
+    off: never call the LLM judge; use deterministic/lexical checks only.
+    """
+    raw_mode = os.getenv("OUTPUT_GUARDRAILS_LLM_JUDGE_MODE", "fallback").strip().lower()
+    aliases = {
+        "0": "off",
+        "false": "off",
+        "no": "off",
+        "deterministic": "off",
+        "1": "audit",
+        "true": "audit",
+        "always": "audit",
+    }
+    mode = aliases.get(raw_mode, raw_mode)
+    if mode not in {"fallback", "audit", "strict", "off"}:
+        logger.warning(
+            "Unknown OUTPUT_GUARDRAILS_LLM_JUDGE_MODE=%r; using fallback mode.",
+            raw_mode,
+        )
+        return "fallback"
+    return mode
+
+
+def _trace_grounding_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
+    context = str(inputs.get("context", ""))
+    answer = str(inputs.get("answer", ""))
+    initial_input = str(inputs.get("initial_input", ""))
+    return {
+        "context_chars": len(context),
+        "answer_chars": len(answer),
+        "initial_input_chars": len(initial_input),
+        "judge_mode": _llm_judge_mode(),
+    }
+
+
+def _trace_grounding_outputs(outputs: float | None) -> dict[str, Any]:
+    return {
+        "score": outputs,
+        "method": "inconclusive" if outputs is None else "scored",
+    }
 
 
 class OutputGuardrails:
@@ -54,34 +124,98 @@ class OutputGuardrails:
         return 0.0
 
     @staticmethod
-    @traceable(run_type="llm", name="Groundedness_LLM_Judge")  # PRODUCTION FIX: Explicit Tracing
-    async def check_groundedness(
-        llm_client, context: str, answer: str, initial_input: str = ""
-    ) -> float:
-        """LLM-as-a-judge: Ensure answer relies purely on retrieved context."""
-        if "NO DOCUMENTATION FOUND" in context or context.strip() == "NONE":
+    def _claim_tokens(text: str) -> set[str]:
+        tokens = {
+            token
+            for token in re.findall(r"\b[a-zA-Z][a-zA-Z0-9_-]{3,}\b", text.lower())
+            if token not in GROUNDING_STOPWORDS and not token.startswith("doc_")
+        }
+        return tokens
+
+    @classmethod
+    def _deterministic_groundedness(
+        cls, context: str, answer: str, initial_input: str = ""
+    ) -> float | None:
+        answer_doc_tags = set(re.findall(r"\bDOC[_\W]*(\d+)\b", answer, re.IGNORECASE))
+        context_doc_tags = set(re.findall(r"\bDOC[_\W]*(\d+)\b", context, re.IGNORECASE))
+        if not answer_doc_tags:
+            return None
+        if not answer_doc_tags.issubset(context_doc_tags):
+            logger.warning("Deterministic groundedness failed due to hallucinated DOC tag.")
+            return 0.0
+
+        answer_tokens = cls._claim_tokens(answer)
+        if not answer_tokens:
             return 1.0
 
+        support_text = f"{context}\n{initial_input}".lower()
+        overlap = sum(1 for token in answer_tokens if token in support_text)
+        ratio = overlap / len(answer_tokens)
+        threshold = float(
+            os.getenv("OUTPUT_GUARDRAILS_DETERMINISTIC_GROUNDEDNESS_THRESHOLD", "0.35")
+        )
+
+        if ratio >= threshold:
+            logger.info(f"Deterministic groundedness passed (Overlap Ratio: {ratio:.2f})")
+            return 1.0
+
+        logger.info(
+            "Deterministic groundedness inconclusive "
+            f"(Overlap Ratio: {ratio:.2f}); falling back to LLM judge."
+        )
+        return None
+
+    @staticmethod
+    @traceable(
+        run_type="chain",
+        name="Deterministic_Groundedness_Check",
+        process_inputs=_trace_grounding_inputs,
+        process_outputs=_trace_grounding_outputs,
+    )
+    def _deterministic_groundedness_trace(
+        context: str, answer: str, initial_input: str = ""
+    ) -> float | None:
+        return OutputGuardrails._deterministic_groundedness(context, answer, initial_input)
+
+    @staticmethod
+    @traceable(
+        run_type="chain",
+        name="Groundedness_LLM_Judge",
+        process_inputs=_trace_grounding_inputs,
+        process_outputs=_trace_grounding_outputs,
+    )
+    async def _run_llm_groundedness_judge(
+        llm_client, context: str, answer: str, initial_input: str = ""
+    ) -> float:
         truncated_answer = answer[:1000]
+        truncated_initial_input = initial_input[:1200]
 
         prompt = (
-            "Task: Determine if the technical claims made inside the JSON Answer are factually supported by the Context.\n"
-            "Output ONLY the word PASS if supported, or FAIL if contradicting.\n\n"
-            f"--- Context ---\n{context}\n\n"
+            "Task: Determine whether every technical claim in the JSON Answer is "
+            "supported by either the Retrieved Context or the Request Evidence.\n"
+            "Telemetry and anomaly fields in Request Evidence count as support. "
+            "General industrial knowledge that is not present in these sections does not.\n"
+            "Output ONLY PASS if all material claims are supported. Output ONLY FAIL if "
+            "any material claim is unsupported or contradicts the evidence.\n\n"
+            f"--- Request Evidence ---\n{truncated_initial_input}\n\n"
+            f"--- Retrieved Context ---\n{context}\n\n"
             f"--- Answer (JSON) ---\n{truncated_answer}"
         )
 
         try:
+            judge_provider = os.getenv("OUTPUT_GUARDRAILS_LLM_JUDGE_PROVIDER", "openai")
+            force_provider = None if judge_provider.strip().lower() == "auto" else judge_provider
             result = await asyncio.wait_for(
-                llm_client.invoke(prompt, is_judge=True, force_provider="openai"), timeout=45.0
+                llm_client.invoke(prompt, is_judge=True, force_provider=force_provider),
+                timeout=45.0,
             )
             content = result.content.strip().upper()
 
             if "PASS" in content and "FAIL" not in content:
                 return 1.0
             elif "FAIL" in content and "PASS" not in content:
-                logger.warning("LLM Judge returned FAIL. Triggering deterministic fallback.")
-                return OutputGuardrails._lexical_fallback(context, answer)
+                logger.warning("LLM Judge returned FAIL.")
+                return 0.0
             elif "PASS" in content:
                 return 1.0
             else:
@@ -97,8 +231,50 @@ class OutputGuardrails:
             logger.error(f"Groundedness check failed: {e}. Triggering deterministic fallback.")
             return OutputGuardrails._lexical_fallback(context, answer)
 
+    @staticmethod
+    async def check_groundedness(
+        llm_client, context: str, answer: str, initial_input: str = ""
+    ) -> float:
+        """Ensure an answer relies only on retrieved context and request evidence."""
+        if "NO DOCUMENTATION FOUND" in context or context.strip() == "NONE":
+            return 1.0
+
+        judge_mode = _llm_judge_mode()
+        deterministic_score = OutputGuardrails._deterministic_groundedness_trace(
+            context, answer, initial_input
+        )
+
+        if deterministic_score == 0.0:
+            return 0.0
+
+        if judge_mode == "off":
+            if deterministic_score is not None:
+                return deterministic_score
+            return OutputGuardrails._lexical_fallback(context, answer)
+
+        if deterministic_score is not None and judge_mode == "fallback":
+            return deterministic_score
+
+        llm_score = await OutputGuardrails._run_llm_groundedness_judge(
+            llm_client, context, answer, initial_input
+        )
+
+        if deterministic_score is None:
+            return llm_score
+
+        if judge_mode == "strict":
+            return min(deterministic_score, llm_score)
+
+        if llm_score < 0.8:
+            logger.warning(
+                "Groundedness LLM audit disagreed with deterministic pass "
+                "(llm_score=%.2f). Keeping deterministic score in audit mode.",
+                llm_score,
+            )
+        return deterministic_score
+
     @classmethod
-    @traceable(run_type="chain", name="Output_Guardrails")  # PRODUCTION FIX: Explicit Tracing
+    @traceable(run_type="chain", name="Output_Guardrails")
     async def validate_output(
         cls, llm_client, context: str, answer: str, initial_input: str = ""
     ) -> Tuple[bool, str]:

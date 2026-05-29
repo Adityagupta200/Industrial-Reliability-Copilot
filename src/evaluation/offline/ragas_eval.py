@@ -48,7 +48,7 @@ def _load_ragas_runtime() -> tuple[Any, Any]:
 
 
 def _build_ragas_components() -> tuple[list[Any], Any, Any]:
-    judge_model = os.getenv("RAGAS_JUDGE_MODEL", "gpt-4o-mini")
+    judge_model = os.getenv("RAGAS_JUDGE_MODEL", "gpt-4.1-mini")
     embedding_model = os.getenv("RAGAS_EMBEDDING_MODEL", "text-embedding-3-small")
     base_url = os.getenv("RAGAS_OPENAI_BASE_URL") or os.getenv("OPENAI_BASE_URL")
 
@@ -126,7 +126,11 @@ async def _wait_for_job(client: httpx.AsyncClient, job_id: str) -> dict[str, Any
     status_url = f"{ORCHESTRATOR_URL.rstrip('/')}/{job_id}"
     for _ in range(int(os.getenv("RAGAS_JOB_POLL_ATTEMPTS", "60"))):
         await asyncio.sleep(float(os.getenv("RAGAS_JOB_POLL_SECONDS", "1")))
-        response = await client.get(status_url, timeout=15.0)
+        response = await client.get(
+            status_url,
+            params={"include_raw_context": "true"},
+            timeout=15.0,
+        )
         response.raise_for_status()
         data = response.json()
         if data.get("status") in {"completed", "failed"}:

@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from typing import Optional
 
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage
+from openai import AsyncOpenAI
 
 from .base import LLMProvider, LLMResult, LLMTransientError, LLMFatalError
+
+
+def _requires_max_completion_tokens(model: str) -> bool:
+    normalized = model.lower().strip()
+    return normalized.startswith(("gpt-5", "o1", "o3", "o4"))
 
 
 class OpenAIProvider(LLMProvider):
@@ -24,25 +28,34 @@ class OpenAIProvider(LLMProvider):
             raise LLMFatalError("OpenAI API key is not configured (LLM_OPENAI_API_KEY).")
 
         self._model_name = model
-        self._client = ChatOpenAI(
+        self._temperature = temperature
+        self._max_tokens = max_tokens
+        self._uses_max_completion_tokens = _requires_max_completion_tokens(model)
+        self._client = AsyncOpenAI(
             api_key=api_key,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            timeout=timeout_s,
             base_url=base_url,
+            timeout=timeout_s,
         )
 
     async def invoke(self, prompt: str, json_mode: bool = False) -> LLMResult:
         try:
-            # PRODUCTION FIX: Use modern LangChain .bind() to avoid kwargs validation crashes
-            client = self._client
-            if json_mode:
-                client = self._client.bind(response_format={"type": "json_object"})
-                prompt += "\n\n[SYSTEM]: You MUST output strictly valid JSON format. No markdown, no conversational text."
+            payload = {
+                "model": self._model_name,
+                "messages": [await self._build_user_message(prompt, json_mode=json_mode)],
+            }
 
-            msg = await client.ainvoke([HumanMessage(content=prompt)])
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
+            if self._uses_max_completion_tokens:
+                payload["max_completion_tokens"] = self._max_tokens
+            else:
+                payload["max_tokens"] = self._max_tokens
+                payload["temperature"] = self._temperature
+
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+
+            response = await self._client.chat.completions.create(**payload)
+            message = response.choices[0].message if response.choices else None
+            content = message.content if message and isinstance(message.content, str) else ""
 
             return LLMResult(content=content, model=self._model_name, provider=self.provider_name)
 
@@ -63,3 +76,11 @@ class OpenAIProvider(LLMProvider):
                 raise LLMFatalError(f"OpenAI fatal configuration/API error: {e}") from e
 
             raise LLMTransientError(f"OpenAI invocation failed: {e}") from e
+
+    async def _build_user_message(self, prompt: str, *, json_mode: bool) -> dict[str, str]:
+        if json_mode:
+            prompt += (
+                "\n\n[SYSTEM]: You MUST output strictly valid JSON format. "
+                "No markdown, no conversational text."
+            )
+        return {"role": "user", "content": prompt}

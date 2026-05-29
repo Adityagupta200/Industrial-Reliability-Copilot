@@ -4,6 +4,7 @@ import os
 from typing import Optional
 import logging
 
+from langsmith import traceable
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from .llm_config import LLMSettings
@@ -12,6 +13,28 @@ from .providers.openai_provider import OpenAIProvider
 from .providers.ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
+
+
+def _trace_llm_inputs(inputs: dict) -> dict:
+    prompt = inputs.get("prompt", "")
+    prompt_text = str(prompt)
+    return {
+        "prompt": prompt_text,
+        "prompt_chars": len(prompt_text),
+        "force_provider": inputs.get("force_provider"),
+        "json_mode": inputs.get("json_mode", False),
+        "is_judge": inputs.get("is_judge", False),
+    }
+
+
+def _trace_llm_outputs(outputs: LLMResult) -> dict:
+    content = outputs.content if isinstance(outputs.content, str) else str(outputs.content)
+    return {
+        "provider": outputs.provider,
+        "model": outputs.model,
+        "content_preview": content[:1200],
+        "content_chars": len(content),
+    }
 
 
 class LLMClient:
@@ -70,6 +93,12 @@ class LLMClient:
     ) -> LLMResult:
         return await provider.invoke(prompt, json_mode=json_mode)
 
+    @traceable(
+        run_type="llm",
+        name="Prompt_Model_Call",
+        process_inputs=_trace_llm_inputs,
+        process_outputs=_trace_llm_outputs,
+    )
     async def invoke(
         self,
         prompt: str,

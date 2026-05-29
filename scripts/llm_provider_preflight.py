@@ -13,6 +13,11 @@ def _is_placeholder(value: str) -> bool:
     return not value or "<" in value or ">" in value or "replace" in lowered
 
 
+def _requires_max_completion_tokens(model: str) -> bool:
+    normalized = model.lower().strip()
+    return normalized.startswith(("gpt-5", "o1", "o3", "o4"))
+
+
 def _post_openai_chat_completion(
     *,
     base_url: str,
@@ -29,9 +34,13 @@ def _post_openai_chat_completion(
                 "content": "Reply with the single word OK.",
             }
         ],
-        "max_tokens": 4,
-        "temperature": 0,
     }
+    if _requires_max_completion_tokens(model):
+        payload["max_completion_tokens"] = 16
+    else:
+        payload["max_tokens"] = 4
+        payload["temperature"] = 0
+
     request = Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),

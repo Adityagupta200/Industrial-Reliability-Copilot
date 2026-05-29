@@ -5,13 +5,14 @@ import time
 import uuid
 import asyncio
 import hashlib
+import json
 from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, BackgroundTasks
-from fastapi.responses import ORJSONResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from prometheus_client import Counter, Histogram, CONTENT_TYPE_LATEST, generate_latest
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -80,9 +81,28 @@ GUARDRAIL_FAILURES = Counter(
 GUARDRAIL_FAILURES.labels(type="input_validation").inc(0)
 GUARDRAIL_FAILURES.labels(type="output_hallucination").inc(0)
 
-LLM_TOKENS = Counter("llm_tokens_total", "Total LLM tokens consumed", ["model", "token_type"])
+INFERENCE_PATH_REQUESTS = Counter(
+    "orchestrator_inference_path_total",
+    "Completed query count by inference path, provider, and model",
+    ["chain", "provider", "model"],
+)
+INFERENCE_PATH_REQUESTS.labels(
+    chain="root_cause", provider="rules+retrieval", model="root-cause-fast-path-v1"
+).inc(0)
+
+LLM_TOKENS = Counter(
+    "llm_tokens_total",
+    "Estimated LLM tokens consumed by actual LLM provider calls",
+    ["provider", "model", "token_type"],
+)
 RETRIEVAL_RECALL = Histogram(
     "retrieval_recall_score", "Retrieval recall @ 10", buckets=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+)
+RETRIEVED_CONTEXT_COUNT = Histogram(
+    "retrieved_context_count",
+    "Number of retrieved evidence sources attached to completed responses",
+    ["chain", "provider"],
+    buckets=[0, 1, 2, 3, 5, 10],
 )
 FAITHFULNESS_SCORE = Histogram(
     "llm_faithfulness",
@@ -100,13 +120,22 @@ USER_FEEDBACK.labels(rating="negative").inc(0)
 CACHE_EVENTS = Counter("cache_events_total", "Cache hit or miss", ["status"])
 CACHE_EVENTS.labels(status="hit").inc(0)
 CACHE_EVENTS.labels(status="miss").inc(0)
+CACHE_EVENTS.labels(status="bypass").inc(0)
 
 health_check_client: httpx.AsyncClient | None = None
 
 
 class FeedbackRequest(BaseModel):
-    query_id: str
-    score: int
+    query_id: str = Field(..., min_length=1)
+    score: int = Field(..., ge=1, le=5)
+
+
+def _feedback_rating_label(score: int) -> str:
+    if score >= 4:
+        return "positive"
+    if score <= 2:
+        return "negative"
+    return "neutral"
 
 
 def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
@@ -128,6 +157,28 @@ def extract_log_data(response: QueryResponse) -> tuple[str, list[str]]:
     except Exception as e:
         logger.warning(f"Failed to extract log data from response: {e}")
         return str(response.result), []
+
+
+def _query_cache_key(req: QueryRequest) -> str:
+    payload = req.model_dump(mode="json", exclude_none=True, exclude={"bypass_cache"})
+    stable_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(stable_payload.encode("utf-8")).hexdigest()
+
+
+def _is_billable_llm_provider(provider: str) -> bool:
+    return provider in {"openai", "ollama"}
+
+
+def _strip_raw_context_from_job(job_data: dict) -> dict:
+    sanitized = {k: v for k, v in job_data.items() if v is not None}
+    result = sanitized.get("result")
+    if isinstance(result, dict):
+        result = dict(result)
+        if "raw_context" in result:
+            result["raw_context"] = "OMITTED_FROM_DEFAULT_RESPONSE"
+            result["raw_context_available"] = True
+        sanitized["result"] = result
+    return sanitized
 
 
 @asynccontextmanager
@@ -161,6 +212,7 @@ def create_app() -> FastAPI:
         hybrid_path=settings.services.rag_retrieve_hybrid_path,
         procedures_path=settings.services.rag_retrieve_procedures_path,
         semantic_path=settings.services.rag_retrieve_semantic_path,
+        procedures_direct_path=settings.services.rag_retrieve_procedures_direct_path,
         timeout_s=5.0,
     )
 
@@ -185,7 +237,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Industrial Reliability Copilot - LLM Orchestrator",
         version="1.0.0",
-        default_response_class=ORJSONResponse,
+        default_response_class=JSONResponse,
         lifespan=lifespan,
     )
 
@@ -260,9 +312,9 @@ def create_app() -> FastAPI:
     async def process_query_bg(job_id: str, req: QueryRequest, trace_id: str):
         start_time = time.time()
         applied_guardrails = []
+        query_text = ""
 
         try:
-            query_text = ""
             if req.root_cause:
                 query_text = req.root_cause.user_query
             elif req.remediation:
@@ -284,36 +336,47 @@ def create_app() -> FastAPI:
                 elif req.historical:
                     req.historical.user_query = safe_text
 
-            cache_key = (
-                hashlib.sha256(query_text.encode("utf-8")).hexdigest() if query_text else None
-            )
+            cache_key = _query_cache_key(req)
 
-            if cache_key and cache_key in QUERY_CACHE:
+            if req.bypass_cache:
+                CACHE_EVENTS.labels(status="bypass").inc()
+                pipeline_response = await orchestrator.handle(req)
+                answer_text, contexts = extract_log_data(pipeline_response)
+            elif cache_key in QUERY_CACHE:
                 CACHE_EVENTS.labels(status="hit").inc()
                 pipeline_response = QUERY_CACHE[cache_key]
                 answer_text, contexts = extract_log_data(pipeline_response)
             else:
                 CACHE_EVENTS.labels(status="miss").inc()
                 pipeline_response = await orchestrator.handle(req)
-                if cache_key:
-                    QUERY_CACHE[cache_key] = pipeline_response
+                QUERY_CACHE[cache_key] = pipeline_response
                 answer_text, contexts = extract_log_data(pipeline_response)
 
             estimated_input_tokens = len(query_text.split()) * 1.3 if query_text else 0.0
             estimated_output_tokens = len(answer_text.split()) * 1.3
+            model_provider = pipeline_response.model_provider
+            model_name = pipeline_response.model_name
 
-            lbl_input = "input"
-            lbl_output = "output"
+            INFERENCE_PATH_REQUESTS.labels(
+                chain=pipeline_response.chain,
+                provider=model_provider,
+                model=model_name,
+            ).inc()
 
-            LLM_TOKENS.labels(model=settings.llm.primary_provider, token_type=lbl_input).inc(
-                estimated_input_tokens
-            )
-            LLM_TOKENS.labels(model=settings.llm.primary_provider, token_type=lbl_output).inc(
-                estimated_output_tokens
-            )
+            if _is_billable_llm_provider(model_provider):
+                LLM_TOKENS.labels(
+                    provider=model_provider, model=model_name, token_type="input"
+                ).inc(estimated_input_tokens)
+                LLM_TOKENS.labels(
+                    provider=model_provider, model=model_name, token_type="output"
+                ).inc(estimated_output_tokens)
 
             recall_proxy = min(len(contexts) / 10.0, 1.0) if contexts else 0.0
             RETRIEVAL_RECALL.observe(recall_proxy)
+            RETRIEVED_CONTEXT_COUNT.labels(
+                chain=pipeline_response.chain,
+                provider=model_provider,
+            ).observe(len(set(contexts)))
 
             # PRODUCTION FIX: Removed the redundant global OutputGuardrails.validate_output check
             # here. The individual Chains (like RootCauseChain) already handle their own robust
@@ -413,6 +476,15 @@ def create_app() -> FastAPI:
                     model_name="safety-guard",
                 )
 
+                fallback_answer, fallback_contexts = extract_log_data(fallback_response)
+                await log_interaction_async(
+                    query_id=trace_id,
+                    query=query_text,
+                    answer=fallback_answer,
+                    contexts=fallback_contexts,
+                    latency=fallback_response.latency_ms,
+                )
+
                 safe_dump = getattr(fallback_response, "model_dump", fallback_response.dict)()
                 await update_job_state(job_id, status="completed", result=safe_dump)
             else:
@@ -434,11 +506,14 @@ def create_app() -> FastAPI:
         return {"job_id": job_id, "status": "processing"}
 
     @app.get("/query/{job_id}", tags=["Inference"])
-    async def get_query_status(job_id: str):
+    async def get_query_status(job_id: str, include_raw_context: bool = False):
         job_data = await get_job_state(job_id)
 
         if not job_data:
             raise HTTPException(status_code=404, detail="Job not found")
+
+        if not include_raw_context:
+            return _strip_raw_context_from_job(job_data)
 
         return {k: v for k, v in job_data.items() if v is not None}
 
@@ -447,23 +522,41 @@ def create_app() -> FastAPI:
     async def submit_feedback(request: Request, feedback: FeedbackRequest):
         async with AsyncSessionLocal() as db:
             try:
-                rating_label = (
-                    "positive"
-                    if feedback.score >= 4
-                    else "negative" if feedback.score <= 2 else "neutral"
-                )
-                USER_FEEDBACK.labels(rating=rating_label).inc()
-
                 result = await db.execute(
                     select(QueryLog).filter(QueryLog.query_id == feedback.query_id)
                 )
                 log_entry = result.scalars().first()
                 if not log_entry:
+                    job_state = await get_job_state(feedback.query_id)
+                    if job_state and job_state.get("status") == "processing":
+                        raise HTTPException(
+                            status_code=409,
+                            detail="Query is still processing; retry once it has completed.",
+                        )
+                    if job_state and job_state.get("status") == "failed":
+                        raise HTTPException(
+                            status_code=409,
+                            detail="Feedback cannot be recorded for a failed query.",
+                        )
+                    if job_state and job_state.get("status") == "completed":
+                        raise HTTPException(
+                            status_code=409,
+                            detail=(
+                                "Query completed but its telemetry log is not available yet; "
+                                "retry shortly."
+                            ),
+                        )
                     raise HTTPException(status_code=404, detail="Query ID not found")
 
                 log_entry.user_feedback_score = feedback.score
                 await db.commit()
-                return {"status": "success", "message": "Feedback recorded"}
+                USER_FEEDBACK.labels(rating=_feedback_rating_label(feedback.score)).inc()
+
+                return {
+                    "status": "success",
+                    "message": "Feedback recorded",
+                    "rating": _feedback_rating_label(feedback.score),
+                }
             except HTTPException:
                 raise
             except Exception as e:

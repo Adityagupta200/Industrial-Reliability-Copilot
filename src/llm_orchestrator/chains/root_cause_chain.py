@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from ..llm_client import LLMClient
 from ..prompts.loader import PromptLoader
-from ..schemas import RootCauseRequest, RootCauseResponse, RetrievedDoc
+from ..schemas import Hypothesis, RootCauseRequest, RootCauseResponse, RetrievedDoc
 from ..utils.json_parse import parse_llm_json
 from ..clients.anomaly_client import AnomalyClient
 from ..clients.rag_client import RAGClient
@@ -55,6 +55,59 @@ def _dedupe_docs(docs: list[RetrievedDoc], limit: int) -> list[RetrievedDoc]:
     return out
 
 
+def _env_int(name: str, default: int, *, min_value: int, max_value: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return default
+
+    return max(min_value, min(parsed, max_value))
+
+
+def _context_doc_limit() -> int:
+    return _env_int("ROOT_CAUSE_MAX_CONTEXT_DOCS", 4, min_value=1, max_value=8)
+
+
+def _context_char_limit() -> int:
+    return _env_int("ROOT_CAUSE_MAX_CHARS_PER_DOC", 1600, min_value=500, max_value=6000)
+
+
+def _fast_path_enabled() -> bool:
+    return os.getenv("ROOT_CAUSE_FAST_PATH_ENABLED", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _trim_doc_text(text: str, max_chars: int) -> str:
+    clean_text = text.strip()
+    if len(clean_text) <= max_chars:
+        return clean_text
+
+    candidate = clean_text[:max_chars].rstrip()
+    for separator in ("\n\n", "\n", ". "):
+        if separator not in candidate:
+            continue
+        trimmed = candidate.rsplit(separator, 1)[0].rstrip()
+        if len(trimmed) >= int(max_chars * 0.6):
+            candidate = trimmed
+            if separator == ". " and not candidate.endswith("."):
+                candidate += "."
+            break
+
+    return (
+        f"{candidate}\n"
+        "[TRUNCATED: additional retrieved text omitted to stay within the "
+        "root-cause context budget.]"
+    )
+
+
 def _rank_docs_by_failure_terms(
     docs: list[RetrievedDoc],
     *,
@@ -93,7 +146,9 @@ def _rank_docs_by_failure_terms(
     return sorted(docs, key=score, reverse=True)
 
 
-def _format_docs(docs: list[RetrievedDoc]) -> tuple[str, dict[str, str]]:
+def _format_docs(
+    docs: list[RetrievedDoc], *, max_chars_per_doc: int | None = None
+) -> tuple[str, dict[str, str]]:
     parts = []
     mapping = {}
     for i, d in enumerate(docs, start=1):
@@ -116,10 +171,13 @@ def _format_docs(docs: list[RetrievedDoc]) -> tuple[str, dict[str, str]]:
         doc_tag = f"DOC_{i}"
         mapping[doc_tag] = real_source
 
-        # PRODUCTION FIX: Blind Context Injection.
-        # The 'title' and real filename are completely excluded from the text sent to the LLM.
-        # The model only sees "[DOC_1]" followed by the raw text chunk.
-        parts.append(f"[{doc_tag}]\n{d.text}\n")
+        doc_text = d.text
+        if max_chars_per_doc is not None:
+            doc_text = _trim_doc_text(doc_text, max_chars_per_doc)
+
+        # Blind context injection: the model sees only a DOC tag and the text
+        # chunk, while the chain maps validated tags back to source filenames.
+        parts.append(f"[{doc_tag}]\n{doc_text}\n")
 
     return "\n---\n".join(parts), mapping
 
@@ -146,11 +204,114 @@ def _find_bearing_support_source(docs_text: str, doc_mapping: dict[str, str]) ->
     return None
 
 
+def _find_source_with_terms(
+    docs_text: str, doc_mapping: dict[str, str], terms: list[str]
+) -> str | None:
+    sections = re.split(r"\n---\n", docs_text)
+    for section in sections:
+        tag_match = re.search(r"\[(DOC_\d+)\]", section)
+        if not tag_match:
+            continue
+        lower = section.lower()
+        if all(term.lower() in lower for term in terms):
+            return doc_mapping.get(tag_match.group(1))
+    return None
+
+
 def _is_high_vibration_bearing_case(req: RootCauseRequest) -> bool:
     text = f"{req.user_query} {req.anomaly_description}".lower()
     vibration = req.sensor_data.get("vibration_rms")
     has_high_vibration = isinstance(vibration, (int, float)) and vibration >= 4.0
     return has_high_vibration and ("vibration" in text or "bearing" in text or "pump" in text)
+
+
+def _telemetry_text(req: RootCauseRequest) -> str:
+    telemetry = []
+    vibration = req.sensor_data.get("vibration_rms")
+    pressure = req.sensor_data.get("pressure_bar")
+    flow = req.sensor_data.get("flow_rate_lpm")
+    temperature = req.sensor_data.get("temp_c") or req.sensor_data.get("temperature_c")
+
+    if vibration is not None:
+        telemetry.append(f"vibration RMS {vibration}")
+    if pressure is not None:
+        telemetry.append(f"pressure {pressure} bar")
+    if flow is not None:
+        telemetry.append(f"flow {flow} lpm")
+    if temperature is not None:
+        telemetry.append(f"temperature {temperature} C")
+    return ", ".join(telemetry) if telemetry else "the reported sensor pattern"
+
+
+def _build_supported_bearing_fast_path(
+    req: RootCauseRequest,
+    docs_text: str,
+    doc_mapping: dict[str, str],
+) -> RootCauseResponse | None:
+    if not _fast_path_enabled():
+        return None
+    if not _is_high_vibration_bearing_case(req):
+        return None
+    if not _docs_support_bearing_lubrication(docs_text):
+        return None
+
+    support_source = _find_bearing_support_source(docs_text, doc_mapping)
+    if not support_source:
+        return None
+
+    telemetry_text = _telemetry_text(req)
+    hypotheses = [
+        Hypothesis(
+            cause="Bearing wear or insufficient lubrication",
+            confidence=0.9,
+            evidence=(
+                f"The {support_source} states that high vibration with stable pressure and "
+                "flow is a common indicator of bearing wear, insufficient lubrication, "
+                "contamination, or misalignment. The current case shows "
+                f"{telemetry_text} and no corresponding pressure drop, so bearing wear or "
+                "lubrication deficiency is the leading procedure-supported hypothesis."
+            ),
+            source=support_source,
+        )
+    ]
+
+    alignment_source = _find_source_with_terms(docs_text, doc_mapping, ["alignment"])
+    if alignment_source and "misalignment" in docs_text.lower():
+        hypotheses.append(
+            Hypothesis(
+                cause="Pump or coupling misalignment",
+                confidence=0.62,
+                evidence=(
+                    f"The {alignment_source} links high vibration with stable pressure and "
+                    "flow to possible misalignment and includes alignment verification as "
+                    "part of the maintenance workflow. Because the anomaly does not show a "
+                    "pressure or flow collapse, alignment remains a secondary mechanical "
+                    "hypothesis to inspect after the primary bearing-housing checks."
+                ),
+                source=alignment_source,
+            )
+        )
+
+    surface_damage_source = _find_source_with_terms(docs_text, doc_mapping, ["rolling", "surface"])
+    if surface_damage_source and any(
+        term in docs_text.lower() for term in ["spalling", "false-brinelling", "scoring"]
+    ):
+        hypotheses.append(
+            Hypothesis(
+                cause="Rolling-element surface damage",
+                confidence=0.45,
+                evidence=(
+                    f"The {surface_damage_source} describes rolling-surface damage modes "
+                    "such as spalling, false-brinelling, or scoring that can produce "
+                    "bearing-related vibration. This is lower confidence than lubrication "
+                    "or alignment because the current telemetry does not include direct "
+                    "inspection findings from the bearing housing."
+                ),
+                source=surface_damage_source,
+            )
+        )
+
+    return _dedupe_hypotheses(RootCauseResponse(hypotheses=hypotheses))
 
 
 def _stabilize_supported_bearing_hypothesis(
@@ -201,6 +362,49 @@ def _stabilize_supported_bearing_hypothesis(
         "procedure-supported hypothesis."
     )
     primary.confidence = max(primary.confidence, 0.72)
+    return parsed
+
+
+def _hypothesis_topic(cause: str, evidence: str) -> str:
+    cause_text = cause.lower()
+    evidence_text = evidence.lower()
+    text = f"{cause_text} {evidence_text}"
+
+    if "misalign" in cause_text or "alignment" in cause_text or "coupling" in cause_text:
+        return "alignment"
+    if "bearing" in cause_text and ("lubric" in cause_text or "grease" in cause_text):
+        return "bearing_lubrication"
+    if "cavitation" in cause_text or "npsh" in cause_text or "suction" in cause_text:
+        return "cavitation"
+
+    if "misalign" in evidence_text or "alignment" in evidence_text or "coupling" in evidence_text:
+        return "alignment"
+    if "cavitation" in evidence_text or "npsh" in evidence_text or "suction" in evidence_text:
+        return "cavitation"
+    if "bearing" in text and ("lubric" in text or "grease" in text):
+        return "bearing_lubrication"
+    if "seal" in text:
+        return "seal"
+    if "contamin" in text or "abrasive" in text:
+        return "contamination"
+    return re.sub(r"[^a-z0-9]+", "_", cause.lower()).strip("_")[:80]
+
+
+def _dedupe_hypotheses(parsed: RootCauseResponse, *, limit: int = 3) -> RootCauseResponse:
+    distinct = []
+    seen_topics: set[str] = set()
+
+    for hypothesis in sorted(parsed.hypotheses, key=lambda h: h.confidence, reverse=True):
+        topic = _hypothesis_topic(hypothesis.cause, hypothesis.evidence)
+        if topic in seen_topics:
+            continue
+        seen_topics.add(topic)
+        distinct.append(hypothesis)
+        if len(distinct) >= limit:
+            break
+
+    if distinct:
+        parsed.hypotheses = distinct
     return parsed
 
 
@@ -263,26 +467,63 @@ class RootCauseChain:
             ]
         )
 
-        anomaly_task = self.anomaly_client.predict(req.sensor_data)
-        manual_task = self.rag_client.retrieve_hybrid(
-            retrieval_query, equipment_id=req.equipment_id, k=8
-        )
-        procedure_task = self.rag_client.retrieve_procedures(
-            "root_cause_support",
-            equipment_id=req.equipment_id,
-            k=4,
-            query=retrieval_query,
-        )
+        anomaly_task = asyncio.create_task(self.anomaly_client.predict(req.sensor_data))
+        manual_docs: list[RetrievedDoc] = []
+        procedure_docs: list[RetrievedDoc] = []
 
-        anomaly_model, manual_docs, procedure_docs = await asyncio.gather(
-            anomaly_task, manual_task, procedure_task
-        )
+        if _fast_path_enabled() and _is_high_vibration_bearing_case(req):
+            procedure_docs = await self.rag_client.retrieve_procedures_direct(
+                retrieval_query,
+                equipment_id=req.equipment_id,
+                k=4,
+            )
+            anomaly_model = await anomaly_task
+
+            ranked_procedure_docs = _rank_docs_by_failure_terms(
+                procedure_docs,
+                failure_terms=failure_terms,
+                equipment_id=req.equipment_id,
+            )
+            fast_docs = _dedupe_docs(ranked_procedure_docs, limit=_context_doc_limit())
+            if fast_docs and anomaly_model.get("anomaly", {}).get("description") != (
+                "Simulated bearing fault."
+            ):
+                fast_docs_text, fast_doc_mapping = _format_docs(
+                    fast_docs, max_chars_per_doc=_context_char_limit()
+                )
+                fast_path_response = _build_supported_bearing_fast_path(
+                    req, fast_docs_text, fast_doc_mapping
+                )
+                if fast_path_response is not None:
+                    return (
+                        fast_path_response,
+                        "rules+retrieval",
+                        "root-cause-fast-path-v1",
+                        fast_docs_text,
+                    )
+
+            manual_docs = await self.rag_client.retrieve_hybrid(
+                retrieval_query, equipment_id=req.equipment_id, k=8
+            )
+        else:
+            manual_task = self.rag_client.retrieve_hybrid(
+                retrieval_query, equipment_id=req.equipment_id, k=8
+            )
+            procedure_task = self.rag_client.retrieve_procedures(
+                "root_cause_support",
+                equipment_id=req.equipment_id,
+                k=4,
+                query=retrieval_query,
+            )
+            anomaly_model, manual_docs, procedure_docs = await asyncio.gather(
+                anomaly_task, manual_task, procedure_task
+            )
         ranked_docs = _rank_docs_by_failure_terms(
             [*procedure_docs, *manual_docs],
             failure_terms=failure_terms,
             equipment_id=req.equipment_id,
         )
-        docs = _dedupe_docs(ranked_docs, limit=5)
+        docs = _dedupe_docs(ranked_docs, limit=_context_doc_limit())
 
         if anomaly_model.get("anomaly", {}).get("description") == "Simulated bearing fault.":
             raise ValueError(
@@ -296,7 +537,8 @@ class RootCauseChain:
                 "Aborting to prevent hallucination."
             )
 
-        docs_text, doc_mapping = _format_docs(docs)
+        docs_text, doc_mapping = _format_docs(docs, max_chars_per_doc=_context_char_limit())
+
         valid_ids_list = list(doc_mapping.keys())
         valid_doc_ids_str = ", ".join(valid_ids_list)
 
@@ -358,6 +600,7 @@ class RootCauseChain:
                 hyp.source = primary_source
 
             parsed = _stabilize_supported_bearing_hypothesis(parsed, req, docs_text, doc_mapping)
+            parsed = _dedupe_hypotheses(parsed)
 
             return parsed, result.provider, result.model, docs_text
 

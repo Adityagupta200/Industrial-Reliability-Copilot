@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # Paths (can still be overridden by ANOM_* env vars)
     # Defaults remain relative, then we resolve them against service_root in model_post_init.
-    anomaly_ckpt_path: Path = Path("artifacts/anomaly/anomaly_model.pth")
+    anomaly_ckpt_path: Path = Path("artifacts/anomaly/anomaly_model.safetensors")
     anomaly_preprocess_path: Path = Path("artifacts/anomaly/preprocess.joblib")
     anomaly_schema_path: Path = Path("artifacts/anomaly/feature_schema.json")
 

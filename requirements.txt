@@ -19,6 +19,7 @@ scikit-learn==1.6.1
 pandas>=2.2.2
 # CPU-only wheel keeps CI/developer installs deterministic without pulling CUDA images.
 torch==2.5.1+cpu
+safetensors>=0.4.5
 
 # Database & Storage
 sqlalchemy>=2.0.30
