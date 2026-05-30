@@ -1,4 +1,5 @@
 import json
+import re
 import warnings
 from pathlib import Path
 
@@ -36,6 +37,40 @@ def test_anomaly_checkpoint_uses_safe_tensor_serialization(repo_root: Path):
     state_dict = load_safetensors_file(str(ckpt_path), device="cpu")
     assert state_dict
     assert all(torch.is_tensor(value) for value in state_dict.values())
+
+
+def test_anomaly_service_image_installs_safetensors(repo_root: Path):
+    requirements = repo_root / "src" / "anomaly_service" / "requirements.txt"
+    text = requirements.read_text(encoding="utf-8")
+
+    assert re.search(r"^safetensors(?:[<=>!~].*)?$", text, flags=re.MULTILINE)
+
+
+def test_anomaly_service_requirements_match_serialized_artifact_versions(repo_root: Path):
+    requirements = repo_root / "src" / "anomaly_service" / "requirements.txt"
+    text = requirements.read_text(encoding="utf-8")
+    rul_model = repo_root / "src" / "anomaly_service" / "artifacts" / "rul" / "rul_model.joblib"
+    artifact_bytes = rul_model.read_bytes()
+
+    sklearn_match = re.search(
+        rb"_sklearn_version\x94\x8c\x05(?P<version>\d+\.\d+\.\d+)", artifact_bytes
+    )
+    xgboost_match = re.search(
+        rb"version\[#L\x00+\x03i(?P<major>.)i(?P<minor>.)i(?P<patch>.)",
+        artifact_bytes,
+        flags=re.DOTALL,
+    )
+
+    assert sklearn_match is not None
+    assert xgboost_match is not None
+
+    sklearn_version = sklearn_match.group("version").decode("ascii")
+    xgboost_version = ".".join(
+        str(ord(xgboost_match.group(part))) for part in ("major", "minor", "patch")
+    )
+
+    assert f"scikit-learn=={sklearn_version}" in text
+    assert f"xgboost=={xgboost_version}" in text
 
 
 def test_schema_matches_preprocess_bundle(repo_root: Path):

@@ -6,6 +6,7 @@ import uuid
 import asyncio
 import hashlib
 import json
+import re
 from contextlib import asynccontextmanager
 from typing import Final
 
@@ -172,16 +173,111 @@ def _is_billable_llm_provider(provider: str) -> bool:
     return provider in {"openai", "ollama"}
 
 
-def _strip_raw_context_from_job(job_data: dict) -> dict:
+@traceable(run_type="chain", name="Query_Cache_Hit")
+def _record_query_cache_hit(cache_key: str, response: QueryResponse) -> dict[str, object]:
+    return {
+        "cache_key_prefix": cache_key[:12],
+        "chain": response.chain,
+        "model_provider": response.model_provider,
+        "model_name": response.model_name,
+        "raw_context_chars": len(response.raw_context or ""),
+        "raw_context_available": bool(response.raw_context),
+    }
+
+
+def _ordered_unique(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        normalized = value.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        ordered.append(normalized)
+    return ordered
+
+
+def _raw_context_available(raw_context: object) -> bool:
+    text = str(raw_context or "").strip()
+    return bool(text and text not in {"NONE", "OMITTED_FROM_DEFAULT_RESPONSE"})
+
+
+def _raw_context_doc_ids(raw_context: str) -> list[str]:
+    return _ordered_unique(re.findall(r"\[(DOC_\d+)\]", raw_context))
+
+
+def _result_source_files(result_payload: dict) -> list[str]:
+    chain_result = result_payload.get("result")
+    sources: list[str] = []
+
+    if not isinstance(chain_result, dict):
+        return sources
+
+    for hypothesis in chain_result.get("hypotheses", []):
+        if isinstance(hypothesis, dict):
+            source = hypothesis.get("source")
+            if isinstance(source, str) and source.upper() != "NONE":
+                sources.append(source)
+
+    remediation_sources = chain_result.get("sources", [])
+    if isinstance(remediation_sources, list):
+        sources.extend(
+            source
+            for source in remediation_sources
+            if isinstance(source, str) and source.upper() != "NONE"
+        )
+
+    for evidence in chain_result.get("evidence", []):
+        if isinstance(evidence, dict):
+            source = evidence.get("source")
+            if isinstance(source, str) and source.upper() != "NONE":
+                sources.append(source)
+
+    return _ordered_unique(sources)
+
+
+def _evidence_summary(result_payload: dict, *, include_raw_context: bool) -> dict[str, object]:
+    raw_context = str(result_payload.get("raw_context") or "")
+    raw_available = _raw_context_available(raw_context)
+    doc_ids = _raw_context_doc_ids(raw_context) if raw_available else []
+    source_files = _result_source_files(result_payload)
+
+    doc_id_to_source_file: dict[str, str] = {}
+    if len(source_files) == 1:
+        doc_id_to_source_file = {doc_id: source_files[0] for doc_id in doc_ids}
+    elif len(source_files) == len(doc_ids):
+        doc_id_to_source_file = dict(zip(doc_ids, source_files))
+
+    return {
+        "raw_context_available": raw_available,
+        "raw_context_included": include_raw_context and raw_available,
+        "context_chars": len(raw_context) if raw_available else 0,
+        "retrieved_doc_count": len(doc_ids),
+        "retrieved_doc_ids": doc_ids,
+        "source_files": source_files,
+        "doc_id_to_source_file": doc_id_to_source_file,
+    }
+
+
+def _prepare_query_status_response(job_data: dict, *, include_raw_context: bool) -> dict:
     sanitized = {k: v for k, v in job_data.items() if v is not None}
     result = sanitized.get("result")
     if isinstance(result, dict):
         result = dict(result)
         if "raw_context" in result:
-            result["raw_context"] = "OMITTED_FROM_DEFAULT_RESPONSE"
-            result["raw_context_available"] = True
+            result["raw_context_available"] = _raw_context_available(result.get("raw_context"))
+            result["evidence_summary"] = _evidence_summary(
+                result,
+                include_raw_context=include_raw_context,
+            )
+            if not include_raw_context:
+                result["raw_context"] = "OMITTED_FROM_DEFAULT_RESPONSE"
         sanitized["result"] = result
     return sanitized
+
+
+def _strip_raw_context_from_job(job_data: dict) -> dict:
+    return _prepare_query_status_response(job_data, include_raw_context=False)
 
 
 @asynccontextmanager
@@ -348,6 +444,7 @@ def create_app() -> FastAPI:
             elif cache_key in QUERY_CACHE:
                 CACHE_EVENTS.labels(status="hit").inc()
                 pipeline_response = QUERY_CACHE[cache_key]
+                _record_query_cache_hit(cache_key, pipeline_response)
                 answer_text, contexts = extract_log_data(pipeline_response)
             else:
                 CACHE_EVENTS.labels(status="miss").inc()
@@ -522,7 +619,7 @@ def create_app() -> FastAPI:
         if not include_raw_context:
             return _strip_raw_context_from_job(job_data)
 
-        return {k: v for k, v in job_data.items() if v is not None}
+        return _prepare_query_status_response(job_data, include_raw_context=True)
 
     @app.post("/feedback", tags=["Evaluation"])
     @limiter.limit("20/minute")

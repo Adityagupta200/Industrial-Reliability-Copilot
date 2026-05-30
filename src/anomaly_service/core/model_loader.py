@@ -10,8 +10,6 @@ import joblib
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from safetensors import safe_open
-from safetensors.torch import load_file as load_safetensors_file
 
 from .config import settings
 
@@ -59,6 +57,9 @@ def _extract_state_dict_and_meta(ckpt: Any) -> Tuple[Dict[str, torch.Tensor], Di
 
 def _load_anomaly_checkpoint(path: Path) -> Tuple[Dict[str, torch.Tensor], Dict[str, Any]]:
     if path.suffix == ".safetensors":
+        from safetensors import safe_open
+        from safetensors.torch import load_file as load_safetensors_file
+
         with safe_open(path, framework="pt", device="cpu") as handle:
             meta = dict(handle.metadata() or {})
         return load_safetensors_file(str(path), device=settings.torch_device), meta

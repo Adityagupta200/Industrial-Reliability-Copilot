@@ -5,6 +5,8 @@ import asyncio
 import os
 from dataclasses import dataclass
 
+from langsmith import traceable
+
 from ..llm_client import LLMClient
 from ..prompts.loader import PromptLoader
 from ..schemas import Hypothesis, RootCauseRequest, RootCauseResponse, RetrievedDoc
@@ -243,6 +245,7 @@ def _telemetry_text(req: RootCauseRequest) -> str:
     return ", ".join(telemetry) if telemetry else "the reported sensor pattern"
 
 
+@traceable(run_type="chain", name="Root_Cause_Fast_Path_Decision")
 def _build_supported_bearing_fast_path(
     req: RootCauseRequest,
     docs_text: str,
@@ -312,6 +315,52 @@ def _build_supported_bearing_fast_path(
         )
 
     return _dedupe_hypotheses(RootCauseResponse(hypotheses=hypotheses))
+
+
+def _root_cause_judge_input(req: RootCauseRequest, anomaly_model: dict) -> str:
+    return (
+        f"User Query: {req.user_query}\n"
+        f"Anomaly Description: {req.anomaly_description}\n"
+        f"Sensor Data: {json.dumps(req.sensor_data, ensure_ascii=False)}\n"
+        f"Anomaly Model Output: {json.dumps(anomaly_model, ensure_ascii=False)}"
+    )
+
+
+def _fast_path_guardrail_answer(response: RootCauseResponse, doc_mapping: dict[str, str]) -> str:
+    """Represent deterministic answers with DOC tags for the shared guardrail."""
+    source_to_tag = {source: doc_tag for doc_tag, source in doc_mapping.items()}
+    payload = response.model_dump(mode="json")
+
+    for hypothesis in payload.get("hypotheses", []):
+        source = str(hypothesis.get("source") or "")
+        doc_tag = source_to_tag.get(source)
+        if doc_tag is None:
+            continue
+        hypothesis["source"] = doc_tag
+        hypothesis["evidence"] = f"{doc_tag} supports: {hypothesis.get('evidence', '')}"
+
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+@traceable(run_type="chain", name="Fast_Path_Output_Guardrails")
+async def _validate_fast_path_response(
+    *,
+    llm_client: LLMClient,
+    req: RootCauseRequest,
+    response: RootCauseResponse,
+    docs_text: str,
+    doc_mapping: dict[str, str],
+    anomaly_model: dict,
+) -> None:
+    guardrail_answer = _fast_path_guardrail_answer(response, doc_mapping)
+    is_valid, msg = await OutputGuardrails.validate_output(
+        llm_client=llm_client,
+        context=docs_text,
+        answer=guardrail_answer,
+        initial_input=_root_cause_judge_input(req, anomaly_model),
+    )
+    if not is_valid:
+        raise ValueError(msg)
 
 
 def _stabilize_supported_bearing_hypothesis(
@@ -450,6 +499,7 @@ class RootCauseChain:
     anomaly_client: AnomalyClient
     rag_client: RAGClient
 
+    @traceable(run_type="chain", name="Root_Cause_Chain")
     async def run(self, req: RootCauseRequest) -> tuple[RootCauseResponse, str, str, str]:
         req.equipment_id, req.anomaly_description = _extract_missing_entities(
             req.user_query, req.equipment_id, req.anomaly_description
@@ -495,6 +545,14 @@ class RootCauseChain:
                     req, fast_docs_text, fast_doc_mapping
                 )
                 if fast_path_response is not None:
+                    await _validate_fast_path_response(
+                        llm_client=self.llm,
+                        req=req,
+                        response=fast_path_response,
+                        docs_text=fast_docs_text,
+                        doc_mapping=fast_doc_mapping,
+                        anomaly_model=anomaly_model,
+                    )
                     return (
                         fast_path_response,
                         "rules+retrieval",
@@ -553,15 +611,11 @@ class RootCauseChain:
 
         result = await self.llm.invoke(prompt, json_mode=True)
 
-        judge_input = (
-            f"User Query: {req.user_query}\n"
-            f"Anomaly Description: {req.anomaly_description}\n"
-            f"Sensor Data: {json.dumps(req.sensor_data)}\n"
-            f"Anomaly Model Output: {json.dumps(anomaly_model)}"
-        )
-
         is_valid, msg = await OutputGuardrails.validate_output(
-            llm_client=self.llm, context=docs_text, answer=result.content, initial_input=judge_input
+            llm_client=self.llm,
+            context=docs_text,
+            answer=result.content,
+            initial_input=_root_cause_judge_input(req, anomaly_model),
         )
         if not is_valid:
             raise ValueError(msg)

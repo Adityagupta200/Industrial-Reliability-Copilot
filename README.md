@@ -120,6 +120,7 @@ Submit a root-cause query:
 ```powershell
 $payload = @{
   chain = "root_cause"
+  bypass_cache = $true
   root_cause = @{
     user_query = "Why did pump P-23 trigger anomaly at 03:41?"
     equipment_id = "pump_P-23"
@@ -134,8 +135,21 @@ $payload = @{
 } | ConvertTo-Json -Depth 6
 
 $job = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/query -ContentType "application/json" -Body $payload
-Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/query/$($job.job_id)" | ConvertTo-Json -Depth 10
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/query/$($job.job_id)?include_raw_context=true" | ConvertTo-Json -Depth 10
 ```
+
+Bash equivalent for polling a submitted job with retrieved evidence visible:
+
+```bash
+curl -s "http://127.0.0.1:8000/query/${job_id}?include_raw_context=true" | python -m json.tool
+```
+
+The default status endpoint omits `raw_context` to keep normal API responses
+compact. Use `include_raw_context=true` for evaluation evidence, screenshots, and
+demo recording; that response also includes `evidence_summary` with retrieved
+`DOC_*` IDs, source files, and context size for quick terminal review. Use
+`bypass_cache=true` in the POST payload when capturing LangSmith traces so the
+retrieval and guardrail spans are regenerated instead of serving a cache hit.
 
 Populate and verify the Grafana feedback panel from bash:
 
@@ -164,6 +178,11 @@ with its nested judge model call. Do not fake this screenshot if LangSmith is no
 configured. The script warms the real RAG hybrid and procedure retrieval paths
 before submitting the traced query so the screenshot does not confuse cold-start
 model/index initialization with steady-state retrieval latency.
+For the default Pump P-23 fast path, the trace should instead show
+`Root_Cause_Chain`, `Direct_Procedure_Search`,
+`Root_Cause_Fast_Path_Decision`, `Fast_Path_Output_Guardrails`, and
+`Output_Guardrails`; in default fallback judge mode that path is intentionally
+`rules+retrieval` and should record zero actual LLM tokens.
 
 Local URLs:
 

@@ -61,6 +61,7 @@ Root-cause query:
 ```powershell
 $payload = @{
   chain = "root_cause"
+  bypass_cache = $true
   root_cause = @{
     user_query = "Why did pump P-23 trigger anomaly at 03:41?"
     equipment_id = "pump_P-23"
@@ -76,8 +77,22 @@ $payload = @{
 
 $job = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/query -ContentType "application/json" -Body $payload
 $job
-Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/query/$($job.job_id)" | ConvertTo-Json -Depth 10
+Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8000/query/$($job.job_id)?include_raw_context=true" | ConvertTo-Json -Depth 10
 ```
+
+If recording from Bash/Git Bash after the POST command, poll with:
+
+```bash
+curl -s "http://127.0.0.1:8000/query/${job_id}?include_raw_context=true" | python -m json.tool
+```
+
+Use `include_raw_context=true` when showing the retrieved evidence. The default
+status response deliberately hides `raw_context`; this keeps normal API output
+compact without removing the evidence from the persisted job state or evaluator.
+The evidence-visible response includes `evidence_summary` with retrieved `DOC_*`
+IDs, source files, and context size so the terminal screenshot is readable at a
+glance. Use `bypass_cache=true` for trace screenshots so LangSmith captures
+fresh retrieval and guardrail spans.
 
 Guardrail query:
 
@@ -125,6 +140,13 @@ Use the generated `phase10-langsmith-*` trace in the
 warms the actual hybrid and procedure retrieval endpoints before creating the
 trace so the screenshot represents steady-state retrieval behavior rather than
 first-request model/index initialization.
+
+For the default Pump P-23 fast-path demo, keep `ROOT_CAUSE_FAST_PATH_ENABLED=true`
+and use `bypass_cache=true`; the trace should show `Root_Cause_Chain`,
+`Direct_Procedure_Search`, `Root_Cause_Fast_Path_Decision`,
+`Fast_Path_Output_Guardrails`, and `Output_Guardrails`. That fast path is the
+serving-optimized evidence path, so it should not show a billable LLM call in
+default fallback judge mode.
 
 For the cost dashboard, a fast-path-only Pump P-23 run should show zero actual
 LLM tokens and `$0.0000` OpenAI cost. That is expected because the response was

@@ -1,9 +1,14 @@
+import pytest
+
 from llm_orchestrator.chains.root_cause_chain import (
     _build_supported_bearing_fast_path,
     _dedupe_hypotheses,
+    _fast_path_guardrail_answer,
     _format_docs,
     _stabilize_supported_bearing_hypothesis,
+    _validate_fast_path_response,
 )
+from llm_orchestrator.guardrails.output_filters import OutputGuardrails
 from llm_orchestrator.schemas import Hypothesis, RetrievedDoc, RootCauseRequest, RootCauseResponse
 
 
@@ -158,3 +163,82 @@ def test_supported_bearing_fast_path_returns_grounded_response(monkeypatch) -> N
         "Bearing wear or insufficient lubrication",
         "Pump or coupling misalignment",
     ]
+
+
+def test_fast_path_guardrail_payload_preserves_doc_tag_grounding() -> None:
+    response = RootCauseResponse(
+        hypotheses=[
+            Hypothesis(
+                cause="Bearing wear or insufficient lubrication",
+                confidence=0.9,
+                evidence=(
+                    "The bearing_replacement_pump_P-23.md states that high vibration "
+                    "with stable pressure and flow supports bearing wear."
+                ),
+                source="bearing_replacement_pump_P-23.md",
+            )
+        ]
+    )
+    context = (
+        "[DOC_1]\n"
+        "High vibration with stable pressure and flow is a common indicator of "
+        "bearing wear and insufficient lubrication."
+    )
+
+    answer = _fast_path_guardrail_answer(
+        response,
+        {"DOC_1": "bearing_replacement_pump_P-23.md"},
+    )
+
+    assert '"source": "DOC_1"' in answer
+    assert "DOC_1 supports" in answer
+    assert OutputGuardrails._deterministic_groundedness(context, answer) == 1.0
+
+
+@pytest.mark.asyncio
+async def test_fast_path_validation_uses_deterministic_grounding_without_llm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OUTPUT_GUARDRAILS_LLM_JUDGE_MODE", "fallback")
+
+    class FailingLLM:
+        async def invoke(self, *args, **kwargs):  # pragma: no cover - must not run
+            raise AssertionError("Fast-path fallback validation should not call the LLM judge")
+
+    request = RootCauseRequest(
+        user_query="Why did pump P-23 trigger anomaly at 03:41?",
+        anomaly_description=(
+            "Pump P-23 triggered a high-vibration anomaly with no corresponding pressure drop."
+        ),
+        equipment_id="pump_P-23",
+        sensor_data={"vibration_rms": 8.4, "pressure_bar": 5.2, "flow_rate_lpm": 176.0},
+    )
+    response = RootCauseResponse(
+        hypotheses=[
+            Hypothesis(
+                cause="Bearing wear or insufficient lubrication",
+                confidence=0.9,
+                evidence=(
+                    "The bearing_replacement_pump_P-23.md states that high vibration "
+                    "with stable pressure and flow supports bearing wear or insufficient "
+                    "lubrication. Sensor readings show vibration RMS 8.4 with stable "
+                    "pressure and flow."
+                ),
+                source="bearing_replacement_pump_P-23.md",
+            )
+        ]
+    )
+    context = (
+        "[DOC_1]\n"
+        "High vibration with stable pressure and flow is a common indicator of "
+        "bearing wear and insufficient lubrication."
+    )
+
+    await _validate_fast_path_response(
+        llm_client=FailingLLM(),
+        req=request,
+        response=response,
+        docs_text=context,
+        doc_mapping={"DOC_1": "bearing_replacement_pump_P-23.md"},
+        anomaly_model={"anomaly": {"description": "High vibration with stable pressure."}},
+    )
