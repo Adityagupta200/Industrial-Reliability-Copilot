@@ -219,15 +219,47 @@ Infrastructure is defined under `infra/terraform` and `infra/kubernetes`.
 
 ## Screenshots
 
-Real screenshots should be captured from a live run and committed under `docs/assets/screenshots/`:
+The screenshots below are captured from a live local run and the passing GitHub
+Actions quality gate. Numbered screenshots are used where a single screen cannot
+show the full evidence clearly without shrinking important text.
 
-- Query response with citations and latency.
-- Grafana RAG quality dashboard.
-- Grafana system health dashboard.
-- Grafana cost and routing dashboard.
-- LangSmith trace showing retrieval, prompt, answer, and guardrail/judge steps.
+### Query Response
 
-The exact capture checklist is in [docs/demo_video.md](docs/demo_video.md). Placeholder images are intentionally not committed.
+<table>
+  <tr>
+    <td><img src="docs/assets/screenshots/query-interface-1.png" alt="Pump P-23 query response with hypotheses, latency, guardrails, and evidence summary" width="520"></td>
+    <td><img src="docs/assets/screenshots/query-interface-2.png" alt="Pump P-23 query response with retrieved raw context and source evidence" width="520"></td>
+  </tr>
+</table>
+
+### Quality Gate
+
+<table>
+  <tr>
+    <td><img src="docs/assets/screenshots/github-actions-ragas-1.png" alt="GitHub Actions workflow summary with Ragas quality gate passing" width="360"></td>
+    <td><img src="docs/assets/screenshots/github-actions-ragas-2.png" alt="Ragas threshold check logs with faithfulness and retrieval metrics passing" width="360"></td>
+    <td><img src="docs/assets/screenshots/github-actions-ragas-3.png" alt="Ragas evaluation artifacts and CI evidence" width="360"></td>
+  </tr>
+</table>
+
+### Observability
+
+<table>
+  <tr>
+    <td><img src="docs/assets/screenshots/grafana-rag-quality-1.png" alt="Grafana RAG quality dashboard with groundedness and retrieval metrics" width="520"></td>
+    <td><img src="docs/assets/screenshots/grafana-rag-quality-2.png" alt="Grafana RAG quality dashboard with feedback and guardrail panels" width="520"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshots/system-health-1.png" alt="System health dashboard with service latency and request health" width="520"></td>
+    <td><img src="docs/assets/screenshots/prometheus-targets.png" alt="Prometheus scrape targets for the local reliability copilot stack" width="520"></td>
+  </tr>
+</table>
+
+### LangSmith Trace
+
+<img src="docs/assets/screenshots/langsmith-trace.png" alt="LangSmith trace with input guardrails, retrieval, root-cause fast path, and output groundedness checks" width="900">
+
+The exact capture checklist and naming convention are in [docs/demo_video.md](docs/demo_video.md). Placeholder images are intentionally not committed.
 
 ## Repository Layout
 

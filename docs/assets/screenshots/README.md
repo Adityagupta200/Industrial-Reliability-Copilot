@@ -4,8 +4,22 @@ Store real screenshots from a live local, staging, or production run in this dir
 
 Do not commit placeholders or mock images as production evidence. The expected files are listed in `docs/demo_video.md`.
 
-For Grafana screenshots, use the dashboards after they have been refreshed from the current provisioning JSON:
+Use `slug.png` when one screenshot is enough. Use `slug-1.png`, `slug-2.png`,
+and so on when one screen cannot show the evidence legibly. Keep README links
+pointing at the actual committed filenames.
 
-- `grafana-rag-quality.png`: online groundedness/relevancy proxies, retrieved evidence count, user feedback, and guardrail blocks.
-- `grafana-system-health.png`: completed async query latency from `orchestrator_query_latency_seconds`, query submission rate, query error rate, and active pods.
-- `grafana-cost-usage.png`: actual LLM token usage only, estimated OpenAI cost, fast-path share, and cache hit rate.
+Current evidence set:
+
+| Evidence | Files | Notes |
+| --- | --- | --- |
+| Query response | `query-interface-1.png`, `query-interface-2.png` | Pump P-23 response, citations, latency, guardrails, raw context, and evidence summary. |
+| GitHub Actions Ragas | `github-actions-ragas-1.png`, `github-actions-ragas-2.png`, `github-actions-ragas-3.png` | Passing workflow, threshold logs, and artifacts. |
+| Grafana RAG quality | `grafana-rag-quality-1.png`, `grafana-rag-quality-2.png` | Online quality, feedback, retrieval, and guardrail panels. |
+| System health | `system-health-1.png` | Live service health and runtime metrics. |
+| Prometheus targets | `prometheus-targets.png` | Healthy scrape targets for the local stack. |
+| LangSmith trace | `langsmith-trace.png` | Retrieval, root-cause fast path, and output groundedness trace. |
+
+For Grafana screenshots, use dashboards after they have been refreshed from the
+current provisioning JSON. Capture cost/routing as `grafana-cost-usage.png` or
+`grafana-cost-usage-*.png` only after real token/cost metrics are present; do
+not create a mock cost screenshot.

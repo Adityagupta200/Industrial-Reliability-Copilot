@@ -156,7 +156,11 @@ query, then re-enable the fast path for the main demo.
 
 ## GitHub Actions Ragas Screenshot
 
-Use a real pull request for `github-actions-ragas.png`; do not mock the CI screen.
+Use a real pull request for the GitHub Actions/Ragas evidence; do not mock the
+CI screen. If one screenshot is enough, save it as `github-actions-ragas.png`.
+If the workflow summary, threshold logs, and artifacts cannot fit legibly in one
+view, save a numbered set such as `github-actions-ragas-1.png`,
+`github-actions-ragas-2.png`, and `github-actions-ragas-3.png`.
 
 Required repository secret:
 
@@ -198,15 +202,25 @@ with faithfulness, answer relevancy, context precision, and context recall.
 
 Capture real screenshots from a live run and save them under `docs/assets/screenshots/`:
 
-| Screenshot | Suggested filename | Must show |
+Use the singular filename when one screenshot is sufficient. Use numbered files
+with the same slug, such as `query-interface-1.png` and
+`query-interface-2.png`, when multiple views are needed for readable evidence.
+The README must link the actual committed files, not a missing unnumbered
+placeholder.
+
+| Screenshot | Suggested filename(s) | Must show |
 | --- | --- | --- |
-| Query response | `query-interface.png` | Pump P-23 response with citations, model provider, latency, and guardrails. |
-| Grafana RAG quality | `grafana-rag-quality.png` | Online groundedness/relevancy proxies, retrieved evidence count, feedback, guardrail blocks. |
-| Grafana system health | `grafana-system-health.png` | Completed query latency, query submission rate, query error rate, pod/container health. |
-| Grafana cost and routing | `grafana-cost-usage.png` | Actual LLM token usage only, estimated OpenAI cost, fast-path share, cache hit rate. |
+| Query response | `query-interface.png` or `query-interface-*.png` | Pump P-23 response with citations, model provider, latency, guardrails, retrieved context, and `evidence_summary`. |
+| GitHub Actions Ragas | `github-actions-ragas.png` or `github-actions-ragas-*.png` | Passing CI quality gate, Ragas threshold logs, and evaluation artifacts or PR comment. |
+| Grafana RAG quality | `grafana-rag-quality.png` or `grafana-rag-quality-*.png` | Online groundedness/relevancy proxies, retrieved evidence count, feedback, guardrail blocks. |
+| Grafana system health | `system-health.png` or `system-health-*.png` | Completed query latency, query submission rate, query error rate, service/container health. |
+| Prometheus targets | `prometheus-targets.png` | Healthy scrape targets for API, orchestrator, RAG, anomaly, PostgreSQL/exported services, and monitoring stack. |
+| Grafana cost and routing | `grafana-cost-usage.png` or `grafana-cost-usage-*.png` | Actual LLM token usage only, estimated OpenAI cost, fast-path share, cache hit rate. Capture this only from real metrics. |
 | LangSmith trace | `langsmith-trace.png` | Chain trace with retrieval, prompt, model response, and guardrail/judge step. |
 
-After adding the files, update the README screenshots section with Markdown image links. Do not commit placeholder or mock screenshots as production evidence.
+After adding the files, update the README screenshots section with Markdown image
+links to the actual filenames. Do not commit placeholder or mock screenshots as
+production evidence.
 
 ## Upload Checklist
 
