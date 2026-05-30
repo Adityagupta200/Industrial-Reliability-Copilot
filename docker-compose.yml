@@ -216,6 +216,10 @@ services:
       - .env  
     ports:
       - "127.0.0.1:8080:8000"
+    volumes:
+      # Keep local Phase 10 trace/demo runs aligned with the working tree while
+      # preserving an immutable-image path for Kubernetes and CI.
+      - ./src:/app/src:ro
     environment:
       - HOST=0.0.0.0
       - PORT=8000
@@ -228,8 +232,13 @@ services:
       - LLM_OLLAMA_BASE_URL=http://ollama:11434
       - LLM_OLLAMA_MODEL=llama3.1
       - LLM_OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ROOT_CAUSE_FAST_PATH_ENABLED=${ROOT_CAUSE_FAST_PATH_ENABLED:-true}
+      - OUTPUT_GUARDRAILS_LLM_JUDGE_MODE=${OUTPUT_GUARDRAILS_LLM_JUDGE_MODE:-fallback}
+      - OUTPUT_GUARDRAILS_LLM_JUDGE_PROVIDER=${OUTPUT_GUARDRAILS_LLM_JUDGE_PROVIDER:-openai}
       # LangSmith variables pulled dynamically from .env at runtime
       - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-industrial-reliability-copilot}
     networks:
       - irc_network
     logging:

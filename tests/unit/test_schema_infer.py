@@ -1,8 +1,19 @@
 import json
+import re
+import warnings
 from pathlib import Path
 
 import joblib
 import pytest
+import torch
+from safetensors.torch import load_file as load_safetensors_file
+from sklearn.exceptions import InconsistentVersionWarning
+
+
+def _load_version_compatible_joblib(path: Path):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=InconsistentVersionWarning)
+        return joblib.load(path)
 
 
 def test_artifacts_present(repo_root: Path):
@@ -11,7 +22,55 @@ def test_artifacts_present(repo_root: Path):
 
     assert (anom_dir / "feature_schema.json").exists()
     assert (anom_dir / "preprocess.joblib").exists()
-    assert (anom_dir / "anomaly_model.pth").exists()
+    assert (anom_dir / "anomaly_model.safetensors").exists()
+
+
+def test_anomaly_checkpoint_uses_safe_tensor_serialization(repo_root: Path):
+    ckpt_path = (
+        repo_root
+        / "src"
+        / "anomaly_service"
+        / "artifacts"
+        / "anomaly"
+        / "anomaly_model.safetensors"
+    )
+    state_dict = load_safetensors_file(str(ckpt_path), device="cpu")
+    assert state_dict
+    assert all(torch.is_tensor(value) for value in state_dict.values())
+
+
+def test_anomaly_service_image_installs_safetensors(repo_root: Path):
+    requirements = repo_root / "src" / "anomaly_service" / "requirements.txt"
+    text = requirements.read_text(encoding="utf-8")
+
+    assert re.search(r"^safetensors(?:[<=>!~].*)?$", text, flags=re.MULTILINE)
+
+
+def test_anomaly_service_requirements_match_serialized_artifact_versions(repo_root: Path):
+    requirements = repo_root / "src" / "anomaly_service" / "requirements.txt"
+    text = requirements.read_text(encoding="utf-8")
+    rul_model = repo_root / "src" / "anomaly_service" / "artifacts" / "rul" / "rul_model.joblib"
+    artifact_bytes = rul_model.read_bytes()
+
+    sklearn_match = re.search(
+        rb"_sklearn_version\x94\x8c\x05(?P<version>\d+\.\d+\.\d+)", artifact_bytes
+    )
+    xgboost_match = re.search(
+        rb"version\[#L\x00+\x03i(?P<major>.)i(?P<minor>.)i(?P<patch>.)",
+        artifact_bytes,
+        flags=re.DOTALL,
+    )
+
+    assert sklearn_match is not None
+    assert xgboost_match is not None
+
+    sklearn_version = sklearn_match.group("version").decode("ascii")
+    xgboost_version = ".".join(
+        str(ord(xgboost_match.group(part))) for part in ("major", "minor", "patch")
+    )
+
+    assert f"scikit-learn=={sklearn_version}" in text
+    assert f"xgboost=={xgboost_version}" in text
 
 
 def test_schema_matches_preprocess_bundle(repo_root: Path):
@@ -20,7 +79,7 @@ def test_schema_matches_preprocess_bundle(repo_root: Path):
     bundle_path = anom_dir / "preprocess.joblib"
 
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    bundle = joblib.load(bundle_path)
+    bundle = _load_version_compatible_joblib(bundle_path)
 
     assert "schemas" in schema and isinstance(schema["schemas"], dict)
     assert (
@@ -61,7 +120,7 @@ def test_schema_matches_preprocess_bundle(repo_root: Path):
 @pytest.mark.parametrize("key", ["ga_mask"])
 def test_ga_mask_shape_valid(repo_root: Path, key: str):
     anom_dir = repo_root / "src" / "anomaly_service" / "artifacts" / "anomaly"
-    bundle = joblib.load(anom_dir / "preprocess.joblib")
+    bundle = _load_version_compatible_joblib(anom_dir / "preprocess.joblib")
     ga_mask = bundle[key]
 
     # Must be 1D mask

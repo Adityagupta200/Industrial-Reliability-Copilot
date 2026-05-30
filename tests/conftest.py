@@ -1,17 +1,72 @@
 import json
 import os
+import re
+import shutil
 import sys
+import tempfile
+import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterator, Optional
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = REPO_ROOT / "src"
+TEST_TMP_PARENT = Path(
+    os.getenv("IRC_TEST_TMP_ROOT", str(REPO_ROOT / "tmp" / "pytest-sessions"))
+).resolve()
 
 for p in (REPO_ROOT, SRC_DIR):
     if p.exists() and str(p) not in sys.path:
         sys.path.insert(0, str(p))
+
+
+def _safe_tmp_prefix(value: str) -> str:
+    prefix = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._-")
+    return (prefix or "test")[:80]
+
+
+def _best_effort_rmtree(path: Path) -> None:
+    try:
+        shutil.rmtree(path, ignore_errors=True)
+    except OSError:
+        pass
+
+
+class RepoTempPathFactory:
+    def __init__(self, root: Path):
+        self._root = root
+
+    def getbasetemp(self) -> Path:
+        return self._root
+
+    def mktemp(self, basename: str, numbered: bool = True) -> Path:
+        prefix = _safe_tmp_prefix(basename)
+        if numbered:
+            return Path(tempfile.mkdtemp(prefix=f"{prefix}-", dir=self._root))
+
+        path = self._root / prefix
+        path.mkdir(parents=True, exist_ok=False)
+        return path
+
+
+@pytest.fixture(scope="session")
+def test_tmp_root() -> Iterator[Path]:
+    TEST_TMP_PARENT.mkdir(parents=True, exist_ok=True)
+    root = TEST_TMP_PARENT / f"run-{os.getpid()}-{uuid.uuid4().hex[:8]}"
+    root.mkdir(parents=True, exist_ok=False)
+    yield root
+    _best_effort_rmtree(root)
+
+
+@pytest.fixture(scope="session")
+def tmp_path_factory(test_tmp_root: Path) -> RepoTempPathFactory:
+    return RepoTempPathFactory(test_tmp_root)
+
+
+@pytest.fixture
+def tmp_path(request: pytest.FixtureRequest, tmp_path_factory: RepoTempPathFactory) -> Path:
+    return tmp_path_factory.mktemp(request.node.name)
 
 
 def _repo_root() -> Path:

@@ -168,6 +168,7 @@ def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
+@app.post("/v1/predict/anomaly", response_model=AnomalyResponse, tags=["Inference"])
 @app.post("/predict/anomaly", response_model=AnomalyResponse, tags=["Inference"])
 def predict_anomaly(req: SensorRequest):
     if (
@@ -229,6 +230,7 @@ def predict_anomaly(req: SensorRequest):
     )
 
 
+@app.post("/v1/predict/rul", response_model=RULResponse, tags=["Inference"])
 @app.post("/predict/rul", response_model=RULResponse, tags=["Inference"])
 def predict_rul(req: SensorRequest):
     if MODELS is None or MODELS.rul_model is None or RUL_SCHEMA is None:

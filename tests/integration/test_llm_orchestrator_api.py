@@ -78,6 +78,7 @@ async def test_query_root_cause_api_contract(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(orchestrator_main, "log_interaction_async", log_interaction_async)
     monkeypatch.setattr(LLMClient, "invoke", fake_invoke)
     monkeypatch.setattr(OutputGuardrails, "validate_output", validate_output)
+    monkeypatch.setenv("ROOT_CAUSE_FAST_PATH_ENABLED", "false")
 
     app = create_app()
     transport = ASGITransport(app=app)

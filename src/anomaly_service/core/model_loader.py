@@ -55,6 +55,21 @@ def _extract_state_dict_and_meta(ckpt: Any) -> Tuple[Dict[str, torch.Tensor], Di
     )
 
 
+def _load_anomaly_checkpoint(path: Path) -> Tuple[Dict[str, torch.Tensor], Dict[str, Any]]:
+    if path.suffix == ".safetensors":
+        from safetensors import safe_open
+        from safetensors.torch import load_file as load_safetensors_file
+
+        with safe_open(path, framework="pt", device="cpu") as handle:
+            meta = dict(handle.metadata() or {})
+        return load_safetensors_file(str(path), device=settings.torch_device), meta
+
+    # Compatibility path for older local artifacts. Production defaults to safetensors.
+    ckpt = torch.load(path, map_location=settings.torch_device, weights_only=True)
+    state_dict, meta = _extract_state_dict_and_meta(ckpt)
+    return state_dict, meta
+
+
 class MultiScaleFeatureExtraction(nn.Module):
     """
     Exposes keys:
@@ -271,13 +286,10 @@ def load_rul_model():
 
 
 def load_anomaly_model():
-    # PRODUCTION FIX: Enforce weights_only=True to prevent arbitrary code execution attacks
-    ckpt = torch.load(
-        settings.anomaly_ckpt_path, map_location=settings.torch_device, weights_only=True
-    )
+    checkpoint_path = Path(settings.anomaly_ckpt_path)
+    state_dict, meta = _load_anomaly_checkpoint(checkpoint_path)
     version = _sha256_of_file(settings.anomaly_ckpt_path)
 
-    state_dict, meta = _extract_state_dict_and_meta(ckpt)
     state_dict = _strip_state_dict_prefix(state_dict, "module.")
 
     # Infer core dims

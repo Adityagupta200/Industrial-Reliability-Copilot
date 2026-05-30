@@ -13,9 +13,9 @@ class LLMSettings(BaseSettings):
     fallback_provider: Literal["openai", "ollama"] = "ollama"
 
     openai_api_key: Optional[SecretStr] = None
-    openai_model: str = "gpt-4o-mini"
+    openai_model: str = "gpt-4.1-mini"
 
-    openai_judge_model: str = "gpt-4o-mini"
+    openai_judge_model: str = "gpt-4.1-mini"
 
     openai_base_url: Optional[str] = None
 
@@ -23,10 +23,9 @@ class LLMSettings(BaseSettings):
     ollama_model: str = "llama3.1"
 
     temperature: float = 0.0
-    max_tokens: int = 1000
+    max_tokens: int = 700
 
-    # PRODUCTION FIX: Increased from 5.0 to 45.0.
-    request_timeout_s: float = 45.0
+    request_timeout_s: float = 30.0
 
     max_retries: int = 2
     retry_min_wait_s: float = 0.2
@@ -53,6 +52,7 @@ class ServiceSettings(BaseSettings):
     anomaly_predict_rul_path: str = "/predict/rul"
     rag_retrieve_hybrid_path: str = "/retrieve/hybrid"
     rag_retrieve_procedures_path: str = "/retrieve/procedures"
+    rag_retrieve_procedures_direct_path: str = "/retrieve/procedures/direct"
     rag_retrieve_semantic_path: str = "/retrieve/semantic"
 
     # PRODUCTION FIX: Corrected credentials and database name, matching RAG service

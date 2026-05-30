@@ -76,6 +76,10 @@ class QueryRequest(BaseModel):
     root_cause: Optional[RootCauseRequest] = None
     remediation: Optional[RemediationRequest] = None
     historical: Optional[HistoricalSearchRequest] = None
+    bypass_cache: bool = Field(
+        default=False,
+        description="Force a fresh pipeline execution for trace/evaluation runs.",
+    )
 
 
 class QueryResponse(BaseModel):

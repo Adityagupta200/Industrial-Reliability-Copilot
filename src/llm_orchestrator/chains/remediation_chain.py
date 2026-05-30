@@ -127,7 +127,7 @@ class RemediationChain:
                 steps=[],
                 sources=[],
             )
-            return fallback_response, "openai", "gpt-4o-mini", "No context retrieved."
+            return fallback_response, "system", "no_llm_called", "No context retrieved."
 
         formatted_context, doc_mapping = _format_docs(docs)
 

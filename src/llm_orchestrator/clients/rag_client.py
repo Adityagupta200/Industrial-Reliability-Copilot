@@ -10,6 +10,23 @@ from ..schemas import RetrievedDoc
 logger = logging.getLogger(__name__)
 
 
+def _repair_text_artifacts(text: str) -> str:
+    replacements = {
+        "\u00e2\u20ac\u00a2": "-",
+        "\u00e2\u20ac\u201c": "-",
+        "\u00e2\u20ac\u201d": "-",
+        "\u00e2\u20ac\u2122": "'",
+        "\u00e2\u20ac\u0153": '"',
+        "\u00e2\u20ac\u009d": '"',
+        "\u00c3\u00b7": "/",
+        "\u00c2\u00ba": " degrees ",
+        "\u00c2": "",
+    }
+    for bad, good in replacements.items():
+        text = text.replace(bad, good)
+    return text
+
+
 class RAGClient:
     def __init__(
         self,
@@ -17,12 +34,14 @@ class RAGClient:
         hybrid_path: str,
         procedures_path: str,
         semantic_path: str,
+        procedures_direct_path: str = "/retrieve/procedures/direct",
         timeout_s: float = 60.0,
     ):
         self.base_url = base_url
         self.hybrid_path = hybrid_path
         self.procedures_path = procedures_path
         self.semantic_path = semantic_path
+        self.procedures_direct_path = procedures_direct_path
         self.timeout_s = timeout_s
         self._client: Optional[httpx.AsyncClient] = None
 
@@ -52,6 +71,9 @@ class RAGClient:
 
         bad_tags = {"hybrid", "semantic", "keyword", "unknown"}
         for d in docs:
+            if isinstance(d.get("text"), str):
+                d["text"] = _repair_text_artifacts(d["text"])
+
             meta = d.get("metadata", {})
             candidate_source = meta.get("file_name") or meta.get("source") or d.get("source")
 
@@ -144,6 +166,32 @@ class RAGClient:
             )
         except Exception as e:
             logger.error(f"RAG Service Procedure Retrieval failed: {type(e).__name__} - {e}")
+            return []
+
+    @traceable(run_type="retriever", name="Direct_Procedure_Search")
+    async def retrieve_procedures_direct(
+        self,
+        query: str,
+        *,
+        equipment_id: Optional[str] = None,
+        k: int = 5,
+    ) -> list[RetrievedDoc]:
+        payload: dict[str, Any] = {"query": query, "k": k, "filters": {}}
+        if equipment_id:
+            payload["filters"]["equipment_id"] = equipment_id
+
+        try:
+            return await self._post_retrieve(
+                path=self.procedures_direct_path,
+                payload=payload,
+                retrieval_name="Direct procedure retrieval",
+            )
+        except Exception as e:
+            logger.warning(
+                "RAG Service Direct Procedure Retrieval failed: %s - %s",
+                type(e).__name__,
+                e,
+            )
             return []
 
     @traceable(run_type="retriever", name="Qdrant_Semantic_Search")
