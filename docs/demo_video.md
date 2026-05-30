@@ -1,6 +1,10 @@
 # Demo Video Guide
 
-This project should not ship a fabricated demo link. Use this guide to record the required 3 to 5 minute video from a live local or staging deployment, then add the YouTube URL to the README.
+This project should not ship a fabricated demo link. Use this guide to record
+the required 3 to 5 minute video from a live local or staging deployment, then
+add the YouTube URL to the README. If you defer the video, keep the README marked
+as pending; screenshots and CI artifacts are strong review evidence, but they do
+not fully satisfy the Phase 10 video acceptance criterion.
 
 ## Target Structure
 

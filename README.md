@@ -12,9 +12,12 @@ Industrial Reliability Copilot combines anomaly/RUL inference, hybrid retrieval 
 
 ## Demo
 
-Video demo: to be recorded from a live local or staging deployment.
+Video demo: pending. The live screenshots, Ragas artifacts, and LangSmith trace
+below provide current review evidence; a 3 to 5 minute walkthrough remains the
+only Phase 10 acceptance item intentionally deferred.
 
-The recording plan, commands, and screenshot checklist are in [docs/demo_video.md](docs/demo_video.md). After upload, add the YouTube URL here and commit real screenshots under `docs/assets/screenshots/`.
+The recording plan, commands, and screenshot checklist are in
+[docs/demo_video.md](docs/demo_video.md). After upload, add the YouTube URL here.
 
 ## Key Features
 
