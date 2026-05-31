@@ -10,15 +10,6 @@ Production-grade RAG + MLOps platform for industrial maintenance.
 
 Industrial Reliability Copilot combines anomaly/RUL inference, hybrid retrieval over manuals and procedures, LLM orchestration, guardrails, offline Ragas evaluation, online telemetry, and Kubernetes deployment automation. It is built as a recruiter-visible Machine Learning Engineering portfolio project: not just a demo chatbot, but a measured, monitored, deployable reliability assistant.
 
-## Demo
-
-Video demo: pending. The live screenshots, Ragas artifacts, and LangSmith trace
-below provide current review evidence; a 3 to 5 minute walkthrough remains the
-only Phase 10 acceptance item intentionally deferred.
-
-The recording plan, commands, and screenshot checklist are in
-[docs/demo_video.md](docs/demo_video.md). After upload, add the YouTube URL here.
-
 ## Key Features
 
 - Hybrid RAG retrieval: Qdrant dense search + BM25 keyword search + Reciprocal Rank Fusion.
@@ -149,7 +140,7 @@ curl -s "http://127.0.0.1:8000/query/${job_id}?include_raw_context=true" | pytho
 
 The default status endpoint omits `raw_context` to keep normal API responses
 compact. Use `include_raw_context=true` for evaluation evidence, screenshots, and
-demo recording; that response also includes `evidence_summary` with retrieved
+review artifacts; that response also includes `evidence_summary` with retrieved
 `DOC_*` IDs, source files, and context size for quick terminal review. Use
 `bypass_cache=true` in the POST payload when capturing LangSmith traces so the
 retrieval and guardrail spans are regenerated instead of serving a cache hit.
@@ -262,7 +253,7 @@ show the full evidence clearly without shrinking important text.
 
 <img src="docs/assets/screenshots/langsmith-trace.png" alt="LangSmith trace with input guardrails, retrieval, root-cause fast path, and output groundedness checks" width="900">
 
-The exact capture checklist and naming convention are in [docs/demo_video.md](docs/demo_video.md). Placeholder images are intentionally not committed.
+The screenshot naming convention is in [docs/assets/screenshots/README.md](docs/assets/screenshots/README.md). Placeholder images are intentionally not committed.
 
 ## Repository Layout
 
@@ -285,7 +276,6 @@ tests/                        unit, integration, regression tests
 - [Evaluation methodology](docs/evaluation.md)
 - [Incident documentation](docs/incidents.md)
 - [Deployment secrets](docs/deployment_secrets.md)
-- [Demo video guide](docs/demo_video.md)
 
 ## License And Contact
 

@@ -2,7 +2,9 @@
 
 Store real screenshots from a live local, staging, or production run in this directory.
 
-Do not commit placeholders or mock images as production evidence. The expected files are listed in `docs/demo_video.md`.
+Do not commit placeholders or mock images as production evidence. The expected
+files and naming convention are listed here so README links always point to real
+committed assets.
 
 Use `slug.png` when one screenshot is enough. Use `slug-1.png`, `slug-2.png`,
 and so on when one screen cannot show the evidence legibly. Keep README links
