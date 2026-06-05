@@ -18,13 +18,11 @@ ENV PATH="${VENV_PATH}/bin:${PATH}"
 
 RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
-COPY requirements.txt /app/requirements.txt
+COPY src/api_gateway/requirements.txt /app/requirements.txt
 
-# PRODUCTION FIX: Added index-url and extra-index-url to allow the gateway 
-# to securely resolve the CPU-only PyTorch wheel and prevent ResolutionImpossible errors.
+# Keep the gateway image small: no ML, RAG, or evaluation dependencies are
+# installed in this edge container.
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
-    --index-url https://pypi.org/simple \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
     -r /app/requirements.txt
 
 ########################
@@ -44,6 +42,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       tini \
     && rm -rf /var/lib/apt/lists/*
+
+# Runtime containers never unpack or build Python wheels. Remove base-image
+# packaging tools from the system interpreter so inactive tooling cannot expand
+# the production attack surface or trigger fixed-version CVEs.
+RUN rm -rf \
+      /usr/local/lib/python3.11/site-packages/_distutils_hack \
+      /usr/local/lib/python3.11/site-packages/pkg_resources \
+      /usr/local/lib/python3.11/site-packages/setuptools* \
+      /usr/local/lib/python3.11/site-packages/wheel* \
+      /usr/local/bin/wheel
 
 # --- Phase 7 Production Patches ---
 
@@ -68,4 +76,4 @@ HEALTHCHECK --interval=20s --timeout=5s --start-period=10s --retries=3 \
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run the API Gateway
-CMD ["uvicorn", "api_gateway.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]
+CMD ["uvicorn", "api_gateway.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--no-access-log", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]

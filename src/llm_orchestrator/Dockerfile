@@ -29,13 +29,11 @@ ENV PATH="${VENV_PATH}/bin:${PATH}"
 RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
 # Copy dependency files
-# Note: Assumes requirements.txt is located at the root of the build context
-COPY requirements.txt /app/requirements.txt
+COPY src/llm_orchestrator/requirements.txt /app/requirements.txt
 
-# Install dependencies with CPU-only PyTorch to optimize image size and prevent OOM
+# Install only the orchestrator runtime stack. Ragas/LangChain evaluation
+# packages stay in requirements-dev.txt and are not shipped in this image.
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
-    --index-url https://pypi.org/simple \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
     -r /app/requirements.txt
 
 # Download spaCy model explicitly into the virtual environment
@@ -63,6 +61,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       tini \
     && rm -rf /var/lib/apt/lists/*
 
+# Runtime containers never unpack or build Python wheels. Remove base-image
+# packaging tools from the system interpreter so inactive tooling cannot expand
+# the production attack surface or trigger fixed-version CVEs.
+RUN rm -rf \
+      /usr/local/lib/python3.11/site-packages/_distutils_hack \
+      /usr/local/lib/python3.11/site-packages/pkg_resources \
+      /usr/local/lib/python3.11/site-packages/setuptools* \
+      /usr/local/lib/python3.11/site-packages/wheel* \
+      /usr/local/bin/wheel
+
 # Create a strict non-root user and group with explicit explicit numeric IDs
 # This ensures compatibility with strict Kubernetes SecurityContext policies
 RUN groupadd --system --gid 10001 appgroup && \
@@ -89,4 +97,4 @@ ENTRYPOINT ["/usr/bin/tini", "--"]
 ENV HF_HOME=/tmp/huggingface
 # Start the Orchestrator service. 
 # Explicitly setting --workers 1 because Kubernetes HPA handles concurrency scaling in production.
-CMD ["uvicorn", "llm_orchestrator.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]
+CMD ["uvicorn", "llm_orchestrator.main:app", "--app-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--no-access-log", "--timeout-keep-alive", "75", "--timeout-graceful-shutdown", "30"]

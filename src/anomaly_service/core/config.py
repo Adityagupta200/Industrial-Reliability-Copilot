@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     # Runtime
     torch_device: str = "cpu"  # keep CPU for portability
+    allow_legacy_torch_checkpoint: bool = False
     request_timeout_seconds: float = 5.0
 
     def model_post_init(self, __context) -> None:

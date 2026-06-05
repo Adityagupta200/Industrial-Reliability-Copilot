@@ -11,7 +11,11 @@ from rag_service.embeddings import get_embedding_provider
 from rag_service.vectorstore.qdrant_store import QdrantStore, VectorPoint
 from rag_service.ingestion.hashing import sha256_file
 from rag_service.ingestion.manifest import Manifest
-from rag_service.ingestion.pdf_extractor import extract_pdf_text, remove_common_headers_footers
+from rag_service.ingestion.pdf_extractor import (
+    extract_pdf_metadata,
+    extract_pdf_text,
+    remove_common_headers_footers,
+)
 from rag_service.ingestion.markdown_loader import load_markdown
 from rag_service.ingestion.cleaning import clean_text
 from rag_service.ingestion.chunking import chunk_text
@@ -75,6 +79,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
 
         _log(f"[manual {n}/{len(pdfs)}] Processing: {pdf}")
         try:
+            pdf_metadata = extract_pdf_metadata(pdf)
             pages = extract_pdf_text(pdf)
             pages = remove_common_headers_footers(pages)
             full_text = clean_text("\n\n".join([p.text for p in pages]))
@@ -94,6 +99,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
                 "source_file": pdf.name,
                 "path": pdf.as_posix(),
                 "equipment_id": eq_id if eq_id else "all",
+                **pdf_metadata,
             }
 
             chunks = chunk_text(

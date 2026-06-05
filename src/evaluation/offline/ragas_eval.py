@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 
 import asyncio
@@ -60,6 +61,67 @@ def _load_ragas_runtime() -> tuple[Any, Any]:
         raise _ragas_dependency_error(exc) from exc
 
     return evaluate, RunConfig
+
+
+def _configure_ragas_progress_output() -> None:
+    """Keep evaluation logs readable across Windows Git Bash, CI, and terminals."""
+    mode = os.getenv("RAGAS_PROGRESS", "ascii").strip().lower()
+    if mode in {"unicode", "default"}:
+        return
+
+    try:
+        import ragas.executor as ragas_executor
+    except Exception:
+        return
+
+    original_tqdm = ragas_executor.tqdm
+
+    def tqdm_wrapper(*args: Any, **kwargs: Any) -> Any:
+        if mode in {"0", "false", "no", "off", "none", "disabled"}:
+            kwargs["disable"] = True
+        else:
+            kwargs.setdefault("ascii", True)
+        return original_tqdm(*args, **kwargs)
+
+    ragas_executor.tqdm = tqdm_wrapper
+
+
+def _verbose_case_output_enabled() -> bool:
+    return os.getenv("RAGAS_VERBOSE_CASES", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _metric_for_console(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(score):
+        return None
+    return round(score, 3)
+
+
+def _case_metrics_for_console(case_metrics: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    metric_names = [
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall",
+    ]
+    compact_rows: list[dict[str, Any]] = []
+    for row in case_metrics:
+        compact_row: dict[str, Any] = {"case_id": row.get("case_id", "unknown")}
+        for metric_name in metric_names:
+            if metric_name in row:
+                compact_row[metric_name] = _metric_for_console(row.get(metric_name))
+        compact_rows.append(compact_row)
+    return compact_rows
 
 
 def _build_ragas_components() -> tuple[list[Any], Any, Any]:
@@ -1078,6 +1140,7 @@ async def main() -> None:
 
     print("Initializing Ragas evaluation models...")
     evaluate, RunConfig = _load_ragas_runtime()
+    _configure_ragas_progress_output()
     metrics, judge_llm, judge_embeddings = _build_ragas_components()
 
     print("Running Ragas metrics...")
@@ -1171,8 +1234,15 @@ async def main() -> None:
     print(json.dumps(safety_summary, indent=4))
     print("\nResponse Contract Evaluation:")
     print(json.dumps(contract_summary, indent=4))
-    print("\nPer-Case Ragas Metrics:")
-    print(json.dumps(case_metrics, indent=4))
+    print("\nPer-Case Ragas Summary:")
+    print(json.dumps(_case_metrics_for_console(case_metrics), indent=4))
+    print(
+        "\nDetailed evaluation artifacts written to "
+        f"{REPORT_PATH}, {LATEST_RUN_PATH}, and {PR_RESULTS_PATH}."
+    )
+    if _verbose_case_output_enabled():
+        print("\nVerbose Per-Case Ragas Metrics:")
+        print(json.dumps(case_metrics, indent=4))
 
 
 if __name__ == "__main__":

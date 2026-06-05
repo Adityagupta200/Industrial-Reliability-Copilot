@@ -17,10 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from prometheus_client import Counter, Histogram, CONTENT_TYPE_LATEST, generate_latest
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select
-from langsmith import traceable  # PRODUCTION FIX: Explicit tracing
+from llm_orchestrator.tracing import traceable
 
 from .llm_config import load_settings
 from .llm_client import LLMClient
@@ -41,6 +40,7 @@ from evaluation.online.logger import (
     QueryLog,
     init_telemetry_db,
     create_job_state,
+    increment_rate_limit_bucket,
     update_job_state,
     get_job_state,
 )
@@ -49,15 +49,90 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(os.getenv("HTTPX_LOG_LEVEL", "WARNING"))
+logging.getLogger("httpcore").setLevel(os.getenv("HTTPCORE_LOG_LEVEL", "WARNING"))
+logging.getLogger("presidio-analyzer").setLevel(os.getenv("PRESIDIO_LOG_LEVEL", "ERROR"))
 
-if os.getenv("LANGCHAIN_API_KEY"):
+LANGSMITH_TRACING_ENABLED = os.getenv("LANGCHAIN_TRACING_V2", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+if os.getenv("LANGCHAIN_API_KEY") and LANGSMITH_TRACING_ENABLED:
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_PROJECT"] = "industrial-reliability-copilot"
     logger.info("Phase 8: LangSmith tracing enabled for LLM Orchestrator.")
+else:
+    os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
-limiter = Limiter(key_func=get_remote_address)
+
+def _env_rate_limit(name: str, default: str) -> str:
+    return os.getenv(name, default).strip() or default
+
+
+def _rate_limit_key(request: Request) -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    forwarded_client = forwarded_for.split(",", 1)[0].strip()
+    if forwarded_client:
+        return forwarded_client
+    if request.client is not None:
+        return request.client.host
+    return "unknown"
+
+
+def _parse_rate_limit(value: str) -> tuple[int, int]:
+    match = re.fullmatch(r"\s*(\d+)\s*/\s*([A-Za-z]+)\s*", value or "")
+    if not match:
+        return 60, 60
+
+    limit = max(1, int(match.group(1)))
+    unit = match.group(2).lower().rstrip("s")
+    window_seconds = {
+        "second": 1,
+        "sec": 1,
+        "s": 1,
+        "minute": 60,
+        "min": 60,
+        "m": 60,
+        "hour": 3600,
+        "hr": 3600,
+        "h": 3600,
+        "day": 86400,
+        "d": 86400,
+    }.get(unit, 60)
+    return limit, window_seconds
+
+
+async def _enforce_shared_rate_limit(request: Request, *, scope: str, rate_limit: str) -> None:
+    limit, window_seconds = _parse_rate_limit(rate_limit)
+    client_key = _rate_limit_key(request)
+    bucket_key = f"{scope}:{client_key}:{window_seconds}"
+    allowed, count, retry_after = await increment_rate_limit_bucket(
+        bucket_key=bucket_key,
+        limit=limit,
+        window_seconds=window_seconds,
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"Rate limit exceeded for {scope}: {count}/{limit} requests in "
+                f"{window_seconds}s window."
+            ),
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
+QUERY_RATE_LIMIT = _env_rate_limit("ORCHESTRATOR_QUERY_RATE_LIMIT", "90/minute")
+FEEDBACK_RATE_LIMIT = _env_rate_limit("ORCHESTRATOR_FEEDBACK_RATE_LIMIT", "20/minute")
+
+limiter = Limiter(key_func=_rate_limit_key)
 
 QUERY_CACHE: dict[str, QueryResponse] = {}
+QUERY_INFLIGHT: dict[str, asyncio.Task[QueryResponse]] = {}
+QUERY_INFLIGHT_LOCK = asyncio.Lock()
 LLM_USAGE_INPUT_LABEL: Final = "input"
 LLM_USAGE_OUTPUT_LABEL: Final = "output"
 
@@ -125,8 +200,21 @@ CACHE_EVENTS = Counter("cache_events_total", "Cache hit or miss", ["status"])
 CACHE_EVENTS.labels(status="hit").inc(0)
 CACHE_EVENTS.labels(status="miss").inc(0)
 CACHE_EVENTS.labels(status="bypass").inc(0)
+CACHE_EVENTS.labels(status="inflight_join").inc(0)
 
 health_check_client: httpx.AsyncClient | None = None
+
+
+def _metrics_endpoint(request: Request) -> str:
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+    if route_path:
+        return str(route_path)
+
+    path = request.url.path
+    if path.startswith("/query/"):
+        return "/query/{job_id}"
+    return path
 
 
 class FeedbackRequest(BaseModel):
@@ -167,6 +255,51 @@ def _query_cache_key(req: QueryRequest) -> str:
     payload = req.model_dump(mode="json", exclude_none=True, exclude={"bypass_cache"})
     stable_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(stable_payload.encode("utf-8")).hexdigest()
+
+
+def _clone_query_response(response: QueryResponse) -> QueryResponse:
+    return response.model_copy(deep=True)
+
+
+async def _cached_or_inflight_response(
+    cache_key: str,
+    execute,
+) -> tuple[QueryResponse, str]:
+    cached_response = QUERY_CACHE.get(cache_key)
+    if cached_response is not None:
+        return _clone_query_response(cached_response), "hit"
+
+    owner = False
+    async with QUERY_INFLIGHT_LOCK:
+        cached_response = QUERY_CACHE.get(cache_key)
+        if cached_response is not None:
+            return _clone_query_response(cached_response), "hit"
+
+        task = QUERY_INFLIGHT.get(cache_key)
+        if task is None:
+            task = asyncio.create_task(execute())
+            QUERY_INFLIGHT[cache_key] = task
+            owner = True
+            cache_status = "miss"
+        else:
+            cache_status = "inflight_join"
+
+    try:
+        response = await task
+    except Exception:
+        if owner:
+            async with QUERY_INFLIGHT_LOCK:
+                if QUERY_INFLIGHT.get(cache_key) is task:
+                    QUERY_INFLIGHT.pop(cache_key, None)
+        raise
+
+    if owner:
+        QUERY_CACHE[cache_key] = _clone_query_response(response)
+        async with QUERY_INFLIGHT_LOCK:
+            if QUERY_INFLIGHT.get(cache_key) is task:
+                QUERY_INFLIGHT.pop(cache_key, None)
+
+    return _clone_query_response(response), cache_status
 
 
 def _is_billable_llm_provider(provider: str) -> bool:
@@ -286,6 +419,9 @@ async def lifespan(app: FastAPI):
     health_check_client = httpx.AsyncClient(timeout=1.0)
 
     await init_telemetry_db()
+    InputGuardrails.preload_engines()
+    if not InputGuardrails.engines_ready():
+        raise RuntimeError("Input guardrail NLP engines failed to initialize.")
 
     logger.info("Orchestrator background resources initialized.")
     yield
@@ -361,9 +497,10 @@ def create_app() -> FastAPI:
             return response
         finally:
             latency = time.time() - start_time
-            REQUEST_LATENCY.labels(endpoint=request.url.path).observe(latency)
+            endpoint = _metrics_endpoint(request)
+            REQUEST_LATENCY.labels(endpoint=endpoint).observe(latency)
             REQUEST_COUNT.labels(
-                method=request.method, endpoint=request.url.path, http_status=status_code
+                method=request.method, endpoint=endpoint, http_status=status_code
             ).inc()
 
     @app.get("/health/live", tags=["Health"])
@@ -441,15 +578,14 @@ def create_app() -> FastAPI:
                 CACHE_EVENTS.labels(status="bypass").inc()
                 pipeline_response = await orchestrator.handle(req)
                 answer_text, contexts = extract_log_data(pipeline_response)
-            elif cache_key in QUERY_CACHE:
-                CACHE_EVENTS.labels(status="hit").inc()
-                pipeline_response = QUERY_CACHE[cache_key]
-                _record_query_cache_hit(cache_key, pipeline_response)
-                answer_text, contexts = extract_log_data(pipeline_response)
             else:
-                CACHE_EVENTS.labels(status="miss").inc()
-                pipeline_response = await orchestrator.handle(req)
-                QUERY_CACHE[cache_key] = pipeline_response
+                pipeline_response, cache_status = await _cached_or_inflight_response(
+                    cache_key,
+                    lambda: orchestrator.handle(req),
+                )
+                CACHE_EVENTS.labels(status=cache_status).inc()
+                if cache_status in {"hit", "inflight_join"}:
+                    _record_query_cache_hit(cache_key, pipeline_response)
                 answer_text, contexts = extract_log_data(pipeline_response)
 
             estimated_input_tokens = len(query_text.split()) * 1.3 if query_text else 0.0
@@ -572,7 +708,11 @@ def create_app() -> FastAPI:
                 fallback_response = QueryResponse(
                     trace_id=trace_id,
                     latency_ms=round((time.time() - start_time) * 1000.0, 2),
-                    guardrails_applied=["fallback_activated"],
+                    guardrails_applied=[
+                        "input_safety",
+                        "input_guardrail_blocked",
+                        "safe_refusal",
+                    ],
                     raw_context="NONE",
                     chain=chain_type,
                     result=fallback_result,
@@ -596,11 +736,17 @@ def create_app() -> FastAPI:
                 await update_job_state(job_id, status="failed", error=error_msg)
 
     @app.post("/query", status_code=202, tags=["Inference"])
-    @limiter.limit("60/minute")
+    @limiter.limit(QUERY_RATE_LIMIT)
     async def query(
         request: Request, req: QueryRequest, response: Response, background_tasks: BackgroundTasks
     ):
-        trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
+        await _enforce_shared_rate_limit(request, scope="query", rate_limit=QUERY_RATE_LIMIT)
+        incoming_trace_id = request.headers.get("X-Trace-ID")
+        trace_id = (
+            f"{incoming_trace_id}-{uuid.uuid4().hex[:12]}"
+            if incoming_trace_id
+            else str(uuid.uuid4())
+        )
         job_id = trace_id
 
         await create_job_state(job_id)
@@ -622,8 +768,9 @@ def create_app() -> FastAPI:
         return _prepare_query_status_response(job_data, include_raw_context=True)
 
     @app.post("/feedback", tags=["Evaluation"])
-    @limiter.limit("20/minute")
+    @limiter.limit(FEEDBACK_RATE_LIMIT)
     async def submit_feedback(request: Request, feedback: FeedbackRequest):
+        await _enforce_shared_rate_limit(request, scope="feedback", rate_limit=FEEDBACK_RATE_LIMIT)
         async with AsyncSessionLocal() as db:
             try:
                 result = await db.execute(

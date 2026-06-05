@@ -202,7 +202,7 @@ metadata:
   name: llm-orchestrator
   namespace: industrial-copilot
 spec:
-  replicas: 1 # PRODUCTION FIX
+  replicas: 4 # Phase 11 production baseline for sustained 50 QPS validation
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 900
   minReadySeconds: 5
@@ -335,7 +335,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: llm-orchestrator
-  minReplicas: 1 # PRODUCTION FIX
+  minReplicas: 4
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -353,7 +353,7 @@ metadata:
   name: api-gateway
   namespace: industrial-copilot
 spec:
-  replicas: 1 # PRODUCTION FIX
+  replicas: 3 # Production edge baseline for 50 QPS validation plus HA
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 600
   minReadySeconds: 5
@@ -386,7 +386,7 @@ spec:
             cpu: "250m"
           limits:
             memory: "512Mi"
-            cpu: "500m"
+            cpu: "1000m"
         startupProbe:
           httpGet:
             path: /health/live
@@ -425,3 +425,23 @@ spec:
   ports:
   - port: 80
     targetPort: 8000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway-hpa
+  namespace: industrial-copilot
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

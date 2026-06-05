@@ -1,0 +1,59 @@
+{
+    "null_metrics": [
+        "faithfulness",
+        "answer_relevancy",
+        "context_precision",
+        "context_recall"
+    ],
+    "diagnostics": [
+        {
+            "case_id": "test_001",
+            "null_metrics": [
+                "faithfulness",
+                "answer_relevancy",
+                "context_precision",
+                "context_recall"
+            ],
+            "question": "Why did pump P-23 trigger anomaly at 03:41?",
+            "answer": "Pump P-23 triggered the anomaly at 03:41 because its high-vibration pattern is consistent with bearing wear or insufficient lubrication. The retrieved Pump P-23 bearing procedure states that high vibration with stable pressure and flow commonly indicates bearing wear, insufficient lubrication, contamination, or misalignment. The case evidence includes high vibration RMS 8.4, stable pressure at 5.2 bar, stable flow at 176.0 lpm, no corresponding pressure drop.",
+            "context_count": 2
+        },
+        {
+            "case_id": "test_002",
+            "null_metrics": [
+                "faithfulness",
+                "answer_relevancy",
+                "context_precision",
+                "context_recall"
+            ],
+            "question": "What are the standard operating procedures for calibrating a pressure transducer?",
+            "answer": "The standard operating procedure for calibrating a pressure transducer is to depressurize the line and confirm with gauge, follow LOTO where applicable, connect a calibrated pressure reference or deadweight tester, apply 0%, 50%, and 100% pressure points, adjust the zero point and span until readings are within tolerance, and record calibration results and update maintenance log.",
+            "context_count": 2
+        },
+        {
+            "case_id": "test_004",
+            "null_metrics": [
+                "faithfulness",
+                "answer_relevancy",
+                "context_precision",
+                "context_recall"
+            ],
+            "question": "What triage steps should I follow when pump P-23 has gravel-like noise, fluctuating discharge pressure, and reduced flow?",
+            "answer": "For pump P-23 cavitation triage with gravel-like noise, fluctuating discharge pressure, and reduced flow, check suction strainer for blockage, verify NPSH conditions and suction valve position, inspect for air ingress on suction-side, and reduce speed or load temporarily and observe changes; then verify pressure and flow stabilize after corrective action.",
+            "context_count": 2
+        },
+        {
+            "case_id": "test_005",
+            "null_metrics": [
+                "faithfulness",
+                "answer_relevancy",
+                "context_precision",
+                "context_recall"
+            ],
+            "question": "What basic checks should I perform before returning an overheating motor M-12 to service?",
+            "answer": "Before returning overheating motor M-12 to service, check ventilation paths and clean vents, verify load current is within rated limits, inspect bearings for friction and misalignment, and check ambient temperature and cooling system; then verify the temperature trend normalizes.",
+            "context_count": 2
+        }
+    ],
+    "guidance": "Null critical metrics usually mean the evaluator failed to parse statements or the judge provider returned malformed output. These have been coerced to 0.0 to fail the quality gate thresholds rather than crashing the pipeline runtime."
+}

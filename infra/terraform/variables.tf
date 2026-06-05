@@ -12,6 +12,17 @@ variable "db_password" {
   description = "Password for PostgreSQL RDS database"
   type        = string
   sensitive   = true
+  nullable    = false
+
+  validation {
+    condition = (
+      length(var.db_password) >= 8 &&
+      length(var.db_password) <= 128 &&
+      can(regex("^[!-~]+$", var.db_password)) &&
+      length(regexall("[/'\"@]", var.db_password)) == 0
+    )
+    error_message = "db_password must be 8-128 printable non-space ASCII characters and cannot contain '/', single quote, double quote, or '@' to satisfy Amazon RDS master password rules."
+  }
 }
 
 variable "dynamodb_lock_table" {

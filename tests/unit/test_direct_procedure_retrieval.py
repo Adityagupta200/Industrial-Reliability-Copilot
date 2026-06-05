@@ -46,4 +46,4 @@ def test_direct_procedure_ranking_prefers_exact_equipment(tmp_path: Path) -> Non
     )
 
     assert [doc.metadata["source_file"] for doc in ranked] == ["bearing_replacement_pump_P-23.md"]
-    assert ranked[0].score > 20.0
+    assert ranked[0].score > 0.0

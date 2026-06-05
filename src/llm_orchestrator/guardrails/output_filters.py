@@ -3,7 +3,7 @@ import asyncio
 import logging
 import os
 from typing import Any, Tuple
-from langsmith import traceable
+from llm_orchestrator.tracing import traceable
 
 logger = logging.getLogger(__name__)
 

@@ -117,6 +117,7 @@ services:
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       EMBEDDING_NORMALIZE: "true"
       HF_HOME: /app/data/hf_cache
+      RAG_WARM_RETRIEVERS_ON_STARTUP: ${RAG_WARM_RETRIEVERS_ON_STARTUP:-true}
     ports:
       - "127.0.0.1:8002:8002"
     volumes:
@@ -235,6 +236,14 @@ services:
       - ROOT_CAUSE_FAST_PATH_ENABLED=${ROOT_CAUSE_FAST_PATH_ENABLED:-true}
       - OUTPUT_GUARDRAILS_LLM_JUDGE_MODE=${OUTPUT_GUARDRAILS_LLM_JUDGE_MODE:-fallback}
       - OUTPUT_GUARDRAILS_LLM_JUDGE_PROVIDER=${OUTPUT_GUARDRAILS_LLM_JUDGE_PROVIDER:-openai}
+      - ORCHESTRATOR_QUERY_RATE_LIMIT=${ORCHESTRATOR_QUERY_RATE_LIMIT:-90/minute}
+      - ORCHESTRATOR_FEEDBACK_RATE_LIMIT=${ORCHESTRATOR_FEEDBACK_RATE_LIMIT:-20/minute}
+      - TELEMETRY_DB_POOL_SIZE=${TELEMETRY_DB_POOL_SIZE:-5}
+      - TELEMETRY_DB_MAX_OVERFLOW=${TELEMETRY_DB_MAX_OVERFLOW:-5}
+      - TELEMETRY_DB_POOL_TIMEOUT_S=${TELEMETRY_DB_POOL_TIMEOUT_S:-10}
+      - HTTPX_LOG_LEVEL=${HTTPX_LOG_LEVEL:-WARNING}
+      - HTTPCORE_LOG_LEVEL=${HTTPCORE_LOG_LEVEL:-WARNING}
+      - PRESIDIO_LOG_LEVEL=${PRESIDIO_LOG_LEVEL:-ERROR}
       # LangSmith variables pulled dynamically from .env at runtime
       - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
@@ -257,16 +266,9 @@ services:
         condition: service_completed_successfully
     command:
       [
-        "uvicorn",
-        "llm_orchestrator.main:app",
-        "--app-dir",
-        "/app/src",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-        "--loop",
-        "asyncio"
+        "sh",
+        "-c",
+        "exec uvicorn llm_orchestrator.main:app --app-dir /app/src --host 0.0.0.0 --port 8000 --loop asyncio --workers ${LLM_ORCHESTRATOR_WORKERS:-4} --no-access-log"
       ]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health/ready > /dev/null || exit 1"]
@@ -287,6 +289,13 @@ services:
       - PORT=8000
       - PYTHONPATH=/app/src
       - ORCHESTRATOR_URL=http://llm-orchestrator:8000 
+      - GATEWAY_MAX_CONNECTIONS=${GATEWAY_MAX_CONNECTIONS:-300}
+      - GATEWAY_MAX_KEEPALIVE_CONNECTIONS=${GATEWAY_MAX_KEEPALIVE_CONNECTIONS:-100}
+      - GATEWAY_REQUEST_TIMEOUT_S=${GATEWAY_REQUEST_TIMEOUT_S:-600}
+      - GATEWAY_CONNECT_TIMEOUT_S=${GATEWAY_CONNECT_TIMEOUT_S:-10}
+      - GATEWAY_POOL_TIMEOUT_S=${GATEWAY_POOL_TIMEOUT_S:-30}
+      - HTTPX_LOG_LEVEL=${HTTPX_LOG_LEVEL:-WARNING}
+      - HTTPCORE_LOG_LEVEL=${HTTPCORE_LOG_LEVEL:-WARNING}
     ports:
       - "127.0.0.1:8000:8000" 
     volumes:
@@ -304,14 +313,9 @@ services:
         condition: service_healthy
     command:
       [
-        "uvicorn",
-        "api_gateway.main:app",
-        "--app-dir",
-        "/app/src",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000"
+        "sh",
+        "-c",
+        "exec uvicorn api_gateway.main:app --app-dir /app/src --host 0.0.0.0 --port 8000 --workers ${API_GATEWAY_WORKERS:-4} --no-access-log"
       ]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/health/ready > /dev/null || exit 1"]
@@ -334,6 +338,8 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=24h"
+      - "--storage.tsdb.retention.size=512MB"
     networks:
       - irc_network
     restart: unless-stopped

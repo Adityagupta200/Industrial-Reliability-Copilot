@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import asyncio
+import os
 import time
 from contextlib import asynccontextmanager
 
@@ -10,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, CONTENT_TYPE_LATEST, generate_latest
 
-from rag_service.api.retrieve import router as retrieve_router
+from rag_service.api.retrieve import router as retrieve_router, warm_retrieval_runtime
 from rag_service.core.config import settings
 
 
@@ -56,6 +58,15 @@ async def lifespan(app: FastAPI):
     # Initialize a fast-failing client (kept for potential future downstream API calls)
     limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
     health_check_client = httpx.AsyncClient(timeout=2.0, limits=limits)
+
+    if os.getenv("RAG_WARM_RETRIEVERS_ON_STARTUP", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        warm_status = await asyncio.to_thread(warm_retrieval_runtime, app)
+        logger.info({"event": "retrieval_runtime_warmed", "status": warm_status})
 
     logger.info(
         {"event": "service_startup", "message": "RAG Service background resources initialized."}

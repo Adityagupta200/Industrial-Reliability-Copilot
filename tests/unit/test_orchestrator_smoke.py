@@ -1,3 +1,6 @@
+import asyncio
+
+import pytest
 from fastapi.testclient import TestClient
 from llm_orchestrator.main import app
 from llm_orchestrator.main import _query_cache_key
@@ -5,6 +8,9 @@ from llm_orchestrator.main import _is_billable_llm_provider
 from llm_orchestrator.main import _record_query_cache_hit
 from llm_orchestrator.main import _strip_raw_context_from_job
 from llm_orchestrator.main import _prepare_query_status_response
+from llm_orchestrator.main import _cached_or_inflight_response
+from llm_orchestrator.main import QUERY_CACHE
+from llm_orchestrator.main import QUERY_INFLIGHT
 from llm_orchestrator.schemas import (
     QueryRequest,
     QueryResponse,
@@ -166,3 +172,41 @@ def test_include_raw_context_response_adds_structured_evidence_summary():
     assert response["result"]["evidence_summary"]["source_files"] == [
         "bearing_replacement_pump_P-23.md"
     ]
+
+
+@pytest.mark.asyncio
+async def test_cached_or_inflight_response_coalesces_identical_work() -> None:
+    QUERY_CACHE.clear()
+    QUERY_INFLIGHT.clear()
+    calls = 0
+
+    async def execute() -> QueryResponse:
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.01)
+        return QueryResponse(
+            chain="root_cause",
+            result=RootCauseResponse(),
+            raw_context="[DOC_1]\nHigh vibration evidence.",
+            model_provider="rules+retrieval",
+            model_name="root-cause-fast-path-v1",
+        )
+
+    results = await asyncio.gather(
+        *[_cached_or_inflight_response("same-cache-key", execute) for _ in range(5)]
+    )
+
+    responses = [item[0] for item in results]
+    statuses = [item[1] for item in results]
+    assert calls == 1
+    assert statuses.count("miss") == 1
+    assert statuses.count("inflight_join") == 4
+
+    responses[0].trace_id = "mutated-response"
+    cached_response, status = await _cached_or_inflight_response("same-cache-key", execute)
+
+    assert status == "hit"
+    assert cached_response.trace_id is None
+    assert calls == 1
+    QUERY_CACHE.clear()
+    QUERY_INFLIGHT.clear()

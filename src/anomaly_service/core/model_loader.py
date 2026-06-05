@@ -64,6 +64,13 @@ def _load_anomaly_checkpoint(path: Path) -> Tuple[Dict[str, torch.Tensor], Dict[
             meta = dict(handle.metadata() or {})
         return load_safetensors_file(str(path), device=settings.torch_device), meta
 
+    if not settings.allow_legacy_torch_checkpoint:
+        raise ValueError(
+            "Legacy PyTorch checkpoint loading is disabled. Use the safetensors "
+            "artifact or set ANOM_ALLOW_LEGACY_TORCH_CHECKPOINT=true only for "
+            "controlled local migration."
+        )
+
     # Compatibility path for older local artifacts. Production defaults to safetensors.
     ckpt = torch.load(path, map_location=settings.torch_device, weights_only=True)
     state_dict, meta = _extract_state_dict_and_meta(ckpt)

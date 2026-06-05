@@ -43,12 +43,15 @@ flowchart LR
 
 ## Current Evidence
 
-Quality scores are from the committed `ragas_results.json` artifact.
+Quality scores are from the committed `ragas_results.json` and
+`data/evaluation_results/summary.json` artifacts. Live Phase 11 results are
+from the `data/phase11/reports/` artifacts captured during a short-lived AWS EKS
+staging validation run on June 5, 2026.
 
 | Area | Metric | Current value | Gate or target | Evidence |
 | --- | --- | ---: | ---: | --- |
 | RAG quality | Faithfulness | 1.000 | >= 0.85 | `ragas_results.json` |
-| RAG quality | Answer relevancy | 0.919 | >= 0.85 | `ragas_results.json` |
+| RAG quality | Answer relevancy | 0.933 | >= 0.85 | `data/evaluation_results/summary.json` |
 | Retrieval | Context precision | 1.000 | >= 0.80 | `ragas_results.json` |
 | Retrieval | Context recall | 1.000 | >= 0.80 | `ragas_results.json` |
 | Safety | Adversarial pass rate | 1.000 | 1.000 | `data/evaluation_results/evaluation_report.json` |
@@ -57,13 +60,28 @@ Quality scores are from the committed `ragas_results.json` artifact.
 | Security | Bandit findings | 0 | 0 high/medium/low | `bandit-report.json` |
 | Tests | Coverage | 53 percent | >= 50 percent CI floor | local `.coverage` report |
 
-Operational targets are documented separately from measured artifacts:
+Phase 11 launch evidence:
 
-| Target | Status |
-| --- | --- |
-| End-to-end p95 latency < 2 seconds | Targeted in golden-set `max_latency_ms`; committed load artifact not yet present. |
-| 50 QPS | Infrastructure is HPA-ready; add a reproducible load-test report before claiming as achieved. |
-| Cost near `$0.12/query` | Cost model target; token counters are implemented, but no committed billing report is present. |
+| Area | Current value | Gate or target | Evidence |
+| --- | ---: | ---: | --- |
+| EKS smoke E2E | 1/1 passed; p95 69.16 ms | Pass before load | `data/phase11/reports/eks_smoke_e2e_report.json` |
+| 50-query E2E | 50/50 passed; p95 878.55 ms | 100 percent pass and per-case SLOs | `data/phase11/reports/e2e_validation_report.json` |
+| Sustained load | 30,000/30,000 completed; 50.0 observed QPS; 1.000 success rate; wall p95 635.79 ms | 50 QPS for 600 seconds, success >= 0.99, wall p95 <= 2.5 seconds | `data/phase11/reports/load_test_report.json` |
+| Failure drill | Passed malformed-input and rate-limit checks | No failed checks | `data/phase11/reports/failure_drill_report.json` |
+| Security audit | Passed | No failed checks | `data/phase11/reports/security_audit_report.json` |
+| Container scan | 0 actionable HIGH/CRITICAL vulnerabilities across 4 service images | No failed images | `data/phase11/reports/container_scan_report.json` |
+| Launch gate | Passed | No failed checks | `data/phase11/reports/launch_gate_final_report.json` |
+| EKS HPA evidence | `llm-orchestrator` scaled from 4 to 5 replicas under load; `api-gateway` held at 3, `rag-service` and `anomaly-service` held at 1 | Record metrics and avoid overclaiming autoscaling | `data/phase11/reports/hpa_samples_during_load.txt` |
+
+Cost near `$0.12/query` remains a cost-model target rather than a measured
+billing claim. End-user authentication and full role-based authorization are
+documented production gaps in [docs/architecture.md](docs/architecture.md).
+
+Phase 11 launch validation is implemented as reproducible tooling rather than
+unverified claims. See [docs/launch.md](docs/launch.md) for the 50-query E2E
+suite, sustained load runner, failure drills, security audit, and final launch
+gate. Portfolio wording and publication templates live in
+[docs/portfolio.md](docs/portfolio.md).
 
 ## Tech Stack
 
@@ -194,6 +212,19 @@ Local URLs:
 
 Run the offline evaluation against running services:
 
+```bash
+bash scripts/run_offline_eval.sh
+```
+
+For explicit bash/Git Bash control from the repository root:
+
+```bash
+source scripts/phase11_python_env.sh
+export ORCHESTRATOR_URL=http://127.0.0.1:8000/query
+"$PY" src/evaluation/offline/ragas_eval.py
+"$PY" scripts/check_thresholds.py
+```
+
 ```powershell
 $env:PYTHONPATH = "src"
 $env:ORCHESTRATOR_URL = "http://127.0.0.1:8000/query"
@@ -276,6 +307,8 @@ tests/                        unit, integration, regression tests
 - [Evaluation methodology](docs/evaluation.md)
 - [Incident documentation](docs/incidents.md)
 - [Deployment secrets](docs/deployment_secrets.md)
+- [Phase 11 launch runbook](docs/launch.md)
+- [Portfolio packaging](docs/portfolio.md)
 
 ## License And Contact
 

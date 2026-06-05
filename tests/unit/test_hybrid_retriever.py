@@ -73,6 +73,11 @@ class DummyKeyword:
         ]
 
 
+class FailingSemantic:
+    def semantic_search(self, query: str, k: int, *, filters: Optional[RetrievalFilters] = None):
+        raise RuntimeError("qdrant unavailable")
+
+
 def _rrf(rank: int, k: int) -> float:
     return 1.0 / (k + rank)
 
@@ -136,3 +141,14 @@ def test_hybrid_respects_out_k_limit():
 
     out = hr.hybrid_search("any query")
     assert len(out) == 2
+
+
+def test_hybrid_degrades_to_keyword_when_semantic_backend_fails():
+    kw = DummyKeyword()
+    hr = HybridRetriever(semantic=FailingSemantic(), keyword=kw, settings=HybridSettings(out_k=3))
+
+    out = hr.hybrid_search("pump bearing vibration")
+
+    assert [doc.id for doc in out] == ["B", "D", "E"]
+    assert kw.calls, "Keyword retriever should still run when semantic retrieval fails"
+    assert all(doc.source == "hybrid" for doc in out)

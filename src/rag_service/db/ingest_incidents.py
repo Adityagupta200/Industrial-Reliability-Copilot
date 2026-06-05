@@ -1,16 +1,41 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
-from sqlalchemy import insert
+from sqlalchemy.dialects.postgresql import insert
 from rag_service.core.config import settings
 from rag_service.db.session import engine
 from rag_service.db.models import Incident, Severity
 
 VALID_SEVERITIES = {s.value for s in Severity}
+INCIDENT_NAMESPACE = uuid.uuid5(
+    uuid.NAMESPACE_URL,
+    "industrial-reliability-copilot/incident-seed/v1",
+)
+
+
+def incident_record_id(record: dict) -> uuid.UUID:
+    """Stable ID for idempotent seed-data ingestion across local and EKS runs."""
+    canonical = {
+        "timestamp": str(record["timestamp"]),
+        "equipment_id": str(record["equipment_id"]),
+        "failure_mode": str(record["failure_mode"]),
+        "severity": str(record["severity"]).lower().strip(),
+        "actions_taken": str(record["actions_taken"]),
+        "outcome": str(record["outcome"]),
+        "resolution_time_hours": str(record["resolution_time_hours"]),
+        "sensor_data": (
+            record["sensor_data"]
+            if isinstance(record["sensor_data"], dict)
+            else json.loads(record["sensor_data"])
+        ),
+    }
+    payload = json.dumps(canonical, sort_keys=True, separators=(",", ":"), default=str)
+    return uuid.uuid5(INCIDENT_NAMESPACE, payload)
 
 
 def _iter_incident_rows(path: Path) -> Iterable[dict]:
@@ -50,6 +75,7 @@ def ingest_incidents(raw_incidents_dir: str | None = None) -> int:
                     raise ValueError(f"Invalid severity '{sev}' in {f.name}")
                 rows.append(
                     dict(
+                        id=incident_record_id(rec),
                         timestamp=pd.to_datetime(rec["timestamp"], utc=True).to_pydatetime(),
                         equipment_id=str(rec["equipment_id"]),
                         sensor_data=(
@@ -66,8 +92,13 @@ def ingest_incidents(raw_incidents_dir: str | None = None) -> int:
                 )
 
             if rows:
-                conn.execute(insert(Incident), rows)
-                inserted += len(rows)
+                stmt = (
+                    insert(Incident)
+                    .values(rows)
+                    .on_conflict_do_nothing(index_elements=[Incident.id])
+                )
+                result = conn.execute(stmt)
+                inserted += max(int(result.rowcount or 0), 0)
 
     return inserted
 

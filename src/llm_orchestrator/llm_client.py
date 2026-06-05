@@ -4,7 +4,7 @@ import os
 from typing import Optional
 import logging
 
-from langsmith import traceable
+from llm_orchestrator.tracing import traceable
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from .llm_config import LLMSettings

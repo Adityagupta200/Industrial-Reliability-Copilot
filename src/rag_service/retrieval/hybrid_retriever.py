@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
 from .keyword_retriever import BM25KeywordRetriever
 from .semantic_retriever import SemanticRetriever
 from .types import Document, RetrievalFilters
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -33,7 +36,10 @@ class HybridRetriever:
         self.settings = settings or HybridSettings()
 
         if self.keyword:
-            self.keyword.build_or_load(force_rebuild=False)
+            try:
+                self.keyword.build_or_load(force_rebuild=False)
+            except Exception as exc:
+                logger.warning("Keyword retriever warmup failed: %s", exc)
 
     @staticmethod
     def _rrf_score(rank: int, k: int) -> float:
@@ -54,13 +60,20 @@ class HybridRetriever:
         out = out_k or self.settings.out_k
         rrf_const = rrf_k or self.settings.rrf_k
 
-        # Safe execution: only run if the retriever stream is active
-        sem_docs = (
-            self.semantic.semantic_search(query, k=sem_k, filters=filters) if self.semantic else []
-        )
-        key_docs = (
-            self.keyword.keyword_search(query, k=key_k, filters=filters) if self.keyword else []
-        )
+        sem_docs: list[Document] = []
+        key_docs: list[Document] = []
+
+        if self.semantic:
+            try:
+                sem_docs = self.semantic.semantic_search(query, k=sem_k, filters=filters)
+            except Exception as exc:
+                logger.warning("Semantic retrieval degraded; using remaining retrievers: %s", exc)
+
+        if self.keyword:
+            try:
+                key_docs = self.keyword.keyword_search(query, k=key_k, filters=filters)
+            except Exception as exc:
+                logger.warning("Keyword retrieval degraded; using remaining retrievers: %s", exc)
 
         fused: dict[str, Document] = {}
         fused_score: dict[str, float] = {}

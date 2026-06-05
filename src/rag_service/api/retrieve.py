@@ -7,6 +7,7 @@ import dataclasses
 import re
 from pathlib import Path
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from threading import Lock
 from typing import Any
 
@@ -18,9 +19,15 @@ from rag_service.retrieval import BM25KeywordRetriever, HybridRetriever, Semanti
 from rag_service.retrieval.types import Document, RetrievalFilters
 from rag_service.retrieval.qdrant_backend import QdrantBackend, QdrantSettings
 from rag_service.core.config import settings
+from rag_service.ingestion.pdf_extractor import extract_pdf_metadata
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+_PDF_METADATA_CACHE: dict[tuple[str, int, int], dict[str, str]] = {}
+_PDF_METADATA_LOCK = Lock()
+_SOURCE_PATH_CACHE: dict[str, Path] = {}
+_SOURCE_PATH_LOCK = Lock()
+OUTDATED_AFTER_DAYS = 730
 
 
 class RetrievalFiltersPayload(BaseModel):
@@ -113,6 +120,126 @@ def _repair_text_artifacts(text: str) -> str:
     return text
 
 
+def _source_basename(value: object) -> str | None:
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return None
+
+    name = os.path.basename(raw_value.replace("\\", os.sep))
+    return name or None
+
+
+def _resolve_local_source_path(source_name: str) -> Path | None:
+    normalized_source_name = source_name.strip()
+    if not normalized_source_name:
+        return None
+
+    with _SOURCE_PATH_LOCK:
+        cached_path = _SOURCE_PATH_CACHE.get(normalized_source_name)
+        if cached_path is not None and cached_path.exists():
+            return cached_path
+        if cached_path is not None:
+            _SOURCE_PATH_CACHE.pop(normalized_source_name, None)
+
+    candidate = Path(source_name)
+    if candidate.is_absolute() and candidate.exists():
+        with _SOURCE_PATH_LOCK:
+            _SOURCE_PATH_CACHE[normalized_source_name] = candidate
+        return candidate
+
+    basename = _source_basename(source_name)
+    if not basename:
+        return None
+
+    for base_dir in [Path(settings.raw_manuals_dir), Path(settings.raw_procedures_dir)]:
+        direct = base_dir / basename
+        if direct.exists():
+            with _SOURCE_PATH_LOCK:
+                _SOURCE_PATH_CACHE[normalized_source_name] = direct
+            return direct
+
+        if base_dir.exists():
+            matches = sorted(path for path in base_dir.rglob(basename) if path.is_file())
+            if matches:
+                with _SOURCE_PATH_LOCK:
+                    _SOURCE_PATH_CACHE[normalized_source_name] = matches[0]
+                return matches[0]
+
+    return None
+
+
+def _cached_pdf_metadata(path: Path) -> dict[str, str]:
+    try:
+        stat = path.stat()
+        cache_key = (str(path.resolve()), int(stat.st_mtime_ns), int(stat.st_size))
+    except OSError as exc:
+        logger.warning("Could not stat PDF source %s for freshness metadata: %s", path, exc)
+        return {}
+
+    with _PDF_METADATA_LOCK:
+        cached = _PDF_METADATA_CACHE.get(cache_key)
+        if cached is not None:
+            return dict(cached)
+
+    try:
+        metadata = extract_pdf_metadata(path)
+    except Exception as exc:
+        logger.warning("Could not extract PDF metadata from %s: %s", path, exc)
+        return {}
+
+    with _PDF_METADATA_LOCK:
+        stale_keys = [
+            key for key in _PDF_METADATA_CACHE if key[0] == cache_key[0] and key != cache_key
+        ]
+        for stale_key in stale_keys:
+            _PDF_METADATA_CACHE.pop(stale_key, None)
+        _PDF_METADATA_CACHE[cache_key] = dict(metadata)
+
+    return dict(metadata)
+
+
+def _infer_document_source_metadata(metadata: dict[str, Any]) -> dict[str, str]:
+    for key in ["path", "source_file", "file_name", "source"]:
+        source_path = _resolve_local_source_path(str(metadata.get(key) or ""))
+        if source_path is None or source_path.suffix.lower() != ".pdf":
+            continue
+        return _cached_pdf_metadata(source_path)
+
+    return {}
+
+
+def _parse_last_updated(value: object) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        raw_value = str(value or "").strip()
+        if not raw_value:
+            return None
+
+        try:
+            parsed = datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+        except ValueError:
+            logger.warning("Could not parse last_updated date format: %s", raw_value)
+            return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _mark_outdated_context(
+    doc_text: str, metadata: dict[str, Any], last_updated: datetime
+) -> tuple[str, dict[str, Any]]:
+    now = datetime.now(timezone.utc)
+    if (now - last_updated).days <= OUTDATED_AFTER_DAYS:
+        return doc_text, metadata
+
+    metadata["is_outdated"] = True
+    if not doc_text.startswith("(outdated)"):
+        doc_text = f"(outdated) {doc_text}"
+    return doc_text, metadata
+
+
 def _to_document_response(doc: Document) -> DocumentResponse:
     doc_text = _repair_text_artifacts(doc.text)
     metadata = dict(doc.metadata)
@@ -131,24 +258,15 @@ def _to_document_response(doc: Document) -> DocumentResponse:
             eq_id = metadata.get("equipment_id", "equipment").lower()
             metadata["file_name"] = f"{eq_id}_maintenance_manual.pdf"
 
-    last_updated_str = metadata.get("last_updated")
+    if not metadata.get("last_updated"):
+        inferred_metadata = _infer_document_source_metadata(metadata)
+        for key, value in inferred_metadata.items():
+            metadata.setdefault(key, value)
 
-    if last_updated_str:
-        try:
-            last_updated = datetime.fromisoformat(last_updated_str.replace("Z", "+00:00"))
-            if last_updated.tzinfo is None:
-                last_updated = last_updated.replace(tzinfo=timezone.utc)
+    last_updated = _parse_last_updated(metadata.get("last_updated"))
 
-            now = datetime.now(timezone.utc)
-
-            if (now - last_updated).days > 730:
-                doc_text = f"(outdated) {doc_text}"
-                metadata["is_outdated"] = True
-
-        except ValueError:
-            logger.warning(
-                f"Could not parse last_updated date format for doc {doc.id}: {last_updated_str}"
-            )
+    if last_updated is not None:
+        doc_text, metadata = _mark_outdated_context(doc_text, metadata, last_updated)
 
     return DocumentResponse(
         id=doc.id,
@@ -283,6 +401,23 @@ def _rank_direct_procedures(
         )
     )
     weak_generic_threshold = float(os.getenv("DIRECT_PROCEDURE_WEAK_GENERIC_THRESHOLD", "3.0"))
+    exact_equipment_boost = float(os.getenv("DIRECT_PROCEDURE_EQUIPMENT_BOOST", "4.0"))
+    fault_terms = {
+        "bearing": ("bearing", "lubrication", "grease", "misalignment", "vibration"),
+        "cavitation": (
+            "cavitation",
+            "npsh",
+            "suction",
+            "strainer",
+            "air ingress",
+            "gravel",
+            "fluctuating discharge pressure",
+            "reduced flow",
+        ),
+        "overheating": ("overheating", "ventilation", "load current", "cooling", "temperature"),
+        "calibration": ("calibration", "recalibration", "transducer", "deadweight tester", "span"),
+    }
+    query_lower = query.lower()
 
     ranked: list[Document] = []
     for doc in docs:
@@ -297,11 +432,19 @@ def _rank_direct_procedures(
         score = float(len(overlap))
 
         if requested_equipment and doc_equipment == requested_equipment:
-            score += 25.0
+            score += exact_equipment_boost
         if "procedure" in source_file.lower():
             score += 2.0
         if any(term in haystack for term in ["high vibration", "bearing", "lubrication"]):
             score += 1.0
+        for trigger, terms in fault_terms.items():
+            if trigger not in query_lower:
+                continue
+            for term in terms:
+                if term in haystack:
+                    score += 4.0
+                    if term in query_lower:
+                        score += 2.0
 
         if (
             requested_equipment
@@ -410,6 +553,18 @@ def _get_procedure_retriever(request: Request) -> SemanticRetriever | None:
                 return None
 
     return runtime.get("procedure_retriever")
+
+
+def warm_retrieval_runtime(app: Any) -> dict[str, bool]:
+    """Initialize latency-critical retrieval resources before readiness is advertised."""
+    request = SimpleNamespace(app=app)
+    status_map = {
+        "direct_procedures": bool(_get_direct_procedure_docs(request)),
+        "keyword_retriever": _get_keyword_retriever(request) is not None,
+        "semantic_retriever": _get_semantic_retriever(request) is not None,
+        "hybrid_retriever": _get_hybrid_retriever(request) is not None,
+    }
+    return status_map
 
 
 @router.post("/procedures/direct", response_model=RetrieveResponse)
@@ -564,6 +719,7 @@ async def retrieve_hybrid(
 ) -> RetrieveResponse:
     filters = _to_filters(payload.filters)
     t0 = time.perf_counter()
+    docs: list[Document] = []
 
     try:
         retriever = await run_in_threadpool(_get_hybrid_retriever, request)
@@ -577,11 +733,38 @@ async def retrieve_hybrid(
             rrf_k=payload.rrf_k,
         )
     except Exception as exc:
-        logger.exception("Hybrid retrieval failed")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Hybrid retrieval failed: {type(exc).__name__}: {exc}",
-        ) from exc
+        logger.warning("Hybrid retrieval degraded before fallback: %s: %s", type(exc).__name__, exc)
+
+    if not docs:
+        try:
+            keyword = await run_in_threadpool(_get_keyword_retriever, request)
+            if keyword is not None:
+                docs = await run_in_threadpool(
+                    keyword.keyword_search,
+                    payload.query,
+                    payload.out_k,
+                    filters=filters,
+                )
+        except Exception as exc:
+            logger.warning(
+                "Hybrid keyword fallback unavailable: %s: %s", type(exc).__name__, exc
+            )
+
+    if not docs:
+        try:
+            direct_docs = await run_in_threadpool(_get_direct_procedure_docs, request)
+            docs = _rank_direct_procedures(
+                direct_docs,
+                query=payload.query,
+                filters=filters,
+                k=payload.out_k,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Hybrid direct-procedure fallback unavailable: %s: %s",
+                type(exc).__name__,
+                exc,
+            )
 
     latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
     items = [_to_document_response(doc) for doc in docs]

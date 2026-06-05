@@ -36,6 +36,22 @@ async def test_fallback_triggers(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_timeout_like_transient_failure_falls_back(monkeypatch):
+    monkeypatch.setenv("LLM_OPENAI_API_KEY", "dummy-test-key")
+
+    settings = LLMSettings(primary_provider="openai", fallback_provider="ollama", max_retries=3)
+    client = LLMClient(settings)
+    client._providers["openai"] = FakeProvider("openai", fail_times=3)
+    client._providers["ollama"] = FakeProvider("ollama", fail_times=0)
+
+    out = await client.invoke("simulate timeout path")
+
+    assert out.provider == "ollama"
+    assert client._providers["openai"].calls == 3
+    assert client._providers["ollama"].calls == 1
+
+
+@pytest.mark.asyncio
 async def test_retry_then_success(monkeypatch):
     # 1. Inject dummy API key so OpenAIProvider initialization doesn't crash
     monkeypatch.setenv("LLM_OPENAI_API_KEY", "dummy-test-key")

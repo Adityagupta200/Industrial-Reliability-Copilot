@@ -178,10 +178,10 @@ flowchart TB
         subgraph vpc["VPC 10.0.0.0/16"]
             subgraph eks["EKS cluster"]
                 lb["AWS LoadBalancer\napi-gateway service :80"]
-                gwPod["api-gateway deployment\nHPA 1-10"]
-                orchPod["llm-orchestrator deployment\nHPA 1-10"]
-                ragPod["rag-service deployment\nHPA 1-10"]
-                anomPod["anomaly-service deployment\nHPA 1-10"]
+                gwPod["api-gateway deployment\n3 baseline pods\nHPA 3-10"]
+                orchPod["llm-orchestrator deployment\n4 baseline pods\nHPA 4-10"]
+                ragPod["rag-service deployment\n1 baseline pod\nHPA 1-10"]
+                anomPod["anomaly-service deployment\n1 baseline pod\nHPA 1-10"]
                 qPod["qdrant deployment\nPVC gp3 encrypted"]
                 ollamaPod["ollama deployment\nlocal fallback model"]
                 cm["copilot-config ConfigMap"]
@@ -214,7 +214,11 @@ flowchart TB
     ecr --> anomPod
 ```
 
-Terraform provisions the VPC, EKS 1.31 cluster, EBS CSI driver, encrypted RDS PostgreSQL, encrypted/versioned S3 buckets, and ECR repositories. GitHub Actions builds images, deploys to staging, runs smoke checks, then deploys to production with rollout monitoring and rollback on failure.
+Terraform provisions the VPC, EKS 1.35 cluster, EBS CSI driver, a managed
+node group using `t3.xlarge` workers, encrypted RDS PostgreSQL,
+encrypted/versioned S3 buckets, and ECR repositories. GitHub Actions builds
+images, deploys to staging, runs smoke checks, then deploys to production with
+rollout monitoring and rollback on failure.
 
 ## Technology Choices
 
@@ -241,14 +245,20 @@ Terraform provisions the VPC, EKS 1.31 cluster, EBS CSI driver, encrypted RDS Po
 
 | Layer | Scaling strategy | Bottlenecks | Mitigations |
 | --- | --- | --- | --- |
-| API Gateway | HorizontalPodAutoscaler to 10 replicas. | Downstream orchestrator latency. | Connection pooling, async forwarding, trace IDs. |
-| LLM Orchestrator | HPA to 10 replicas, database-backed job state. | LLM provider latency, judge calls, database connection pool. | Async jobs, cache for repeated queries, provider fallback, rate limiting. |
-| RAG Service | HPA to 10 replicas. | Embedding model CPU/memory, Qdrant latency, BM25 rebuild. | Lazy initialization, query embedding cache, bounded candidate pools, persistent Qdrant. |
+| API Gateway | Three-pod baseline with HPA from 3 to 10 replicas. | Downstream orchestrator latency. | Connection pooling, async forwarding, trace IDs. |
+| LLM Orchestrator | Four-pod baseline with HPA from 4 to 10 replicas and database-backed job state. | LLM provider latency, judge calls, database connection pool. | Async jobs, cache for repeated queries, provider fallback, rate limiting. |
+| RAG Service | One-pod baseline with HPA from 1 to 10 replicas. | Embedding model CPU/memory, Qdrant latency, BM25 rebuild. | Lazy initialization, query embedding cache, bounded candidate pools, persistent Qdrant. |
 | Qdrant | Persistent PVC in current EKS manifest. | Single-pod vector DB is the main scaling limit. | For larger production load, move to Qdrant cluster or managed Qdrant with replicas and payload indexes. |
 | PostgreSQL | RDS private subnets, indexed incident table. | Query log growth, text-to-SQL pressure on incident history. | Retention policies, partitioning by time, read replicas for analytics. |
 | LLM Provider | External API primary, local Ollama fallback. | Rate limits, context size, provider outages. | Token budgets, fallback, request timeout, monitoring, cache hits. |
 
-The codebase has HPA manifests and rollout guards, but a committed 50 QPS load-test artifact is not present. Treat 50 QPS as a production target until a reproducible load report is added.
+The Phase 11 EKS staging validation on June 5, 2026 sustained 50.0 observed
+QPS for 600 seconds with 30,000/30,000 completed requests and 635.79 ms
+wall-clock p95 latency. Metrics-server and HPA samples were captured during the
+run; `llm-orchestrator` scaled from 4 to 5 replicas while the API gateway,
+RAG service, and anomaly service stayed within their configured baseline
+replica counts. Treat this as launch validation for the current staging shape,
+not as a claim of long-term multi-day production SRE capacity.
 
 ## Security
 

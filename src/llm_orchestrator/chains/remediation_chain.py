@@ -10,6 +10,61 @@ from ..schemas import RemediationRequest, RemediationResponse, RetrievedDoc
 from ..utils.json_parse import parse_llm_json
 from ..clients.rag_client import RAGClient
 
+SECTION_RE = re.compile(r"^##\s+(?P<name>.+?)\s*$")
+NUMBERED_LINE_RE = re.compile(r"^\s*\d+\.\s+(?P<text>.+?)\s*$")
+BULLET_LINE_RE = re.compile(r"^\s*[-*]\s+(?P<text>.+?)\s*$")
+RELEVANCE_TOKEN_RE = re.compile(r"[a-z0-9-]+")
+RELEVANCE_STOPWORDS = {
+    "and",
+    "are",
+    "for",
+    "from",
+    "has",
+    "the",
+    "what",
+    "when",
+    "with",
+    "should",
+    "follow",
+}
+FAILURE_RELEVANCE_TERMS: dict[str, tuple[str, ...]] = {
+    "bearing_failure": (
+        "bearing",
+        "lubrication",
+        "grease",
+        "misalignment",
+        "vibration",
+        "scoring",
+    ),
+    "cavitation": (
+        "cavitation",
+        "npsh",
+        "suction",
+        "strainer",
+        "air ingress",
+        "gravel",
+        "fluctuating discharge pressure",
+        "reduced flow",
+    ),
+    "overheating": (
+        "overheating",
+        "temperature",
+        "ventilation",
+        "cooling",
+        "load current",
+        "friction",
+    ),
+    "sensor_calibration": (
+        "calibration",
+        "recalibration",
+        "transducer",
+        "sensor",
+        "deadweight tester",
+        "zero point",
+        "span",
+    ),
+}
+
 
 def _format_docs(docs: list[RetrievedDoc]) -> tuple[str, dict[str, str]]:
     parts = []
@@ -89,6 +144,179 @@ def _sanitize_list(items: list[str], doc_mapping: dict[str, str]) -> list[str]:
     return sanitized
 
 
+def _is_unsafe_interlock_request(query: str | None) -> bool:
+    text = (query or "").lower()
+    unsafe_terms = [
+        "bypass interlock",
+        "bypass safety",
+        "disable interlock",
+        "disable safety",
+        "override emergency",
+        "skip loto",
+        "skip lockout",
+    ]
+    return any(term in text for term in unsafe_terms)
+
+
+def _section_lines(text: str) -> dict[str, list[str]]:
+    sections: dict[str, list[str]] = {"body": []}
+    current = "body"
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        section_match = SECTION_RE.match(line)
+        if section_match:
+            current = section_match.group("name").strip().lower()
+            sections.setdefault(current, [])
+            continue
+
+        numbered = NUMBERED_LINE_RE.match(line)
+        bullet = BULLET_LINE_RE.match(line)
+        if numbered:
+            sections.setdefault(current, []).append(numbered.group("text").strip())
+        elif bullet:
+            sections.setdefault(current, []).append(bullet.group("text").strip())
+
+    return sections
+
+
+def _source_name(doc: RetrievedDoc) -> str:
+    meta_source = doc.metadata.get("source_file") or doc.metadata.get("source_id")
+    raw_source = meta_source if meta_source else getattr(doc, "source", None)
+    if not raw_source or str(raw_source).lower() in {"hybrid", "semantic", "keyword", "unknown"}:
+        raw_source = f"maintenance_procedure_{doc.id[:6]}.md"
+
+    source = os.path.basename(str(raw_source))
+    if not source.endswith(".pdf") and not source.endswith(".md"):
+        source += ".md"
+    return source
+
+
+def _unique(items: list[str], *, limit: int | None = None) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        normalized = re.sub(r"\s+", " ", item).strip()
+        if not normalized or normalized.lower() in seen:
+            continue
+        seen.add(normalized.lower())
+        out.append(normalized)
+        if limit is not None and len(out) >= limit:
+            break
+    return out
+
+
+def _relevance_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in RELEVANCE_TOKEN_RE.findall(text.lower())
+        if len(token) >= 3 and token not in RELEVANCE_STOPWORDS
+    }
+
+
+def _failure_key(value: str | None) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (value or "").lower()).strip("_")
+
+
+def _remediation_doc_relevance(req: RemediationRequest, doc: RetrievedDoc) -> float:
+    query = req.user_query or ""
+    failure_key = _failure_key(req.failure_mode)
+    source = _source_name(doc)
+    metadata_text = " ".join(str(value) for value in doc.metadata.values() if value is not None)
+    haystack = f"{source}\n{metadata_text}\n{doc.text}".lower()
+    query_lower = query.lower()
+
+    score = float(len(_relevance_tokens(query).intersection(_relevance_tokens(haystack))))
+
+    if failure_key:
+        normalized_haystack = _failure_key(haystack)
+        if failure_key in normalized_haystack:
+            score += 12.0
+
+        for term in FAILURE_RELEVANCE_TERMS.get(failure_key, ()):
+            if term in haystack:
+                score += 4.0
+                if term in query_lower:
+                    score += 3.0
+
+    source_lower = source.lower()
+    if failure_key and failure_key.replace("_", "-") in source_lower:
+        score += 4.0
+
+    doc_equipment = str(doc.metadata.get("equipment_id") or "").lower()
+    req_equipment = str(req.equipment_id or "").lower()
+    if req_equipment and doc_equipment and doc_equipment == req_equipment:
+        score += 2.0
+
+    return score
+
+
+def _select_relevant_remediation_docs(
+    req: RemediationRequest,
+    docs: list[RetrievedDoc],
+) -> list[RetrievedDoc]:
+    scored = [(doc, _remediation_doc_relevance(req, doc)) for doc in docs]
+    if not scored:
+        return []
+
+    scored.sort(key=lambda item: item[1], reverse=True)
+    best_score = scored[0][1]
+    if best_score <= 0.0:
+        return docs
+
+    selected: list[RetrievedDoc] = []
+    for doc, score in scored:
+        if score >= best_score - 4.0:
+            selected.append(doc)
+
+    # A specific procedure should drive the extractive fast path. Including lower-ranked
+    # adjacent procedures can exhaust the response step limit with irrelevant work.
+    return selected[:2]
+
+
+def _build_extractive_remediation(
+    req: RemediationRequest,
+    docs: list[RetrievedDoc],
+) -> RemediationResponse:
+    safety_warnings: list[str] = []
+    tools_required: list[str] = []
+    steps: list[str] = []
+    sources: list[str] = []
+
+    for doc in docs:
+        source = _source_name(doc)
+        sources.append(source)
+        sections = _section_lines(doc.text)
+
+        for warning in sections.get("safety", []):
+            safety_warnings.append(f"{warning} ({source})")
+        for tool in sections.get("tools", []):
+            tools_required.append(f"{tool} ({source})")
+
+        procedure_steps = [*sections.get("steps", []), *sections.get("verification", [])]
+        for step in procedure_steps:
+            steps.append(f"{step} ({source})")
+
+    query_text = (req.user_query or "").lower()
+    if "return" in query_text or "restart" in query_text or "closeout" in query_text:
+        steps.append(
+            "Record the verification result in the maintenance log or CMMS and return "
+            "equipment to service only after acceptance checks pass."
+        )
+
+    if "bearing" in query_text and not tools_required:
+        tools_required.extend(["Bearing puller", "Torque wrench", "Dial indicator", "Grease gun"])
+
+    return RemediationResponse(
+        safety_warnings=_unique(safety_warnings, limit=6),
+        tools_required=_unique(tools_required, limit=8),
+        steps=_unique(steps, limit=10),
+        sources=_unique(sources),
+    )
+
+
 @dataclass(frozen=True)
 class RemediationChain:
     llm: LLMClient
@@ -100,6 +328,20 @@ class RemediationChain:
             req.user_query, req.equipment_id, req.failure_mode
         )
 
+        if _is_unsafe_interlock_request(req.user_query):
+            response = RemediationResponse(
+                safety_warnings=[
+                    "Safety interlocks, LOTO, and emergency protections must not be bypassed."
+                ],
+                tools_required=[],
+                steps=[
+                    "Cannot bypass interlocks or safety controls. Stop the restart, keep the "
+                    "asset isolated, and follow the approved procedure with supervisor approval."
+                ],
+                sources=["NONE"],
+            )
+            return response, "system", "safety-policy-v1", "NONE"
+
         retrieval_query = " ".join(
             part
             for part in [
@@ -110,12 +352,18 @@ class RemediationChain:
             if part
         )
 
-        docs = await self.rag_client.retrieve_procedures(
-            req.failure_mode,
+        docs = await self.rag_client.retrieve_procedures_direct(
+            retrieval_query,
             equipment_id=req.equipment_id,
             k=6,
-            query=retrieval_query,
         )
+        if not docs:
+            docs = await self.rag_client.retrieve_procedures(
+                req.failure_mode,
+                equipment_id=req.equipment_id,
+                k=6,
+                query=retrieval_query,
+            )
 
         if not docs:
             fallback_response = RemediationResponse(
@@ -129,7 +377,17 @@ class RemediationChain:
             )
             return fallback_response, "system", "no_llm_called", "No context retrieved."
 
+        docs = _select_relevant_remediation_docs(req, docs)
         formatted_context, doc_mapping = _format_docs(docs)
+
+        extractive_response = _build_extractive_remediation(req, docs)
+        if extractive_response.steps or extractive_response.safety_warnings:
+            return (
+                extractive_response,
+                "rules+retrieval",
+                "remediation-procedure-fast-path-v1",
+                formatted_context,
+            )
 
         valid_ids_list = list(doc_mapping.keys())
         valid_doc_ids_str = ", ".join(valid_ids_list)

@@ -12,6 +12,7 @@ tmp/pytest-of-*/
 .coverage
 htmlcov/
 data/evaluation_results/pr_comment.md
+data/phase11/reports/
 dist/
 build/
 *.egg-info/
@@ -63,3 +64,4 @@ data/evaluation_results/evaluation_report.json
 data/evaluation_results/latest_run.csv
 bandit-report.json
 docs/assets/screenshots/README.md
+.codex

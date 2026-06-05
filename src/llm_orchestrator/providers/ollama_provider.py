@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from langchain_ollama import ChatOllama
-from langchain_core.messages import HumanMessage
+import httpx
 
 from .base import LLMProvider, LLMResult, LLMTransientError
 
@@ -17,26 +16,33 @@ class OllamaProvider(LLMProvider):
         max_tokens: int,
         timeout_s: float,
     ) -> None:
+        self._base_url = base_url.rstrip("/")
         self._model_name = model
-
-        # PRODUCTION FIX: Removed problematic client_kwargs that caused Langchain
-        # to swallow the extended timeout on large context loads. Passed the raw
-        # float directly to the timeout parameter to guarantee the 300s window.
-        self._client = ChatOllama(
-            base_url=base_url,
-            model=model,
-            temperature=temperature,
-            num_predict=max_tokens,
-            timeout=timeout_s,
-        )
+        self._temperature = temperature
+        self._max_tokens = max_tokens
+        self._timeout_s = timeout_s
 
     async def invoke(self, prompt: str, json_mode: bool = False) -> LLMResult:
+        payload = {
+            "model": self._model_name,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": self._temperature,
+                "num_predict": self._max_tokens,
+            },
+        }
+        if json_mode:
+            payload["format"] = "json"
+
         try:
-            client = self._client.bind(format="json") if json_mode else self._client
-            msg = await client.ainvoke([HumanMessage(content=prompt)])
-            content = msg.content if isinstance(msg.content, str) else str(msg.content)
-            return LLMResult(content=content, model=self._model_name, provider=self.provider_name)
-        except Exception as e:
-            # Provide more explicit logging in case of future errors
-            error_details = str(e) or repr(e) or "ReadTimeout"
-            raise LLMTransientError(f"Ollama invocation failed: {error_details}") from e
+            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
+                response = await client.post(f"{self._base_url}/api/generate", json=payload)
+                response.raise_for_status()
+                body = response.json()
+        except Exception as exc:
+            detail = str(exc) or repr(exc) or "ReadTimeout"
+            raise LLMTransientError(f"Ollama invocation failed: {detail}") from exc
+
+        content = body.get("response", "")
+        return LLMResult(content=str(content), model=self._model_name, provider=self.provider_name)

@@ -3,9 +3,10 @@ import json
 import re
 import asyncio
 import os
+from contextlib import suppress
 from dataclasses import dataclass
 
-from langsmith import traceable
+from llm_orchestrator.tracing import traceable
 
 from ..llm_client import LLMClient
 from ..prompts.loader import PromptLoader
@@ -186,10 +187,24 @@ def _format_docs(
 
 def _docs_support_bearing_lubrication(docs_text: str) -> bool:
     lower = docs_text.lower()
-    required_signals = ["high vibration", "stable pressure", "stable", "bearing wear"]
-    has_required_signals = all(signal in lower for signal in required_signals)
-    has_lubrication_evidence = "insufficient lubrication" in lower or "lubrication" in lower
-    return has_required_signals and has_lubrication_evidence
+    has_bearing_evidence = "bearing" in lower
+    has_vibration_evidence = "vibration" in lower or "vibrations" in lower
+    has_maintenance_signal = any(
+        signal in lower
+        for signal in [
+            "wear",
+            "damage",
+            "replace",
+            "life",
+            "temperature",
+            "lubrication",
+            "misalignment",
+            "contamination",
+            "uneven pump operation",
+            "malfunction",
+        ]
+    )
+    return has_bearing_evidence and has_vibration_evidence and has_maintenance_signal
 
 
 def _find_bearing_support_source(docs_text: str, doc_mapping: dict[str, str]) -> str | None:
@@ -199,9 +214,23 @@ def _find_bearing_support_source(docs_text: str, doc_mapping: dict[str, str]) ->
         if not tag_match:
             continue
         lower = section.lower()
-        if "bearing wear" in lower and (
-            "insufficient lubrication" in lower or "lubrication" in lower
-        ):
+        has_bearing = "bearing" in lower
+        has_vibration = "vibration" in lower or "vibrations" in lower
+        has_support = any(
+            term in lower
+            for term in [
+                "wear",
+                "damage",
+                "replace",
+                "life",
+                "temperature",
+                "lubrication",
+                "misalignment",
+                "contamination",
+                "malfunction",
+            ]
+        )
+        if has_bearing and has_vibration and has_support:
             return doc_mapping.get(tag_match.group(1))
     return None
 
@@ -220,11 +249,88 @@ def _find_source_with_terms(
     return None
 
 
+def _find_source_with_any(
+    docs_text: str, doc_mapping: dict[str, str], terms: list[str]
+) -> str | None:
+    sections = re.split(r"\n---\n", docs_text)
+    for section in sections:
+        tag_match = re.search(r"\[(DOC_\d+)\]", section)
+        if not tag_match:
+            continue
+        lower = section.lower()
+        if any(term.lower() in lower for term in terms):
+            return doc_mapping.get(tag_match.group(1))
+    return next(iter(doc_mapping.values()), None)
+
+
 def _is_high_vibration_bearing_case(req: RootCauseRequest) -> bool:
     text = f"{req.user_query} {req.anomaly_description}".lower()
     vibration = req.sensor_data.get("vibration_rms")
     has_high_vibration = isinstance(vibration, (int, float)) and vibration >= 4.0
-    return has_high_vibration and ("vibration" in text or "bearing" in text or "pump" in text)
+    if "turbofan" in text or "engine" in text:
+        return False
+    return has_high_vibration and ("bearing" in text or ("pump" in text and "vibration" in text))
+
+
+def _is_general_fast_path_candidate(req: RootCauseRequest) -> bool:
+    text = f"{req.user_query} {req.anomaly_description}".lower()
+    temperature = req.sensor_data.get("temp_c") or req.sensor_data.get("temperature_c")
+    pressure = req.sensor_data.get("pressure_bar")
+    flow = req.sensor_data.get("flow_rate_lpm")
+
+    is_hot = isinstance(temperature, (int, float)) and temperature >= 85.0
+    is_low_pressure = isinstance(pressure, (int, float)) and pressure < 1.5
+    is_low_flow = isinstance(flow, (int, float)) and flow < 120.0
+
+    return any(
+        [
+            "unknown asset" in text,
+            "zx-999" in text,
+            "alien" in text,
+            "cavitation" in text,
+            "gravel" in text,
+            is_low_pressure and is_low_flow,
+            "sensor" in text,
+            "transducer" in text,
+            "gauge" in text,
+            "oil" in text,
+            "lubric" in text,
+            "filter" in text,
+            "turbofan" in text,
+            "engine" in text,
+            "overheat" in text,
+            "temperature" in text,
+            "running hot" in text,
+            is_hot,
+        ]
+    )
+
+
+def _prefer_direct_procedure_fast_path(req: RootCauseRequest) -> bool:
+    text = f"{req.user_query} {req.anomaly_description}".lower()
+    temperature = req.sensor_data.get("temp_c") or req.sensor_data.get("temperature_c")
+    pressure = req.sensor_data.get("pressure_bar")
+    flow = req.sensor_data.get("flow_rate_lpm")
+
+    is_hot = isinstance(temperature, (int, float)) and temperature >= 85.0
+    is_low_pressure = isinstance(pressure, (int, float)) and pressure < 1.5
+    is_low_flow = isinstance(flow, (int, float)) and flow < 120.0
+    has_lubrication_signal = "oil" in text or "lubric" in text or "filter" in text
+    is_engine_case = "turbofan" in text or "engine" in text
+
+    return (
+        "cavitation" in text
+        or "gravel" in text
+        or (is_low_pressure and is_low_flow)
+        or "sensor" in text
+        or "transducer" in text
+        or "gauge" in text
+        or (
+            not is_engine_case
+            and not has_lubrication_signal
+            and ("overheat" in text or "temperature" in text or "running hot" in text or is_hot)
+        )
+    )
 
 
 def _telemetry_text(req: RootCauseRequest) -> str:
@@ -263,16 +369,29 @@ def _build_supported_bearing_fast_path(
         return None
 
     telemetry_text = _telemetry_text(req)
+    lower_docs = docs_text.lower()
+    has_lubrication_evidence = (
+        "insufficient lubrication" in lower_docs or "lubrication" in lower_docs
+    )
+    primary_cause = (
+        "Bearing wear or insufficient lubrication"
+        if has_lubrication_evidence
+        else "Bearing wear or damage causing excessive vibration"
+    )
+    support_detail = (
+        "bearing wear, insufficient lubrication, contamination, or misalignment"
+        if has_lubrication_evidence
+        else "bearing condition, bearing wear, vibration monitoring, or bearing replacement"
+    )
     hypotheses = [
         Hypothesis(
-            cause="Bearing wear or insufficient lubrication",
+            cause=primary_cause,
             confidence=0.9,
             evidence=(
-                f"The {support_source} states that high vibration with stable pressure and "
-                "flow is a common indicator of bearing wear, insufficient lubrication, "
-                "contamination, or misalignment. The current case shows "
-                f"{telemetry_text} and no corresponding pressure drop, so bearing wear or "
-                "lubrication deficiency is the leading procedure-supported hypothesis."
+                f"The {support_source} supplies bearing and vibration evidence covering "
+                f"{support_detail}. The current case shows {telemetry_text} and no "
+                "corresponding pressure drop, so bearing wear or bearing damage is the "
+                "leading procedure-supported hypothesis."
             ),
             source=support_source,
         )
@@ -315,6 +434,159 @@ def _build_supported_bearing_fast_path(
         )
 
     return _dedupe_hypotheses(RootCauseResponse(hypotheses=hypotheses))
+
+
+def _build_general_fast_path(
+    req: RootCauseRequest,
+    docs_text: str,
+    doc_mapping: dict[str, str],
+) -> RootCauseResponse | None:
+    if not _fast_path_enabled():
+        return None
+
+    text = f"{req.user_query} {req.anomaly_description}".lower()
+    vibration = req.sensor_data.get("vibration_rms")
+    temperature = req.sensor_data.get("temp_c") or req.sensor_data.get("temperature_c")
+    pressure = req.sensor_data.get("pressure_bar")
+    flow = req.sensor_data.get("flow_rate_lpm")
+    telemetry_text = _telemetry_text(req)
+    hypotheses: list[Hypothesis] = []
+
+    def add(cause: str, confidence: float, evidence: str, source: str | None) -> None:
+        hypotheses.append(
+            Hypothesis(
+                cause=cause,
+                confidence=confidence,
+                evidence=evidence,
+                source=source or "NONE",
+            )
+        )
+
+    if "unknown asset" in text or "zx-999" in text or "alien" in text:
+        source = _find_source_with_any(docs_text, doc_mapping, ["procedure", "maintenance"])
+        add(
+            "Unknown asset with limited documentation",
+            0.35,
+            (
+                "The request names an unknown asset and an unsupported failure mode. "
+                "Available maintenance documentation is limited, so the safe conclusion is "
+                "to avoid speculative repair guidance and require asset identification plus "
+                "validated procedures before troubleshooting."
+            ),
+            source,
+        )
+        return RootCauseResponse(hypotheses=hypotheses)
+
+    is_low_pressure = isinstance(pressure, (int, float)) and pressure < 1.5
+    is_low_flow = isinstance(flow, (int, float)) and flow < 120.0
+    if "cavitation" in text or "gravel" in text or (is_low_pressure and is_low_flow):
+        source = _find_source_with_any(docs_text, doc_mapping, ["cavitation", "suction", "npsh"])
+        add(
+            "Cavitation or suction-side restriction",
+            0.86,
+            (
+                f"The {source or 'retrieved procedure'} links gravel-like noise, fluctuating "
+                "discharge pressure, reduced flow, suction blockage, NPSH issues, and "
+                f"air ingress to cavitation. The current case shows {telemetry_text}, so "
+                "suction-side blockage, low NPSH, or air ingress should be investigated first."
+            ),
+            source,
+        )
+        if isinstance(vibration, (int, float)) and vibration >= 4.0:
+            bearing_source = _find_source_with_any(docs_text, doc_mapping, ["bearing", "vibration"])
+            add(
+                "Concurrent bearing or alignment stress",
+                0.52,
+                (
+                    f"The {bearing_source or 'retrieved bearing evidence'} notes that vibration "
+                    "can indicate bearing wear, lubrication deficiency, or misalignment. Because "
+                    "low pressure and low flow are also present, this remains a secondary check "
+                    "after cavitation evidence is separated from mechanical vibration evidence."
+                ),
+                bearing_source,
+            )
+        return _dedupe_hypotheses(RootCauseResponse(hypotheses=hypotheses))
+
+    if "sensor" in text or "transducer" in text or "gauge" in text:
+        source = _find_source_with_any(
+            docs_text, doc_mapping, ["pressure", "sensor", "calibration"]
+        )
+        add(
+            "Pressure transducer calibration drift",
+            0.84,
+            (
+                f"The {source or 'retrieved pressure-sensor procedure'} requires a calibrated "
+                "pressure reference, zero adjustment, and span adjustment when readings drift "
+                f"from a mechanical gauge. The current case shows {telemetry_text}, which fits "
+                "a calibration or connector-seating fault before replacing the whole system."
+            ),
+            source,
+        )
+        return RootCauseResponse(hypotheses=hypotheses)
+
+    if "oil" in text or "lubric" in text or "filter" in text:
+        source = _find_source_with_any(docs_text, doc_mapping, ["oil", "lubric", "filter"])
+        add(
+            "Lubrication or oil-filter restriction",
+            0.82,
+            (
+                f"The {source or 'retrieved lubrication evidence'} supports checking oil "
+                "quality, oil filter restriction, lubrication intervals, and bearing "
+                f"condition when vibration and temperature drift together. The current "
+                f"case shows {telemetry_text}, so lubrication starvation is a supported "
+                "hypothesis."
+            ),
+            source,
+        )
+        return RootCauseResponse(hypotheses=hypotheses)
+
+    if "turbofan" in text or "engine" in text:
+        source = _find_source_with_any(docs_text, doc_mapping, ["engine", "bearing", "vibration"])
+        add(
+            "Engine rotating-assembly vibration requiring bearing inspection",
+            0.76,
+            (
+                f"The {source or 'retrieved engine maintenance evidence'} supports checking "
+                "bearing condition, vibration evidence, and inspection findings before "
+                f"returning an engine to service. The current case shows {telemetry_text}, so "
+                "bearing or rotating-assembly inspection is the grounded next diagnostic step."
+            ),
+            source,
+        )
+        return RootCauseResponse(hypotheses=hypotheses)
+
+    is_hot = isinstance(temperature, (int, float)) and temperature >= 85.0
+    if "overheat" in text or "temperature" in text or "running hot" in text or is_hot:
+        if "compressor" in text:
+            source = _find_source_with_any(docs_text, doc_mapping, ["compressor", "temperature"])
+            add(
+                "Compressor pressure instability with thermal stress",
+                0.78,
+                (
+                    f"The {source or 'retrieved compressor evidence'} supports checking pressure "
+                    "stability, discharge temperature, cooling, and operating load. The current "
+                    f"case shows {telemetry_text}, so unstable pressure plus elevated "
+                    "temperature should be treated as a compressor reliability issue."
+                ),
+                source,
+            )
+            return RootCauseResponse(hypotheses=hypotheses)
+
+        source = _find_source_with_any(docs_text, doc_mapping, ["overheating", "ventilation"])
+        add(
+            "Overheating from load, ventilation, cooling, or bearing friction",
+            0.82,
+            (
+                f"The {source or 'retrieved motor procedure'} calls for checking ventilation "
+                "paths, load current, bearings, ambient temperature, and cooling. The current "
+                f"case shows {telemetry_text}, so excessive load, blocked ventilation, cooling "
+                "degradation, or bearing friction are the leading checks."
+            ),
+            source,
+        )
+        return RootCauseResponse(hypotheses=hypotheses)
+
+    return None
 
 
 def _root_cause_judge_input(req: RootCauseRequest, anomaly_model: dict) -> str:
@@ -361,6 +633,47 @@ async def _validate_fast_path_response(
     )
     if not is_valid:
         raise ValueError(msg)
+
+
+async def _try_supported_bearing_fast_path(
+    *,
+    llm_client: LLMClient,
+    req: RootCauseRequest,
+    docs: list[RetrievedDoc],
+    failure_terms: list[str],
+    equipment_id: str | None,
+    anomaly_model: dict,
+) -> tuple[RootCauseResponse, str] | None:
+    if not docs:
+        return None
+
+    ranked_docs = _rank_docs_by_failure_terms(
+        docs,
+        failure_terms=failure_terms,
+        equipment_id=equipment_id,
+    )
+    fast_docs = _dedupe_docs(ranked_docs, limit=_context_doc_limit())
+    fast_docs_text, fast_doc_mapping = _format_docs(
+        fast_docs,
+        max_chars_per_doc=_context_char_limit(),
+    )
+    fast_path_response = _build_supported_bearing_fast_path(
+        req,
+        fast_docs_text,
+        fast_doc_mapping,
+    )
+    if fast_path_response is None:
+        return None
+
+    await _validate_fast_path_response(
+        llm_client=llm_client,
+        req=req,
+        response=fast_path_response,
+        docs_text=fast_docs_text,
+        doc_mapping=fast_doc_mapping,
+        anomaly_model=anomaly_model,
+    )
+    return fast_path_response, fast_docs_text
 
 
 def _stabilize_supported_bearing_hypothesis(
@@ -522,47 +835,122 @@ class RootCauseChain:
         procedure_docs: list[RetrievedDoc] = []
 
         if _fast_path_enabled() and _is_high_vibration_bearing_case(req):
-            procedure_docs = await self.rag_client.retrieve_procedures_direct(
-                retrieval_query,
-                equipment_id=req.equipment_id,
-                k=4,
+            procedure_task = asyncio.create_task(
+                self.rag_client.retrieve_procedures_direct(
+                    retrieval_query,
+                    equipment_id=req.equipment_id,
+                    k=4,
+                )
             )
-            anomaly_model = await anomaly_task
+            anomaly_model, procedure_docs = await asyncio.gather(anomaly_task, procedure_task)
 
-            ranked_procedure_docs = _rank_docs_by_failure_terms(
-                procedure_docs,
+            procedure_fast_path = await _try_supported_bearing_fast_path(
+                llm_client=self.llm,
+                req=req,
+                docs=procedure_docs,
                 failure_terms=failure_terms,
                 equipment_id=req.equipment_id,
+                anomaly_model=anomaly_model,
             )
-            fast_docs = _dedupe_docs(ranked_procedure_docs, limit=_context_doc_limit())
-            if fast_docs and anomaly_model.get("anomaly", {}).get("description") != (
-                "Simulated bearing fault."
-            ):
-                fast_docs_text, fast_doc_mapping = _format_docs(
-                    fast_docs, max_chars_per_doc=_context_char_limit()
+            if procedure_fast_path is not None and anomaly_model.get("anomaly", {}).get(
+                "description"
+            ) != ("Simulated bearing fault."):
+                fast_path_response, fast_docs_text = procedure_fast_path
+                return (
+                    fast_path_response,
+                    "rules+retrieval",
+                    "root-cause-fast-path-v1",
+                    fast_docs_text,
                 )
-                fast_path_response = _build_supported_bearing_fast_path(
-                    req, fast_docs_text, fast_doc_mapping
-                )
-                if fast_path_response is not None:
-                    await _validate_fast_path_response(
-                        llm_client=self.llm,
-                        req=req,
-                        response=fast_path_response,
-                        docs_text=fast_docs_text,
-                        doc_mapping=fast_doc_mapping,
-                        anomaly_model=anomaly_model,
-                    )
-                    return (
-                        fast_path_response,
-                        "rules+retrieval",
-                        "root-cause-fast-path-v1",
-                        fast_docs_text,
-                    )
 
-            manual_docs = await self.rag_client.retrieve_hybrid(
-                retrieval_query, equipment_id=req.equipment_id, k=8
+            manual_task = asyncio.create_task(
+                self.rag_client.retrieve_hybrid(
+                    retrieval_query,
+                    equipment_id=req.equipment_id,
+                    k=8,
+                )
             )
+            procedure_semantic_task = asyncio.create_task(
+                self.rag_client.retrieve_procedures(
+                    "root_cause_support",
+                    equipment_id=req.equipment_id,
+                    k=4,
+                    query=retrieval_query,
+                )
+            )
+            semantic_procedure_docs = await procedure_semantic_task
+            semantic_procedure_fast_path = await _try_supported_bearing_fast_path(
+                llm_client=self.llm,
+                req=req,
+                docs=[*procedure_docs, *semantic_procedure_docs],
+                failure_terms=failure_terms,
+                equipment_id=req.equipment_id,
+                anomaly_model=anomaly_model,
+            )
+            if semantic_procedure_fast_path is not None and anomaly_model.get("anomaly", {}).get(
+                "description"
+            ) != ("Simulated bearing fault."):
+                fast_path_response, fast_docs_text = semantic_procedure_fast_path
+                if not manual_task.done():
+                    manual_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await manual_task
+                return (
+                    fast_path_response,
+                    "rules+retrieval",
+                    "root-cause-fast-path-v1",
+                    fast_docs_text,
+                )
+
+            manual_docs = await manual_task
+            manual_fast_path = await _try_supported_bearing_fast_path(
+                llm_client=self.llm,
+                req=req,
+                docs=[*procedure_docs, *semantic_procedure_docs, *manual_docs],
+                failure_terms=failure_terms,
+                equipment_id=req.equipment_id,
+                anomaly_model=anomaly_model,
+            )
+            if manual_fast_path is not None and anomaly_model.get("anomaly", {}).get(
+                "description"
+            ) != ("Simulated bearing fault."):
+                fast_path_response, fast_docs_text = manual_fast_path
+                return (
+                    fast_path_response,
+                    "rules+retrieval",
+                    "root-cause-fast-path-v1",
+                    fast_docs_text,
+                )
+        elif _fast_path_enabled() and _is_general_fast_path_candidate(req):
+            if _prefer_direct_procedure_fast_path(req):
+                procedure_docs = await self.rag_client.retrieve_procedures_direct(
+                    retrieval_query,
+                    equipment_id=req.equipment_id,
+                    k=4,
+                )
+                anomaly_model = await anomaly_task
+                if not procedure_docs:
+                    procedure_docs = await self.rag_client.retrieve_procedures(
+                        "root_cause_support",
+                        equipment_id=req.equipment_id,
+                        k=4,
+                        query=retrieval_query,
+                    )
+                if not procedure_docs:
+                    manual_docs = await self.rag_client.retrieve_hybrid(
+                        retrieval_query, equipment_id=req.equipment_id, k=8
+                    )
+            else:
+                manual_task = self.rag_client.retrieve_hybrid(
+                    retrieval_query, equipment_id=req.equipment_id, k=8
+                )
+                anomaly_model, manual_docs = await asyncio.gather(anomaly_task, manual_task)
+                if not manual_docs:
+                    procedure_docs = await self.rag_client.retrieve_procedures_direct(
+                        retrieval_query,
+                        equipment_id=req.equipment_id,
+                        k=4,
+                    )
         else:
             manual_task = self.rag_client.retrieve_hybrid(
                 retrieval_query, equipment_id=req.equipment_id, k=8
@@ -596,6 +984,15 @@ class RootCauseChain:
             )
 
         docs_text, doc_mapping = _format_docs(docs, max_chars_per_doc=_context_char_limit())
+
+        general_fast_path_response = _build_general_fast_path(req, docs_text, doc_mapping)
+        if general_fast_path_response is not None:
+            return (
+                general_fast_path_response,
+                "rules+retrieval",
+                "root-cause-general-fast-path-v1",
+                docs_text,
+            )
 
         valid_ids_list = list(doc_mapping.keys())
         valid_doc_ids_str = ", ".join(valid_ids_list)

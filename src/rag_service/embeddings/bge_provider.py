@@ -1,13 +1,15 @@
 from __future__ import annotations
+
+import logging
+import os
+
+import torch
+from sentence_transformers import SentenceTransformer
+
 from rag_service.core.config import settings
 from rag_service.embeddings.base import EmbeddingProvider
-from langchain_huggingface import HuggingFaceEmbeddings
 
-import os
-import logging
-import torch
-
-# PRODUCTION FIX: Silence the benign HuggingFace 'UNEXPECTED' architecture warnings for clean logs
+# Silence benign HuggingFace architecture warnings for clean service logs.
 logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
 
 
@@ -15,25 +17,29 @@ class BGEEmbeddingProvider(EmbeddingProvider):
     def __init__(self) -> None:
         device = getattr(settings, "bge_device", None) or os.getenv("EMBEDDING_DEVICE", "cpu")
 
-        # PRODUCTION FIX: CPU Thread Clamping
-        # Prevents thread thrashing inside compute-constrained environments.
         if device == "cpu":
             torch.set_num_threads(2)
 
-        # PRODUCTION FIX: Implemented requested langchain-huggingface provider
-        self.model = HuggingFaceEmbeddings(
-            model_name=settings.huggingface_embedding_model,
-            model_kwargs={"device": device},
-            encode_kwargs={"normalize_embeddings": True, "batch_size": settings.embed_batch_size},
+        self.model = SentenceTransformer(
+            settings.huggingface_embedding_model,
+            device=device,
         )
-        self._dim = None
+        self._dim: int | None = None
 
     def dim(self) -> int:
-        # Dynamically infer dimension on first call to support swapping between base/large models
         if self._dim is None:
-            self._dim = len(self.model.embed_query("dimension_check"))
+            dim = self.model.get_sentence_embedding_dimension()
+            if dim is None:
+                dim = len(self.embed_texts(["dimension_check"])[0])
+            self._dim = int(dim)
         return self._dim
 
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        # LangChain handles the batch processing and list conversions natively
-        return self.model.embed_documents(texts)
+        embeddings = self.model.encode(
+            texts,
+            batch_size=settings.embed_batch_size,
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )
+        return embeddings.astype(float).tolist()

@@ -26,14 +26,12 @@ RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 
 COPY requirements-rag.txt /app/requirements-rag.txt
 
-# PRODUCTION FIX: Upgrade past the unstable 2.4.x branch to 2.5.1+cpu 
-# to permanently resolve the C++ custom_op schema crashes on CPU architectures.
+# Security-patched CPU-only PyTorch stack. Keep this aligned with
+# requirements-rag.txt so the image stays scanner-clean without pulling CUDA.
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --index-url https://pypi.org/simple \
     --extra-index-url https://download.pytorch.org/whl/cpu \
-    torch==2.5.1+cpu \
-    torchvision==0.20.1+cpu \
-    torchaudio==2.5.1+cpu \
+    torch==2.9.1+cpu \
     "numpy>=1.26.0,<2.0.0" \
     "typing_extensions>=4.10" \
     -r /app/requirements-rag.txt
@@ -68,6 +66,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       tini \
     && rm -rf /var/lib/apt/lists/*
 
+# Runtime containers never unpack or build Python wheels. Remove base-image
+# packaging tools from the system interpreter so inactive tooling cannot expand
+# the production attack surface or trigger fixed-version CVEs.
+RUN rm -rf \
+      /usr/local/lib/python3.11/site-packages/_distutils_hack \
+      /usr/local/lib/python3.11/site-packages/pkg_resources \
+      /usr/local/lib/python3.11/site-packages/setuptools* \
+      /usr/local/lib/python3.11/site-packages/wheel* \
+      /usr/local/bin/wheel
+
 # --- Phase 7 Production Patches ---
 
 # 1. Prevent running as root using explicit numeric IDs for strict K8s SecurityContexts
@@ -88,6 +96,10 @@ RUN install -d -m 0755 -o 10001 -g 10001 \
 COPY --from=builder --chown=10001:10001 /opt/venv /opt/venv
 COPY --from=builder --chown=10001:10001 /app/src /app/src
 COPY --from=builder --chown=10001:10001 /app/scripts /app/scripts
+# Ship the small versioned SOP corpus with the runtime image. Direct procedure
+# retrieval depends on these files and avoids slower semantic lookups for common
+# EKS validation and operator workflows.
+COPY --chown=10001:10001 data/raw/procedures/ /app/data/raw/procedures/
 
 # Switch to non-root user before running final validation to prevent root-owned pycache generation
 USER appuser:appgroup

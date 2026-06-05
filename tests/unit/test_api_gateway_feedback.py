@@ -9,6 +9,20 @@ from httpx import ASGITransport
 import api_gateway.main as gateway_main
 
 
+def test_gateway_env_int_uses_default_for_invalid_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GATEWAY_TEST_INT", "not-an-int")
+
+    assert gateway_main._env_int("GATEWAY_TEST_INT", 300) == 300
+
+
+def test_gateway_env_int_enforces_minimum(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GATEWAY_TEST_INT", "-10")
+
+    assert gateway_main._env_int("GATEWAY_TEST_INT", 300, minimum=1) == 1
+
+
 class FakeGatewayHTTPClient:
     def __init__(
         self,

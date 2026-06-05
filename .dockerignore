@@ -51,8 +51,13 @@ secrets/
 *.DS_Store
 .DS_Store
 
-# Data and Models (Exclude large local artifacts, let volumes/S3 handle them in K8s)
-data/
+# Data and Models
+# Runtime service images should not copy local artifacts. Keep the build context
+# small by default, but allow the explicit Phase 11 bootstrap image to COPY the
+# versioned seed corpus under data/raw for reproducible EKS validation.
+data/*
+!data/raw/
+!data/raw/**
 tmp/
 models/
 artifacts/

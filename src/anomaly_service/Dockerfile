@@ -28,14 +28,15 @@ RUN python -m pip install --no-cache-dir -U pip setuptools wheel
 # Explicitly target the service-specific requirements file
 COPY src/anomaly_service/requirements.txt /app/requirements.txt
 
-# Force CPU-only PyTorch to prevent massive image bloat and OOM crashes
+# Force a security-patched CPU-only PyTorch wheel to prevent CUDA image bloat
+# while keeping the anomaly model runtime scanner-clean.
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --index-url https://pypi.org/simple \
     --extra-index-url https://download.pytorch.org/whl/cpu \
-    torch==2.1.0+cpu
+    torch==2.9.1+cpu
 
 # Install dependencies strictly from the synchronized requirements file
-# The extra-index-url is included again so pip maps torch==2.1.0 to the cpu wheel
+# The extra-index-url is included again so pip maps the torch pin to CPU wheels.
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --index-url https://pypi.org/simple \
     --extra-index-url https://download.pytorch.org/whl/cpu \
@@ -60,6 +61,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       tini \
       libgomp1 \
     && rm -rf /var/lib/apt/lists/*
+
+# Runtime containers never unpack or build Python wheels. Remove base-image
+# packaging tools from the system interpreter so inactive tooling cannot expand
+# the production attack surface or trigger fixed-version CVEs.
+RUN rm -rf \
+      /usr/local/lib/python3.11/site-packages/_distutils_hack \
+      /usr/local/lib/python3.11/site-packages/pkg_resources \
+      /usr/local/lib/python3.11/site-packages/setuptools* \
+      /usr/local/lib/python3.11/site-packages/wheel* \
+      /usr/local/bin/wheel
 
 # Explicit numeric UID/GID for strict Kubernetes SecurityContext policies
 RUN groupadd --system --gid 10001 appgroup && \

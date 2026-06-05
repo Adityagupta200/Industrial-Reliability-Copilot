@@ -40,7 +40,7 @@ A prompt change removed explicit wording that every hypothesis must cite one of 
 ### Validation
 
 - Re-ran the offline evaluation suite.
-- Faithfulness recovered to 0.86+ aggregate in the committed Ragas artifact.
+- Faithfulness recovered above the 0.85 production gate in the Ragas artifact.
 - Response contract checks passed for the Pump P-23 root-cause case.
 - No new guardrail failures appeared in the smoke run.
 

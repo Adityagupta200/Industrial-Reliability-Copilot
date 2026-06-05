@@ -67,6 +67,10 @@ class ExistingQueryLog:
     user_feedback_score: int | None = None
 
 
+async def _allow_rate_limit(**_: Any) -> tuple[bool, int, int]:
+    return True, 1, 60
+
+
 @pytest.mark.asyncio
 async def test_orchestrator_feedback_persists_then_updates_metric(
     monkeypatch: pytest.MonkeyPatch,
@@ -81,6 +85,7 @@ async def test_orchestrator_feedback_persists_then_updates_metric(
     monkeypatch.setattr(orchestrator_main, "AsyncSessionLocal", lambda: fake_db)
     monkeypatch.setattr(orchestrator_main, "USER_FEEDBACK", fake_counter)
     monkeypatch.setattr(orchestrator_main, "get_job_state", get_job_state)
+    monkeypatch.setattr(orchestrator_main, "increment_rate_limit_bucket", _allow_rate_limit)
 
     app = create_app()
     transport = ASGITransport(app=app)
@@ -111,6 +116,7 @@ async def test_orchestrator_feedback_does_not_increment_metric_for_processing_jo
     monkeypatch.setattr(orchestrator_main, "AsyncSessionLocal", lambda: fake_db)
     monkeypatch.setattr(orchestrator_main, "USER_FEEDBACK", fake_counter)
     monkeypatch.setattr(orchestrator_main, "get_job_state", get_job_state)
+    monkeypatch.setattr(orchestrator_main, "increment_rate_limit_bucket", _allow_rate_limit)
 
     app = create_app()
     transport = ASGITransport(app=app)

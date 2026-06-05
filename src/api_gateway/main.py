@@ -16,6 +16,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger("api_gateway")
+logging.getLogger("httpx").setLevel(os.getenv("HTTPX_LOG_LEVEL", "WARNING"))
+logging.getLogger("httpcore").setLevel(os.getenv("HTTPCORE_LOG_LEVEL", "WARNING"))
 
 # --- Prometheus Metrics ---
 REQUEST_COUNT = Counter(
@@ -31,6 +33,18 @@ ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://llm-orchestrator:8000")
 http_client: httpx.AsyncClient | None = None
 
 
+def _env_int(name: str, default: int, *, minimum: int = 1) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%r; falling back to %d", name, raw, default)
+        return default
+    return max(value, minimum)
+
+
 def _env_float(name: str, default: float) -> float:
     raw = os.getenv(name)
     if raw is None:
@@ -44,16 +58,64 @@ def _env_float(name: str, default: float) -> float:
 
 
 READINESS_TIMEOUT_S = _env_float("GATEWAY_READINESS_TIMEOUT_S", 2.0)
+GATEWAY_MAX_CONNECTIONS = _env_int("GATEWAY_MAX_CONNECTIONS", 300)
+GATEWAY_MAX_KEEPALIVE_CONNECTIONS = min(
+    _env_int("GATEWAY_MAX_KEEPALIVE_CONNECTIONS", 100),
+    GATEWAY_MAX_CONNECTIONS,
+)
+GATEWAY_REQUEST_TIMEOUT_S = _env_float("GATEWAY_REQUEST_TIMEOUT_S", 600.0)
+GATEWAY_CONNECT_TIMEOUT_S = _env_float("GATEWAY_CONNECT_TIMEOUT_S", 10.0)
+GATEWAY_POOL_TIMEOUT_S = _env_float("GATEWAY_POOL_TIMEOUT_S", 30.0)
+
+
+def _metrics_endpoint(request: Request) -> str:
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+    if route_path:
+        return str(route_path)
+
+    path = request.url.path
+    if path.startswith("/query/"):
+        return "/query/{job_id}"
+    return path
+
+
+def _forward_headers(request: Request, trace_id: str) -> dict[str, str]:
+    headers = {"X-Trace-ID": trace_id}
+    client_ip = request.client.host if request.client else ""
+    existing_forwarded_for = request.headers.get("X-Forwarded-For", "").strip()
+
+    if existing_forwarded_for and client_ip:
+        headers["X-Forwarded-For"] = f"{existing_forwarded_for}, {client_ip}"
+    elif existing_forwarded_for:
+        headers["X-Forwarded-For"] = existing_forwarded_for
+    elif client_ip:
+        headers["X-Forwarded-For"] = client_ip
+
+    return headers
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global http_client
-    limits = httpx.Limits(max_keepalive_connections=50, max_connections=100)
-    timeout = httpx.Timeout(600.0, connect=10.0)
+    limits = httpx.Limits(
+        max_keepalive_connections=GATEWAY_MAX_KEEPALIVE_CONNECTIONS,
+        max_connections=GATEWAY_MAX_CONNECTIONS,
+    )
+    timeout = httpx.Timeout(
+        GATEWAY_REQUEST_TIMEOUT_S,
+        connect=GATEWAY_CONNECT_TIMEOUT_S,
+        pool=GATEWAY_POOL_TIMEOUT_S,
+    )
 
     http_client = httpx.AsyncClient(limits=limits, timeout=timeout)
-    logger.info("Gateway HTTP client initialized with connection pooling.")
+    logger.info(
+        "Gateway HTTP client initialized with max_connections=%d, "
+        "max_keepalive_connections=%d, pool_timeout_s=%.1f.",
+        GATEWAY_MAX_CONNECTIONS,
+        GATEWAY_MAX_KEEPALIVE_CONNECTIONS,
+        GATEWAY_POOL_TIMEOUT_S,
+    )
 
     yield
 
@@ -89,9 +151,10 @@ async def metrics_middleware(request: Request, call_next):
         return response
     finally:
         latency = time.time() - start_time
-        REQUEST_LATENCY.labels(endpoint=request.url.path).observe(latency)
+        endpoint = _metrics_endpoint(request)
+        REQUEST_LATENCY.labels(endpoint=endpoint).observe(latency)
         REQUEST_COUNT.labels(
-            method=request.method, endpoint=request.url.path, http_status=status_code
+            method=request.method, endpoint=endpoint, http_status=status_code
         ).inc()
 
 
@@ -183,14 +246,18 @@ async def route_query(request: Request):
     trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
 
     try:
-        headers = {"X-Trace-ID": trace_id}
-        if request.client:
-            headers["X-Forwarded-For"] = request.client.host
-
-        response = await http_client.post(f"{ORCHESTRATOR_URL}/query", json=body, headers=headers)
+        response = await http_client.post(
+            f"{ORCHESTRATOR_URL}/query",
+            json=body,
+            headers=_forward_headers(request, trace_id),
+        )
 
     except httpx.RequestError as e:
-        logger.error(f"Gateway to Orchestrator network error: {str(e)}")
+        logger.exception(
+            "Gateway to Orchestrator network error: %s: %s",
+            type(e).__name__,
+            str(e) or repr(e),
+        )
         raise HTTPException(
             status_code=502, detail="Bad Gateway: Failed to communicate with downstream service."
         )
@@ -219,17 +286,17 @@ async def route_feedback(request: Request):
     trace_id = request.headers.get("X-Trace-ID", str(uuid.uuid4()))
 
     try:
-        headers = {"X-Trace-ID": trace_id}
-        if request.client:
-            headers["X-Forwarded-For"] = request.client.host
-
         response = await http_client.post(
             f"{ORCHESTRATOR_URL}/feedback",
             json=body,
-            headers=headers,
+            headers=_forward_headers(request, trace_id),
         )
     except httpx.RequestError as e:
-        logger.error(f"Gateway to Orchestrator feedback network error: {str(e)}")
+        logger.exception(
+            "Gateway to Orchestrator feedback network error: %s: %s",
+            type(e).__name__,
+            str(e) or repr(e),
+        )
         raise HTTPException(
             status_code=502, detail="Bad Gateway: Failed to communicate with downstream service."
         )
@@ -272,5 +339,9 @@ async def get_query_status(job_id: str, request: Request):
             media_type="application/json",
         )
     except httpx.RequestError as e:
-        logger.error(f"Gateway network error fetching job: {e}")
+        logger.exception(
+            "Gateway network error fetching job: %s: %s",
+            type(e).__name__,
+            str(e) or repr(e),
+        )
         raise HTTPException(status_code=502, detail="Bad Gateway: Downstream unreachable")

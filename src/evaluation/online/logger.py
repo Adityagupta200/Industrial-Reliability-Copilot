@@ -1,6 +1,8 @@
 import logging
+import os
+import time
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON, select
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON, select, text, update
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
@@ -59,12 +61,27 @@ class AsyncJobState(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class RateLimitBucket(Base):
+    __tablename__ = "rate_limit_buckets"
+
+    bucket_key = Column(String, primary_key=True, index=True)
+    window_start = Column(DateTime, nullable=False)
+    request_count = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 logger.info(
     "Telemetry database target: %s",
     _safe_database_target(settings.services.incidents_db_dsn),
 )
 
-engine = create_async_engine(settings.services.incidents_db_dsn, pool_pre_ping=True)
+engine = create_async_engine(
+    settings.services.incidents_db_dsn,
+    pool_pre_ping=True,
+    pool_size=int(os.getenv("TELEMETRY_DB_POOL_SIZE", "5")),
+    max_overflow=int(os.getenv("TELEMETRY_DB_MAX_OVERFLOW", "5")),
+    pool_timeout=float(os.getenv("TELEMETRY_DB_POOL_TIMEOUT_S", "10")),
+)
 AsyncSessionLocal = async_sessionmaker(
     autocommit=False, autoflush=False, bind=engine, class_=AsyncSession
 )
@@ -104,20 +121,70 @@ async def create_job_state(job_id: str) -> None:
         await db.commit()
 
 
+async def increment_rate_limit_bucket(
+    *,
+    bucket_key: str,
+    limit: int,
+    window_seconds: int,
+) -> tuple[bool, int, int]:
+    """Atomically increment a shared rate-limit bucket.
+
+    The orchestrator can run with multiple Uvicorn workers or Kubernetes pods. A
+    process-local limiter cannot prove a single-client limit in that topology, so
+    Phase 11 uses this Postgres-backed bucket as the authoritative gate.
+    """
+    now_epoch = int(time.time())
+    window_epoch = now_epoch - (now_epoch % window_seconds)
+    retry_after = max(1, window_seconds - (now_epoch - window_epoch))
+    window_start = datetime.utcfromtimestamp(window_epoch)
+    now = datetime.utcnow()
+
+    statement = text(
+        """
+        INSERT INTO rate_limit_buckets (bucket_key, window_start, request_count, updated_at)
+        VALUES (:bucket_key, :window_start, 1, :now)
+        ON CONFLICT (bucket_key) DO UPDATE SET
+            request_count = CASE
+                WHEN rate_limit_buckets.window_start = EXCLUDED.window_start
+                    THEN rate_limit_buckets.request_count + 1
+                ELSE 1
+            END,
+            window_start = EXCLUDED.window_start,
+            updated_at = EXCLUDED.updated_at
+        RETURNING request_count
+        """
+    )
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            statement,
+            {
+                "bucket_key": bucket_key,
+                "window_start": window_start,
+                "now": now,
+            },
+        )
+        count = int(result.scalar_one())
+        await db.commit()
+
+    return count <= limit, count, retry_after
+
+
 async def update_job_state(
     job_id: str, status: str, result: dict | None = None, error: str | None = None
 ) -> None:
     """Updates an existing job's status, result payload, or error message."""
     async with AsyncSessionLocal() as db:
-        res = await db.execute(select(AsyncJobState).filter(AsyncJobState.job_id == job_id))
-        job = res.scalars().first()
-        if job:
-            job.status = status
-            if result is not None:
-                job.result = result
-            if error is not None:
-                job.error = error
-            await db.commit()
+        values: dict = {"status": status, "updated_at": datetime.utcnow()}
+        if result is not None:
+            values["result"] = result
+        if error is not None:
+            values["error"] = error
+
+        await db.execute(
+            update(AsyncJobState).where(AsyncJobState.job_id == job_id).values(**values)
+        )
+        await db.commit()
 
 
 async def get_job_state(job_id: str) -> dict | None:

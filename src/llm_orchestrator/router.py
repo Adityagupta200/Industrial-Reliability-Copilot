@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal, Optional
-from langsmith import traceable  # PRODUCTION FIX: Explicit Tracing
+from llm_orchestrator.tracing import traceable
 
 from .schemas import QueryRequest, QueryResponse
 from .chains.root_cause_chain import RootCauseChain

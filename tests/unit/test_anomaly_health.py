@@ -1,4 +1,17 @@
+import pytest
+
 from anomaly_service.core.model_loader import LoadedModels
+from anomaly_service.core.model_loader import _load_anomaly_checkpoint
+
+
+def test_legacy_torch_checkpoint_loading_disabled_by_default(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "anomaly_service.core.model_loader.settings.allow_legacy_torch_checkpoint",
+        False,
+    )
+
+    with pytest.raises(ValueError, match="Legacy PyTorch checkpoint loading is disabled"):
+        _load_anomaly_checkpoint(tmp_path / "legacy_model.pth")
 
 
 def test_readiness_allows_degraded_fallback(client, monkeypatch):
