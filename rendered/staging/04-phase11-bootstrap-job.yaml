@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: phase11-data-bootstrap
+  namespace: staging
+  labels:
+    app: phase11-data-bootstrap
+    phase: "11"
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 7200
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: phase11-data-bootstrap
+        phase: "11"
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: phase11-data-bootstrap
+        image: 519245966025.dkr.ecr.ap-south-1.amazonaws.com/rag-service:phase11-20260605135326-f455ea6-bootstrap
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: copilot-config
+        - secretRef:
+            name: copilot-secrets
+        env:
+        - name: PHASE11_MIN_DOC_POINTS
+          value: "50"
+        - name: PHASE11_MIN_PROCEDURE_POINTS
+          value: "5"
+        - name: PHASE11_MIN_INCIDENT_ROWS
+          value: "100"
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "2000m"
+          limits:
+            memory: "6Gi"
+            cpu: "4000m"
