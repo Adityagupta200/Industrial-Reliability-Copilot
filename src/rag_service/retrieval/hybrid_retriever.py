@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class HybridSettings:
-    # PRODUCTION FIX: Asymmetric Retrieval Optimization
+    #   Asymmetric Retrieval Optimization
     # Drastically reduced initial candidate pool to minimize heavy Cross-Encoder CPU inference.
     semantic_k: int = 15
     keyword_k: int = 15
@@ -29,7 +29,7 @@ class HybridRetriever:
         keyword: Optional[BM25KeywordRetriever] = None,
         settings: Optional[HybridSettings] = None,
     ):
-        # PRODUCTION FIX: We no longer force "or SemanticRetriever()".
+        #   We no longer force "or SemanticRetriever()".
         # We accept None to allow Graceful Degradation.
         self.semantic = semantic
         self.keyword = keyword

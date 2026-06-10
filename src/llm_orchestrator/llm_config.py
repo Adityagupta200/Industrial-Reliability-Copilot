@@ -37,7 +37,7 @@ class LLMSettings(BaseSettings):
 
     @model_validator(mode="after")
     def route_to_k8s_dns(self) -> "LLMSettings":
-        """PRODUCTION FIX: Dynamic K8s DNS Routing for Ollama"""
+        """  Dynamic K8s DNS Routing for Ollama"""
         if "KUBERNETES_SERVICE_HOST" in os.environ:
             self.ollama_base_url = self.ollama_base_url.replace("localhost", "ollama")
         return self
@@ -55,7 +55,6 @@ class ServiceSettings(BaseSettings):
     rag_retrieve_procedures_direct_path: str = "/retrieve/procedures/direct"
     rag_retrieve_semantic_path: str = "/retrieve/semantic"
 
-    # PRODUCTION FIX: Corrected credentials and database name, matching RAG service
     incidents_db_dsn: str = Field(
         default="postgresql+asyncpg://irc:irc_password@localhost:5432/industrial_maintenance"
     )
@@ -63,7 +62,7 @@ class ServiceSettings(BaseSettings):
 
     @model_validator(mode="after")
     def route_to_k8s_dns(self) -> "ServiceSettings":
-        """PRODUCTION FIX: Dynamic K8s DNS Routing for Inter-Service Comm & DB"""
+        """  Dynamic K8s DNS Routing for Inter-Service Comm & DB"""
         if "KUBERNETES_SERVICE_HOST" in os.environ:
             self.anomaly_service_url = self.anomaly_service_url.replace(
                 "localhost", "anomaly-service"

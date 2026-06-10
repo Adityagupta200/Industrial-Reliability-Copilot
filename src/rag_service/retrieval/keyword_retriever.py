@@ -32,7 +32,7 @@ class _BM25Index:
 class BM25KeywordRetriever:
     def __init__(self, *, qdrant: Optional[QdrantBackend] = None, index_path: Optional[str] = None):
         self.qdrant = qdrant or QdrantBackend()
-        # PRODUCTION FIX: Eliminate hardcoded /tmp directory, use secure tempfile retrieval
+        #   Eliminate hardcoded /tmp directory, use secure tempfile retrieval
         self.index_path = index_path or os.getenv(
             "BM25_INDEX_PATH", os.path.join(tempfile.gettempdir(), "bm25_index.json")
         )
@@ -41,7 +41,7 @@ class BM25KeywordRetriever:
 
     def _load(self) -> Optional[_BM25Index]:
         try:
-            # PRODUCTION FIX: Safe JSON payload reading and dynamical recreation of BM25
+            #   Safe JSON payload reading and dynamical recreation of BM25
             with open(self.index_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
@@ -63,7 +63,7 @@ class BM25KeywordRetriever:
 
     def _save(self, idx: _BM25Index) -> None:
         os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
-        # PRODUCTION FIX: Serialize corpus into safe JSON instead of binary pickle
+        #   Serialize corpus into safe JSON instead of binary pickle
         data = {
             "doc_ids": idx.doc_ids,
             "texts": idx.texts,
@@ -94,7 +94,7 @@ class BM25KeywordRetriever:
             equipment_to_indices: dict[str, list[int]] = {}
 
             for p in points:
-                # PRODUCTION FIX: Safely extract payload whether Qdrant returns a dict or an object
+                #   Safely extract payload whether Qdrant returns a dict or an object
                 payload = (
                     p.get("payload", {}) if isinstance(p, dict) else getattr(p, "payload", {}) or {}
                 )
@@ -110,7 +110,7 @@ class BM25KeywordRetriever:
                 tokenized.append(_tokenize(text))
 
                 eq = payload.get(self.qdrant.settings.payload_equipment_id_key)
-                # PRODUCTION FIX: Mirror `filters.py` and `pipeline.py` exactly by tracking "all"
+                #   Mirror `filters.py` and `pipeline.py` exactly by tracking "all"
                 if isinstance(eq, str) and eq.strip():
                     equipment_to_indices.setdefault(eq, []).append(current_idx)
                 else:
@@ -143,7 +143,7 @@ class BM25KeywordRetriever:
         if self._index is None:
             self.build_or_load(force_rebuild=False)
 
-        # PRODUCTION FIX: Replaced unsafe assert with explicit RuntimeError to resolve B101
+        #   Replaced unsafe assert with explicit RuntimeError to resolve B101
         if self._index is None:
             raise RuntimeError("Index could not be loaded or built")
 
@@ -155,7 +155,7 @@ class BM25KeywordRetriever:
         candidate_indices = set(range(len(idx.doc_ids)))
         if filters and filters.equipment_id:
             specific_indices = set(idx.equipment_to_indices.get(filters.equipment_id, []))
-            # PRODUCTION FIX: Union specific equipment indices with explicitly tagged "all" generic documents
+            #   Union specific equipment indices with explicitly tagged "all" generic documents
             generic_indices = set(idx.equipment_to_indices.get("all", []))
             candidate_indices = specific_indices.union(generic_indices)
 

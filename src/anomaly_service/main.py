@@ -177,7 +177,7 @@ def predict_anomaly(req: SensorRequest):
         or ANOM_SCHEMA is None
         or ANOM_ARTIFACTS is None
     ):
-        # PRODUCTION FIX: Graceful Degradation.
+        #   Graceful Degradation.
         # Return a safe baseline instead of a hard 503 so upstream pipelines don't crash.
         logger.warning(
             {"event": "anomaly_service_degraded", "message": "Returning fallback baseline"}
@@ -234,7 +234,7 @@ def predict_anomaly(req: SensorRequest):
 @app.post("/predict/rul", response_model=RULResponse, tags=["Inference"])
 def predict_rul(req: SensorRequest):
     if MODELS is None or MODELS.rul_model is None or RUL_SCHEMA is None:
-        # PRODUCTION FIX: Graceful Degradation
+        #   Graceful Degradation
         logger.warning({"event": "rul_service_degraded", "message": "Returning fallback baseline"})
         return RULResponse(
             timestamp=req.timestamp,

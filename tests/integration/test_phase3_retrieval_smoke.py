@@ -44,7 +44,6 @@ def _require_qdrant_has_points(client: QdrantClient, collection: str) -> None:
 
 def test_phase3_retrieval_smoke_end_to_end() -> None:
     """
-    Phase 3 -> Phase 9 Upgraded Acceptance Checks:
     Tests the RAG retrieval microservice across the network boundary
     instead of relying on local PyTorch bindings.
     """

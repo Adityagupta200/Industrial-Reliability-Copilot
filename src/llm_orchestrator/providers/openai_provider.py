@@ -61,7 +61,7 @@ class OpenAIProvider(LLMProvider):
 
         except Exception as e:
             err_msg = str(e).lower()
-            # PRODUCTION FIX: Do not retry on Auth/Billing failures
+            #   Do not retry on Auth/Billing failures
             if (
                 "authentication" in err_msg
                 or "401" in err_msg

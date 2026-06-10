@@ -34,7 +34,7 @@ def _install_dummy_sentence_transformers(monkeypatch) -> None:
     dummy_mod.CrossEncoder = DummyCrossEncoder  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "sentence_transformers", dummy_mod)
 
-    # PRODUCTION FIX: Flush the global model cache to prevent test state leakage
+    #   Flush the global model cache to prevent test state leakage
     monkeypatch.setattr("rag_service.core.model_cache._cross_models", {})
 
 

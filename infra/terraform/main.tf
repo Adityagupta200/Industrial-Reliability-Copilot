@@ -135,7 +135,6 @@ module "eks" {
       capacity_type  = "ON_DEMAND"
       disk_size      = 50
 
-      # AL2023 explicitly defined to pass Step 7.4 verification
       ami_type = "AL2023_x86_64_STANDARD"
     }
   }
@@ -208,12 +207,11 @@ module "db" {
 
   manage_master_user_password = false
 
-  # FIX: Attached explicit security group instead of VPC default
+  # Attached explicit security group instead of VPC default
   vpc_security_group_ids = [module.rds_sg.security_group_id]
   create_db_subnet_group = true
   subnet_ids             = module.vpc.private_subnets
 
-  # FIX: Phase 7 mandatory production flags
   storage_encrypted       = true
   backup_retention_period = 7
   deletion_protection     = true
@@ -283,7 +281,7 @@ resource "aws_s3_bucket_public_access_block" "documents_public_access" {
 
 # 5. Container Registry (ECR)
 resource "aws_ecr_repository" "microservices" {
-  # PRODUCTION FIX: Removed 'irc-' prefix to match Step 7.5 docker push commands
+  #   Removed 'irc-' prefix to match Step 7.5 docker push commands
   for_each = toset([
     "api-gateway",
     "llm-orchestrator",

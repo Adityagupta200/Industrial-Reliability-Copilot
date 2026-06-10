@@ -7,18 +7,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Keep your existing env behavior (ANOM_* variables)
     model_config = SettingsConfigDict(env_prefix="ANOM_", case_sensitive=False)
 
     service_name: str = "anomaly-service"
     api_prefix: str = "/v1"
     log_level: str = "INFO"
-
-    # Absolute path to: <repo>/src/anomaly_service
     service_root: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[1])
 
-    # Paths (can still be overridden by ANOM_* env vars)
-    # Defaults remain relative, then we resolve them against service_root in model_post_init.
+    
     anomaly_ckpt_path: Path = Path("artifacts/anomaly/anomaly_model.safetensors")
     anomaly_preprocess_path: Path = Path("artifacts/anomaly/preprocess.joblib")
     anomaly_schema_path: Path = Path("artifacts/anomaly/feature_schema.json")
@@ -33,7 +29,7 @@ class Settings(BaseSettings):
     mlflow_inference_sample_rate: float = 0.01  # 1% sampling to reduce overhead
 
     # Runtime
-    torch_device: str = "cpu"  # keep CPU for portability
+    torch_device: str = "cpu"  # CPU for portability
     allow_legacy_torch_checkpoint: bool = False
     request_timeout_seconds: float = 5.0
 

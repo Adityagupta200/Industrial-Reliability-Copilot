@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Resolve the project Python interpreter for bash-based Phase 11 validation.
-# Source this file before using "$PY" in Git Bash, WSL, Linux, or macOS shells.
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   echo "source scripts/phase11_python_env.sh instead of executing it directly" >&2

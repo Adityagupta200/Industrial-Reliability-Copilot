@@ -7,7 +7,6 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
-# Aligned with Docker's internal PYTHONPATH namespace
 from llm_orchestrator.llm_config import load_settings
 
 logger = logging.getLogger(__name__)
@@ -50,7 +49,7 @@ class EvalScore(Base):
     answer_relevancy = Column(Float)
 
 
-# PRODUCTION FIX: Database-backed Job State for Distributed Kubernetes Pods
+# Database-backed Job State for Distributed Kubernetes Pods
 class AsyncJobState(Base):
     __tablename__ = "async_job_states"
     job_id = Column(String, primary_key=True, index=True)
@@ -110,7 +109,7 @@ async def log_interaction_async(
             logger.error(f"Failed to log query {query_id}: {e}")
 
 
-# --- PRODUCTION FIX: Job State Utility Functions ---
+# Job State Utility Functions 
 
 
 async def create_job_state(job_id: str) -> None:

@@ -71,7 +71,6 @@ def _load_anomaly_checkpoint(path: Path) -> Tuple[Dict[str, torch.Tensor], Dict[
             "controlled local migration."
         )
 
-    # Compatibility path for older local artifacts. Production defaults to safetensors.
     ckpt = torch.load(path, map_location=settings.torch_device, weights_only=True)
     state_dict, meta = _extract_state_dict_and_meta(ckpt)
     return state_dict, meta
@@ -248,7 +247,6 @@ class HybridMultiDomainArchitecture(nn.Module):
             input_dim=hidden_dim, hidden_dim=hidden_dim
         )
 
-        # IMPORTANT: this must match checkpoint shapes
         self.additional_processing = nn.Sequential(
             nn.Linear(hidden_dim, ap_hidden1),
             nn.ReLU(),

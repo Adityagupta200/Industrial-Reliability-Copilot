@@ -4,7 +4,7 @@ import httpx
 import asyncio
 import time
 
-# PRODUCTION FIX: Gate integration tests behind environment variable
+#   Gate integration tests behind environment variable
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_INTEGRATION") != "1", reason="Set RUN_INTEGRATION=1 to run integration tests"
 )
@@ -96,7 +96,7 @@ async def test_retrieval_guardrail_multi_tenancy():
         "filters": {"plant_id": "Plant-A", "user_role": "operator"},
     }
     async with httpx.AsyncClient() as client:
-        # PRODUCTION FIX: Bumped timeout to 60.0 to handle HuggingFace cold start
+        #   Bumped timeout to 60.0 to handle HuggingFace cold start
         response = await client.post(RAG_URL, json=payload, timeout=60.0)
 
     assert response.status_code == 200
@@ -110,7 +110,7 @@ async def test_retrieval_guardrail_freshness():
     """Validates legacy document tagging for LLM context grounding."""
     payload = {"query": "legacy industrial pump handbook", "k": 5, "filters": {}}
     async with httpx.AsyncClient() as client:
-        # PRODUCTION FIX: Bumped timeout to 60.0 to handle HuggingFace cold start
+        #   Bumped timeout to 60.0 to handle HuggingFace cold start
         response = await client.post(RAG_URL, json=payload, timeout=60.0)
 
     assert response.status_code == 200

@@ -8,7 +8,7 @@ from .filters import build_qdrant_filter
 from .qdrant_backend import QdrantBackend, QdrantSettings
 from .types import Document, RetrievalFilters
 
-# PRODUCTION FIX: Import the centralized provider instead of local hardcodes
+#   Import the centralized provider instead of local hardcodes
 from rag_service.embeddings import get_embedding_provider
 
 
@@ -21,7 +21,7 @@ class SemanticRetriever:
         cache: Optional[QueryEmbeddingCache] = None,
     ):
         self.qdrant = qdrant or QdrantBackend(qdrant_settings)
-        # PRODUCTION FIX: Use the configured embedding provider (OpenAI)
+        #   Use the configured embedding provider (OpenAI)
         # to guarantee the query vector dimensions match the ingestion vectors.
         self.embedder = get_embedding_provider()
         self.cache = cache or QueryEmbeddingCache(

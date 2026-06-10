@@ -13,7 +13,7 @@ reclaimPolicy: Retain
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 ---
-# PRODUCTION FIX: Added Persistent Volume Claim for Vector DB statefulness
+# Added Persistent Volume Claim for Vector DB statefulness
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -78,7 +78,6 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 12
-        # Attach the persistent volume to the container
         volumeMounts:
         - name: qdrant-storage-volume
           mountPath: /qdrant/storage

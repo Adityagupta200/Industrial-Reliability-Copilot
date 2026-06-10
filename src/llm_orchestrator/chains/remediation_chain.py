@@ -401,7 +401,7 @@ class RemediationChain:
 
         result = await self.llm.invoke(prompt, json_mode=True)
 
-        # PRODUCTION FIX: Wrap LLM parsing in a try-except block to prevent 500 errors
+        # Wrap LLM parsing in a try-except block to prevent 500 errors
         try:
             parsed = parse_llm_json(result.content, RemediationResponse)
         except Exception as e:

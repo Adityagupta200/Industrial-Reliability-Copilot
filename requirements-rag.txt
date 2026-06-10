@@ -1,4 +1,4 @@
-# --- RAG service runtime deps (Phase 3 retrieval API) ---
+# RAG service runtime deps 
 
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
@@ -17,30 +17,27 @@ tenacity>=8.2.3
 qdrant-client>=1.10.1
 
 # Retrieval
-# FIXED: Prevent NumPy 2.x from causing C-extension crashes in rank-bm25/torch
 numpy>=1.26.0,<2.0.0
 rank-bm25>=0.2.2
 
 # Chunking / text split
-# PRODUCTION FIX: Added tiktoken to resolve ModuleNotFoundError during ingestion chunking
 tiktoken>=0.6.0
 
 # Local Embeddings/Reranker core dependencies
-# Keep aligned with the Dockerfile's security-patched CPU-only PyTorch stack.
 torch==2.9.1
 sentence-transformers>=3.3.1
 transformers>=4.46.1
 tokenizers>=0.20.3
 
-# Postgres + text-to-SQL safety (needed by your safe_sql / historical chain)
+# Postgres + text-to-SQL safety (needed by the safe_sql / historical chain)
 sqlalchemy>=2.0.30
 psycopg[binary]>=3.1.19
 asyncpg>=0.29.0
 alembic>=1.13.1
 sqlglot>=25.10.0
 
-# Ingestion-only (keep only if rag-service container also ingests PDFs)
+# Ingestion-only 
 pymupdf>=1.24.9
 
-# CLI helpers (keep only if you run ingestion CLI inside this container)
+# CLI helpers 
 typer>=0.12.3

@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
-# --- Production Logging Setup ---
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -19,7 +18,7 @@ logger = logging.getLogger("api_gateway")
 logging.getLogger("httpx").setLevel(os.getenv("HTTPX_LOG_LEVEL", "WARNING"))
 logging.getLogger("httpcore").setLevel(os.getenv("HTTPCORE_LOG_LEVEL", "WARNING"))
 
-# --- Prometheus Metrics ---
+# Prometheus Metrics 
 REQUEST_COUNT = Counter(
     "gateway_requests_total",
     "Total HTTP requests routed through the gateway",
@@ -158,7 +157,7 @@ async def metrics_middleware(request: Request, call_next):
         ).inc()
 
 
-# --- Phase 7: Kubernetes Probes & Observability ---
+# Phase 7: Kubernetes Probes & Observability
 
 
 @app.get("/health/live", tags=["Health"])
@@ -229,12 +228,11 @@ async def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-# --- Core Gateway Routing ---
+# Core Gateway Routing
 
 
 @app.post("/query", tags=["Routing"])
 async def route_query(request: Request):
-    # PRODUCTION FIX: Avoid unsafe assert
     if http_client is None:
         raise RuntimeError("HTTP client not initialized")
 
@@ -314,7 +312,6 @@ async def route_feedback(request: Request):
 
 @app.get("/query/{job_id}", tags=["Routing"])
 async def get_query_status(job_id: str, request: Request):
-    # PRODUCTION FIX: Avoid unsafe assert
     if http_client is None:
         raise RuntimeError("HTTP client not initialized")
 

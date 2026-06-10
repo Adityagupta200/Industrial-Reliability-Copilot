@@ -25,8 +25,6 @@ def build_qdrant_filter(
 
     must: list[qmodels.Condition] = []
 
-    # PRODUCTION FIX: Replaced MatchAny with explicit Should (OR) condition.
-    # Scalar string payloads can cause silent MatchAny dropouts depending on Qdrant index schemas.
     if getattr(filters, "equipment_id", None):
         must.append(
             qmodels.Filter(

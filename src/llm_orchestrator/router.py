@@ -33,7 +33,7 @@ class ChainOrchestrator:
     remediation: RemediationChain
     historical: HistoricalSearchChain
 
-    @traceable(run_type="chain", name="Chain_Orchestrator")  # PRODUCTION FIX: Explicit Tracing
+    @traceable(run_type="chain", name="Chain_Orchestrator")  #   Explicit Tracing
     async def handle(self, req: QueryRequest) -> QueryResponse:
         chain: Optional[ChainName] = req.chain
 
@@ -50,7 +50,6 @@ class ChainOrchestrator:
         if chain == "root_cause":
             if req.root_cause is None:
                 raise ValueError("root_cause payload is required.")
-            # PRODUCTION FIX: Unpacking 4 variables
             result, prov, model, raw_ctx = await self.root_cause.run(req.root_cause)
             return QueryResponse(
                 chain=chain,

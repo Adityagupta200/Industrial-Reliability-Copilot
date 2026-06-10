@@ -41,7 +41,7 @@ def _extract_equipment_id(filename: str) -> str | None:
     return None
 
 
-# PRODUCTION FIX: Added 'force' parameter to bypass manifest checks
+#   Added 'force' parameter to bypass manifest checks
 def ingest_all(force: bool = False) -> dict[str, Any]:
     manifest = Manifest.load()
 
@@ -72,7 +72,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
         key = f"manual::{pdf.as_posix()}"
         sha = sha256_file(pdf)
 
-        # PRODUCTION FIX: Check if force is True before skipping
+        #   Check if force is True before skipping
         if not force and manifest.is_unchanged(key, sha):
             stats["skipped_files"] += 1
             continue
@@ -143,7 +143,7 @@ def ingest_all(force: bool = False) -> dict[str, Any]:
         key = f"procedure::{md.as_posix()}"
         sha = sha256_file(md)
 
-        # PRODUCTION FIX: Check if force is True before skipping
+        #   Check if force is True before skipping
         if not force and manifest.is_unchanged(key, sha):
             stats["skipped_files"] += 1
             continue

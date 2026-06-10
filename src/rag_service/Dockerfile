@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-########################
 # Builder Stage
-########################
 FROM python:3.11-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -37,7 +35,7 @@ RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     -r /app/requirements-rag.txt
 
 COPY src/ /app/src/
-# PRODUCTION FIX: Explicitly copy the scripts directory to allow containerized data generation
+#   Explicitly copy the scripts directory to allow containerized data generation
 COPY scripts/ /app/scripts/
 
 # Fail-fast builder tests to ensure core libraries loaded correctly
@@ -45,9 +43,7 @@ RUN python -c "import numpy, typing_extensions; print('builder deps ok')"
 RUN python -c "import sys; sys.path.insert(0, '/app/src'); import rag_service; print('builder rag_service ok')"
 RUN python -c "import sys; sys.path.insert(0, '/app/src'); import rag_service.main; print('builder rag_service.main ok')"
 
-########################
 # Runtime Stage
-########################
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -76,13 +72,11 @@ RUN rm -rf \
       /usr/local/lib/python3.11/site-packages/wheel* \
       /usr/local/bin/wheel
 
-# --- Phase 7 Production Patches ---
-
 # 1. Prevent running as root using explicit numeric IDs for strict K8s SecurityContexts
 RUN groupadd --system --gid 10001 appgroup && \
     useradd --system --uid 10001 --gid 10001 --create-home appuser
 
-# FIXED: Added /app/data/hf_cache to pre-create the directory with non-root ownership.
+# Added /app/data/hf_cache to pre-create the directory with non-root ownership.
 # When Docker mounts the irc_hf_cache volume, it will inherit these 10001:10001 permissions.
 RUN install -d -m 0755 -o 10001 -g 10001 \
       /app/data/raw/manuals \
@@ -119,7 +113,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
 # 4. Use Tini to handle Kubernetes SIGTERM scaling gracefully
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# FIXED: Environment variable to explicitly direct HuggingFace downloads to the new volume
+# Environment variable to explicitly direct HuggingFace downloads to the new volume
 ENV HF_HOME=/app/data/hf_cache
 
 # 5. Lock workers to 1 (Rely on Kubernetes HPA for scaling) and set log-level to info for production

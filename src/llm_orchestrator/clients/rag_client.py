@@ -82,7 +82,7 @@ class RAGClient:
                 if title and title != "Untitled":
                     candidate_source = f"{title.replace(' ', '_').lower()}.pdf"
                 else:
-                    # PRODUCTION FIX: Safely cast to string before lower() to prevent AttributeError
+                    #   Safely cast to string before lower() to prevent AttributeError
                     eq_id = meta.get("equipment_id", "equipment")
                     if not eq_id:
                         eq_id = "equipment"

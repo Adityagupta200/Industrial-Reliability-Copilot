@@ -14,11 +14,11 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         if not settings.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required for OpenAI embeddings.")
 
-        # PRODUCTION FIX: Use configurable timeouts rather than hardcoded 1.0s.
+        #   Use configurable timeouts rather than hardcoded 1.0s.
         # This prevents dropped connections while maintaining a safety ceiling.
         http_client = httpx.Client(timeout=httpx.Timeout(settings.openai_timeout_s))
 
-        # PRODUCTION FIX: Enable native OpenAI SDK retries
+        #   Enable native OpenAI SDK retries
         self.client = OpenAI(
             api_key=settings.openai_api_key,
             http_client=http_client,
@@ -33,7 +33,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self._dim = len(v[0])
         return self._dim
 
-    # PRODUCTION FIX: Decorate with exponential backoff to handle rate limits (429)
+    #   Decorate with exponential backoff to handle rate limits (429)
     # and transient API/network connection errors gracefully during batch ingestion.
     @retry(
         retry=retry_if_exception_type(

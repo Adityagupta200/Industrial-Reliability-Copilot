@@ -478,7 +478,7 @@ def _get_semantic_retriever(request: Request) -> SemanticRetriever | None:
                 retriever = SemanticRetriever()
                 runtime["semantic_retriever"] = retriever
             except Exception as e:
-                # PRODUCTION FIX: Graceful Degradation
+                #   Graceful Degradation
                 logger.error(
                     f"Graceful Degradation: SemanticRetriever initialization failed: {e}. Semantic search disabled."
                 )

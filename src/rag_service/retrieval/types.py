@@ -11,7 +11,7 @@ class RetrievalFilters:
     severity: Optional[str] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
-    # FIX: Added explicitly for Multi-Tenancy and Role-Based Access Control
+    # Added explicitly for Multi-Tenancy and Role-Based Access Control
     plant_id: Optional[str] = None
     user_role: Optional[str] = None
 

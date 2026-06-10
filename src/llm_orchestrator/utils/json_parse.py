@@ -34,7 +34,7 @@ def _extract_json_object(text: str) -> str:
 
     m = _JSON_BLOCK_RE.search(text)
     if not m:
-        # MLE FIX: If the LLM truncates the JSON (hitting max_tokens mid-generation),
+        # If the LLM truncates the JSON (hitting max_tokens mid-generation),
         # return an empty JSON object instead of crashing.
         logger.warning("Truncated or missing JSON detected. Triggering graceful fallback.")
         return "{}"

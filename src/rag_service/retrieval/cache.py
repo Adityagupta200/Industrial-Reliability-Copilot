@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 try:
-    import redis  # type: ignore
-except Exception:  # pragma: no cover
+    import redis  
+except Exception:  
     redis = None
 
 
@@ -50,7 +50,6 @@ class QueryEmbeddingCache:
                 self.stats.misses += 1
                 return None
             try:
-                # PRODUCTION FIX: Replaced pickle with secure json deserialization
                 self.stats.hits += 1
                 return json.loads(raw)
             except Exception:
@@ -75,7 +74,6 @@ class QueryEmbeddingCache:
         key = self._mk_key(query)
 
         if self._redis is not None:
-            # PRODUCTION FIX: Replaced pickle with secure json serialization
             self._redis.setex(key, self.ttl_seconds, json.dumps(vec))
             return
 

@@ -11,7 +11,7 @@ class FakeProvider(LLMProvider):
         self._fail_times = fail_times
         self.calls = 0
 
-    # PRODUCTION FIX: Added json_mode parameter to match the updated Phase 8 interface
+    #   Added json_mode parameter
     async def invoke(self, prompt: str, json_mode: bool = False) -> LLMResult:
         self.calls += 1
         if self.calls <= self._fail_times:

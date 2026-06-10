@@ -100,7 +100,6 @@ class OutputGuardrails:
         if "NO DOCUMENTATION FOUND" in context or context.strip() == "NONE":
             return True
 
-        # PRODUCTION FIX: Eliminated Double Validation Brittleness.
         # Because we enforce the citation format rigorously at the Pydantic JSON parsing layer
         # inside the Chain, we bypass this raw-string regex check. This prevents false negatives
         # if the LLM structures its JSON slightly differently.

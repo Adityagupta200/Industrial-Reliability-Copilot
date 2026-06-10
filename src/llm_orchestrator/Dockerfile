@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-########################
 # Builder Stage
-########################
 FROM python:3.11-slim AS builder
 
 # Set build-time environment variables
@@ -39,12 +37,10 @@ RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
 # Download spaCy model explicitly into the virtual environment
 RUN python -m spacy download en_core_web_sm
 
-########################
 # Runtime Stage
-########################
 FROM python:3.11-slim AS runtime
 
-# Production environment variables
+# Environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     VENV_PATH=/opt/venv \
@@ -88,7 +84,7 @@ USER appuser:appgroup
 EXPOSE 8000
 
 # Local Docker Compose Healthcheck
-# Note: Kubernetes will ignore this and use the Liveness/Readiness probes defined in your manifest
+# Kubernetes will ignore this and use the Liveness/Readiness probes defined in the manifest
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8000/health/live || exit 1
 

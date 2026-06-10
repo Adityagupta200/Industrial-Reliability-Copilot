@@ -21,10 +21,10 @@ class RerankerSettings:
     def from_env() -> "RerankerSettings":
         return RerankerSettings(
             model_name=os.getenv("RERANKER_MODEL_NAME", "cross-encoder/ms-marco-MiniLM-L-12-v2"),
-            # PRODUCTION FIX: Hard ceiling aligned with HybridSettings out_k
+            #   Hard ceiling aligned with HybridSettings out_k
             max_rerank=int(os.getenv("RERANK_MAX_DOCS", "8")),
             top_n=int(os.getenv("RERANK_TOP_N", "3")),
-            # PRODUCTION FIX: Process all candidates in exactly one batch
+            #   Process all candidates in exactly one batch
             batch_size=int(os.getenv("RERANK_BATCH_SIZE", "8")),
             device=os.getenv("RERANKER_DEVICE") or None,
         )
@@ -35,9 +35,6 @@ class CrossEncoderReranker:
         self.settings = settings or RerankerSettings.from_env()
         self._model = None
 
-        # PRODUCTION FIX: Prevent CPU Thread Thrashing
-        # Clamps PyTorch threads to prevent catastrophic context-switching in containerized
-        # or restricted memory environments.
         if self.settings.device is None or self.settings.device == "cpu":
             import torch
 
@@ -64,7 +61,7 @@ class CrossEncoderReranker:
         pairs = [(query, (d.text or "")) for d in candidates]
 
         model = self._get_model()
-        # PRODUCTION FIX: Disable progress bar I/O overhead
+        #   Disable progress bar I/O overhead
         scores = model.predict(pairs, batch_size=self.settings.batch_size, show_progress_bar=False)
 
         rescored: list[Document] = []

@@ -618,7 +618,7 @@ def create_app() -> FastAPI:
                 provider=model_provider,
             ).observe(len(set(contexts)))
 
-            # PRODUCTION FIX: Removed the redundant global OutputGuardrails.validate_output check
+            # Removed the redundant global OutputGuardrails.validate_output check
             # here. The individual Chains (like RootCauseChain) already handle their own robust
             # output validation securely.
             FAITHFULNESS_SCORE.observe(1.0)
@@ -633,9 +633,6 @@ def create_app() -> FastAPI:
             pipeline_response.trace_id = trace_id
             pipeline_response.latency_ms = latency_ms
             pipeline_response.guardrails_applied = applied_guardrails
-
-            # PRODUCTION FIX: DO NOT OVERWRITE raw_context WITH "OMITTED_FROM_RESPONSE".
-            # The evaluator needs the raw context to accurately generate the quality metrics.
 
             await log_interaction_async(
                 query_id=trace_id,
@@ -657,7 +654,7 @@ def create_app() -> FastAPI:
 
             error_lower = error_msg.lower()
 
-            # PRODUCTION FIX: Scope the adversarial fallback to safety guardrail blocks.
+            # Scope the adversarial fallback to safety guardrail blocks.
             # Do NOT overwrite normal pipeline errors with the security refusal.
             if (
                 "guardrail blocked" in error_lower

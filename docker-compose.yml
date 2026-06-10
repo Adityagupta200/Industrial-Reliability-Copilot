@@ -65,7 +65,7 @@ services:
     ports:
       - "127.0.0.1:8001:8001"
     volumes:
-      # PRODUCTION FIX: Read-only mount to prevent WSL sync freezes
+      #   Read-only mount to prevent WSL sync freezes
       - ./src:/app/src:ro
     networks:
       - irc_network
@@ -124,7 +124,7 @@ services:
       - ./data/raw:/app/data/raw:rw
       - irc_rag_processed:/app/data/processed
       - irc_hf_cache:/app/data/hf_cache
-      # PRODUCTION FIX: Read-only mount to prevent WSL sync freezes
+      #   Read-only mount to prevent WSL sync freezes
       - ./src:/app/src:ro
     networks:
       - irc_network
@@ -218,8 +218,6 @@ services:
     ports:
       - "127.0.0.1:8080:8000"
     volumes:
-      # Keep local Phase 10 trace/demo runs aligned with the working tree while
-      # preserving an immutable-image path for Kubernetes and CI.
       - ./src:/app/src:ro
     environment:
       - HOST=0.0.0.0
@@ -299,7 +297,7 @@ services:
     ports:
       - "127.0.0.1:8000:8000" 
     volumes:
-      # PRODUCTION FIX: Read-only mount to prevent WSL sync freezes
+      #   Read-only mount to prevent WSL sync freezes
       - ./src:/app/src:ro
     networks:
       - irc_network
@@ -325,7 +323,6 @@ services:
       start_period: 15s
     restart: unless-stopped
 
-  # --- PHASE 8: Observability Stack (Prometheus, Alertmanager, Grafana) ---
   prometheus:
     image: prom/prometheus:v2.50.1
     container_name: irc-prometheus

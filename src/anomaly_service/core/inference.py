@@ -12,7 +12,6 @@ from .config import settings
 def anomaly_infer(model, x_np: np.ndarray, domain_id: int) -> tuple[float, float]:
     x = torch.from_numpy(x_np).to(settings.torch_device)
 
-    # Ensure [B, D]
     if x.dim() == 1:
         x = x.unsqueeze(0)
 
@@ -38,5 +37,4 @@ def rul_infer(model, x_np: np.ndarray) -> tuple[float, float]:
 def should_log_to_mlflow() -> bool:
     if not settings.mlflow_log_inference:
         return False
-    # PRODUCTION FIX: Use cryptographically secure randomness
     return secrets.SystemRandom().random() < settings.mlflow_inference_sample_rate

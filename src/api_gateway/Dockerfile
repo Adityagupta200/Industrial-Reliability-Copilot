@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-########################
 # Builder Stage
-########################
 FROM python:3.11-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -25,9 +23,7 @@ COPY src/api_gateway/requirements.txt /app/requirements.txt
 RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     -r /app/requirements.txt
 
-########################
 # Runtime Stage
-########################
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -52,8 +48,6 @@ RUN rm -rf \
       /usr/local/lib/python3.11/site-packages/setuptools* \
       /usr/local/lib/python3.11/site-packages/wheel* \
       /usr/local/bin/wheel
-
-# --- Phase 7 Production Patches ---
 
 # Explicit numeric UID/GID
 RUN groupadd --system --gid 10001 appgroup && \

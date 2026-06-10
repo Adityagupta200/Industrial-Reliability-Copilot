@@ -16,7 +16,6 @@ from rag_service.api.retrieve import router as retrieve_router, warm_retrieval_r
 from rag_service.core.config import settings
 
 
-# --- Production Logging Setup ---
 def _configure_logging() -> None:
     level_name = str(settings.log_level).upper()
     level = getattr(logging, level_name, logging.INFO)
@@ -30,7 +29,6 @@ def _configure_logging() -> None:
 _configure_logging()
 logger = logging.getLogger("rag_service.main")
 
-# --- Phase 7: Prometheus Metrics ---
 # Tracks the golden signals: Traffic, Errors, and Latency
 REQUEST_COUNT = Counter(
     "rag_service_requests_total",
@@ -89,17 +87,15 @@ app = FastAPI(
     description="Microservice responsible for semantic and hybrid retrieval from the Vector DB.",
 )
 
-# --- Phase 7 Security: CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In strict production, restrict this to internal cluster IPs/Gateway DNS
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# --- Phase 7 Observability: Metrics Middleware ---
 @app.middleware("http")
 async def metrics_middleware(request: Request, call_next):
     """Middleware to automatically track metrics for all RAG Service traffic."""
@@ -120,8 +116,6 @@ async def metrics_middleware(request: Request, call_next):
 app.include_router(retrieve_router, prefix="/retrieve", tags=["retrieve"])
 
 
-# --- Phase 7: Kubernetes Probes & Telemetry ---
-
 
 @app.get("/health/live", tags=["Health"])
 async def liveness_probe() -> dict[str, str]:
@@ -135,7 +129,7 @@ async def liveness_probe() -> dict[str, str]:
 @app.get("/health/ready", tags=["Health"])
 async def readiness_probe() -> Response:
     """
-    Production Fix: Shallow readiness probe.
+      Shallow readiness probe.
     Confirms the application is fully booted and the event loop is responsive.
     By removing the deep downstream check to Qdrant, we ensure Kubernetes
     does not falsely mark this pod as unready (and sever the ELB connection)

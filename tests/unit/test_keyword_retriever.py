@@ -99,13 +99,6 @@ def test_bm25_equipment_id_filter_limits_candidates(tmp_path):
 
 
 def test_bm25_results_are_complementary_to_semantic_on_crafted_example(tmp_path):
-    """
-    Phase 3 acceptance asks: keyword retrieval should be complementary,
-    i.e., can return different results than semantic-only. [file:8]
-
-    We simulate this by constructing a query that strongly favors exact token match "E404".
-    BM25 should put that doc first.
-    """
     qdrant = DummyQdrant(points=_make_points())
     idx_path = tmp_path / "bm25.pkl"
 

@@ -25,8 +25,6 @@ class PromptLoader:
     def load(self, prompt_name: str, version: str) -> PromptBundle:
         prompt_dir = self._base_dir / prompt_name
 
-        # PRODUCTION FIX: Robustly handle version strings to prevent 'vv1.0.txt' errors.
-        # Strips any leading 'v' or 'V' so both "1.0" and "v1.0" safely resolve to "v1.0.txt"
         clean_version = version.lstrip("vV")
         template_path = prompt_dir / f"v{clean_version}.txt"
         metadata_path = prompt_dir / "metadata.json"

@@ -18,8 +18,8 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"ragas\..*")
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
-import httpx  # noqa: E402
-from datasets import Dataset  # noqa: E402
+import httpx  
+from datasets import Dataset 
 
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://127.0.0.1:8000/query")
 RESULTS_DIR = Path("data/evaluation_results")
@@ -1168,7 +1168,7 @@ async def main() -> None:
     ]
     null_metrics = [m for m in critical_metrics if m in df.columns and df[m].isna().any()]
 
-    # PRODUCTION FIX: Log the extraction failure and penalize instead of crashing.
+    #   Log the extraction failure and penalize instead of crashing.
     if null_metrics:
         diagnostics = _null_metric_diagnostics(case_metrics, critical_metrics)
         guidance = (

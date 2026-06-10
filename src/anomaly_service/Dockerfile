@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-########################
 # Builder Stage
-########################
 FROM python:3.11-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -42,9 +40,7 @@ RUN python -m pip install --no-cache-dir --retries 5 --timeout 200 \
     --extra-index-url https://download.pytorch.org/whl/cpu \
     -r /app/requirements.txt
 
-########################
 # Runtime Stage
-########################
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

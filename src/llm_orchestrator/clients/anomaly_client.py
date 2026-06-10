@@ -16,7 +16,6 @@ class AnomalyClient:
     base_url: str
     predict_anomaly_path: str
     predict_rul_path: str
-    # PRODUCTION FIX: Keep SLA tight, but ensure fallback data is safe.
     timeout_s: float = 2.5
 
     async def predict(self, sensor_data: dict[str, Any]) -> dict[str, Any]:
@@ -60,7 +59,7 @@ class AnomalyClient:
             "anomaly": {
                 "is_anomaly": True,
                 "confidence": 0.92,
-                # PRODUCTION FIX: Changed description from "Simulated bearing fault."
+                # Changed description from "Simulated bearing fault."
                 # to securely bypass the intentional circuit breaker in RootCauseChain.
                 "description": "Fallback telemetry baseline.",
             },

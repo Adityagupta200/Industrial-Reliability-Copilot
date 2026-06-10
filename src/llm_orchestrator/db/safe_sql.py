@@ -25,9 +25,6 @@ def validate_readonly_sql(sql: str, policy: SQLPolicy) -> str:
     if not isinstance(parsed, exp.Select):
         raise UnsafeSQLError("Only SELECT queries are allowed.")
 
-    # PRODUCTION FIX: Dynamically build the tuple of blocked types based on what
-    # exists in this specific version of sqlglot. This avoids both the
-    # AttributeError (if Truncate is missing) AND the TypeError (by passing valid types to find).
     blocked_names = ["Insert", "Update", "Delete", "Drop", "Create", "Alter", "Command", "Truncate"]
     blocked_types = tuple(getattr(exp, name) for name in blocked_names if hasattr(exp, name))
 

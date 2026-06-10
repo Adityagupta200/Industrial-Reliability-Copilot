@@ -5,7 +5,7 @@ metadata:
   name: rag-service
   namespace: staging
 spec:
-  replicas: 1 # PRODUCTION FIX: Reduced from 2 to 1 to prevent cluster memory starvation
+  replicas: 1 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 900
   minReadySeconds: 5
@@ -25,9 +25,9 @@ spec:
       terminationGracePeriodSeconds: 45
       containers:
       - name: rag-service
-        # PRODUCTION FIX: Point to AWS ECR instead of local Minikube cache
+        # Point to AWS ECR instead of local Minikube cache
         image: 519245966025.dkr.ecr.ap-south-1.amazonaws.com/rag-service:phase11-20260605135326-f455ea6
-        imagePullPolicy: Always # PRODUCTION FIX: Force EKS to pull from cloud registry
+        imagePullPolicy: Always # Force EKS to pull from cloud registry
         envFrom:
         - configMapRef:
             name: copilot-config
@@ -54,7 +54,7 @@ spec:
             port: 8002
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # Breathing room for heavy retrieval
+          timeoutSeconds: 10      
           failureThreshold: 10    # Prevents pod termination during CPU spikes
         readinessProbe:
           httpGet:
@@ -87,7 +87,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: rag-service
-  minReplicas: 1 # PRODUCTION FIX: Lowered floor to match base replicas
+  minReplicas: 1 # Lowered floor to match base replicas
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -105,7 +105,7 @@ metadata:
   name: anomaly-service
   namespace: staging
 spec:
-  replicas: 1 # PRODUCTION FIX
+  replicas: 1 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 600
   minReadySeconds: 5
@@ -184,7 +184,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: anomaly-service
-  minReplicas: 1 # PRODUCTION FIX
+  minReplicas: 1
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -202,7 +202,7 @@ metadata:
   name: llm-orchestrator
   namespace: staging
 spec:
-  replicas: 4 # Phase 11 production baseline for sustained 50 QPS validation
+  replicas: 4 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 900
   minReadySeconds: 5
@@ -353,7 +353,7 @@ metadata:
   name: api-gateway
   namespace: staging
 spec:
-  replicas: 3 # Production edge baseline for 50 QPS validation plus HA
+  replicas: 3 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 600
   minReadySeconds: 5

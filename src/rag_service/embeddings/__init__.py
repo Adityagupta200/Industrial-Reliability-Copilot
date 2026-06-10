@@ -6,7 +6,7 @@ from rag_service.embeddings.base import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
-# PRODUCTION FIX: Global Singleton Cache
+#   Global Singleton Cache
 # Prevents reloading 1.5GB model weights into RAM on every FastAPI request.
 _PROVIDER_INSTANCE: EmbeddingProvider | None = None
 

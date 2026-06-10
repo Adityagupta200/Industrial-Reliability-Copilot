@@ -4,7 +4,6 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
-# PRODUCTION FIX: Universal Path Resolution
 # By dynamically anchoring to this file's location, paths resolve correctly
 # regardless of the execution environment, OS, or containerization state.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

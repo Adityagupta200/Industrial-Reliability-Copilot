@@ -27,8 +27,6 @@ class QdrantStore:
     def ensure_collection(self, name: str, vector_size: int) -> None:
         existing = {c.name for c in self.client.get_collections().collections}
         if name in existing:
-            # PRODUCTION FIX: Auto-heal dimension mismatches.
-            # If you switch from BGE (384) to OpenAI (1536), wipe and recreate the collection.
             try:
                 col_info = self.client.get_collection(name)
                 v_config = col_info.config.params.vectors

@@ -52,7 +52,7 @@ def test_predict_anomaly_missing_feature_graceful_fallback(
 
     r = client.post("/predict/anomaly", json=bad)
 
-    # PRODUCTION FIX: Assert the graceful fallback behavior instead of expecting a 422 crash
+    #   Assert the graceful fallback behavior instead of expecting a 422 crash
     assert r.status_code == 200, r.text
 
     body = r.json()

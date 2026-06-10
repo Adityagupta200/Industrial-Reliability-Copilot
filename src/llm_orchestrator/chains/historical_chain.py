@@ -24,7 +24,7 @@ def _format_docs(docs: list[RetrievedDoc]) -> str:
     return "\n---\n".join(parts)
 
 
-# PRODUCTION FIX: Injected the Data Dictionary and an off-topic fallback rule.
+# Injected the Data Dictionary and an off-topic fallback rule.
 # This strictly grounds the LLM to reality and prevents column hallucination.
 _TEXT2SQL_PROMPT = """You are a senior data engineer.
 Write a single Postgres SELECT query to answer the question using only the allowed table.

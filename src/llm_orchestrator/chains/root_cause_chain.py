@@ -155,7 +155,7 @@ def _format_docs(
     parts = []
     mapping = {}
     for i, d in enumerate(docs, start=1):
-        # PRODUCTION FIX: Prioritize 'source_file' exactly as injected by pipeline.py
+        # Prioritize 'source_file' exactly as injected by pipeline.py
         meta_source = d.metadata.get("source_file") or d.metadata.get("source_id")
         raw_source = meta_source if meta_source else getattr(d, "source", None)
 

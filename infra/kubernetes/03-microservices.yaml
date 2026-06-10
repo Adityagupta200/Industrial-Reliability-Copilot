@@ -5,7 +5,7 @@ metadata:
   name: rag-service
   namespace: industrial-copilot
 spec:
-  replicas: 1 # PRODUCTION FIX: Reduced from 2 to 1 to prevent cluster memory starvation
+  replicas: 1 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 900
   minReadySeconds: 5
@@ -25,9 +25,8 @@ spec:
       terminationGracePeriodSeconds: 45
       containers:
       - name: rag-service
-        # PRODUCTION FIX: Point to AWS ECR instead of local Minikube cache
         image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-south-1.amazonaws.com/rag-service:v1.2
-        imagePullPolicy: Always # PRODUCTION FIX: Force EKS to pull from cloud registry
+        imagePullPolicy: Always 
         envFrom:
         - configMapRef:
             name: copilot-config
@@ -37,10 +36,10 @@ spec:
         - containerPort: 8002
         resources:
           requests:
-            memory: "1.5Gi" # Accommodates BGE-Large
+            memory: "1.5Gi" 
             cpu: "500m"
           limits:
-            memory: "4Gi"   # Prevents OOMKilled during inference spikes
+            memory: "4Gi"   
             cpu: "2000m"
         startupProbe:
           httpGet:
@@ -54,7 +53,7 @@ spec:
             port: 8002
           initialDelaySeconds: 15
           periodSeconds: 20
-          timeoutSeconds: 10      # Breathing room for heavy retrieval
+          timeoutSeconds: 10      
           failureThreshold: 10    # Prevents pod termination during CPU spikes
         readinessProbe:
           httpGet:
@@ -87,7 +86,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: rag-service
-  minReplicas: 1 # PRODUCTION FIX: Lowered floor to match base replicas
+  minReplicas: 1 # Lowered floor to match base replicas
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -105,7 +104,7 @@ metadata:
   name: anomaly-service
   namespace: industrial-copilot
 spec:
-  replicas: 1 # PRODUCTION FIX
+  replicas: 1 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 600
   minReadySeconds: 5
@@ -184,7 +183,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: anomaly-service
-  minReplicas: 1 # PRODUCTION FIX
+  minReplicas: 1 
   maxReplicas: 10
   metrics:
   - type: Resource
@@ -202,7 +201,7 @@ metadata:
   name: llm-orchestrator
   namespace: industrial-copilot
 spec:
-  replicas: 4 # Phase 11 production baseline for sustained 50 QPS validation
+  replicas: 4 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 900
   minReadySeconds: 5
@@ -353,7 +352,7 @@ metadata:
   name: api-gateway
   namespace: industrial-copilot
 spec:
-  replicas: 3 # Production edge baseline for 50 QPS validation plus HA
+  replicas: 3 
   revisionHistoryLimit: 5
   progressDeadlineSeconds: 600
   minReadySeconds: 5

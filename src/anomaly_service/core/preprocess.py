@@ -35,14 +35,14 @@ def load_schema(path: str) -> Dict[str, Any]:
 def infer_schema_id(sensor_values: Dict[str, Any]) -> str:
     keys = set(sensor_values.keys())
 
-    # HAI has tags like P1_B2004 etc; the technical doc also describes a timestamp column + Attack labeling [file:8]
+    # HAI has tags like P1_B2004 etc; the technical doc also describes a timestamp column + Attack labeling 
     if any(
         k.startswith("P1_") or k.startswith("P2_") or k.startswith("P3_") or k.startswith("P4_")
         for k in keys
     ):
         return "hai"
 
-    # SWaT commonly includes tags like FIT101/LIT101 and many plant instruments [file:9]
+    # SWaT commonly includes tags like FIT101/LIT101 and many plant instruments 
     if "FIT101" in keys or "LIT101" in keys or "MV101" in keys:
         return "swat"
 
@@ -84,7 +84,7 @@ def preprocess_anomaly(
 ) -> Tuple[np.ndarray, int]:
     """
     Replicates the notebook’s inference path:
-    raw vector -> scaler(domain) -> PCA(domain) -> GA mask -> final x for torch [file:7]
+    raw vector -> scaler(domain) -> PCA(domain) -> GA mask -> final x for torch 
     """
     dom = schema_id
     feature_order = schema["schemas"][dom]["feature_order"]

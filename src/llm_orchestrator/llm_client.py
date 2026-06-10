@@ -116,7 +116,7 @@ class LLMClient:
         try:
             return await self._invoke_with_retry(primary, prompt, json_mode=json_mode)
         except LLMTransientError as e:
-            # PRODUCTION FIX: Implement Graceful Degradation
+            # Implement Graceful Degradation
             logger.warning(
                 f"Primary provider '{self._settings.primary_provider}' failed: {e}. "
                 f"Initiating failover to fallback provider '{self._settings.fallback_provider}'."

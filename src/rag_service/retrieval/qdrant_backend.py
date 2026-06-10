@@ -111,7 +111,7 @@ class QdrantBackend:
                     with_vectors=False,
                 )
             except UnexpectedResponse as e:
-                # FIX: Handle cold-start/empty environments where the collection hasn't been created yet.
+                # Handle cold-start/empty environments where the collection hasn't been created yet.
                 if getattr(e, "status_code", None) == 404 or "Not found" in str(e):
                     return []
                 raise

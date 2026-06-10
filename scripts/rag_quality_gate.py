@@ -19,8 +19,6 @@ def main():
         print("❌ Error: summary.json not found. Pipeline failed to run Ragas.")
         sys.exit(1)
 
-    # MLE FIX: Dynamically aggregate row-level scores if Ragas outputs a list of dictionaries
-    # and gracefully handle NaN values caused by LLM-as-a-judge generation dropouts.
     aggregated_scores = {}
     if isinstance(results, list):
         print("ℹ️ Detected row-level evaluation records. Computing aggregates...")
