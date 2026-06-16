@@ -65,3 +65,5 @@ data/evaluation_results/latest_run.csv
 bandit-report.json
 docs/assets/screenshots/README.md
 .codex
+docs/launch.md
+docs/portfolio.md
