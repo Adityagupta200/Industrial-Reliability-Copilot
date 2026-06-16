@@ -307,8 +307,6 @@ tests/                        unit, integration, regression tests
 - [Evaluation methodology](docs/evaluation.md)
 - [Incident documentation](docs/incidents.md)
 - [Deployment secrets](docs/deployment_secrets.md)
-- [Phase 11 launch runbook](docs/launch.md)
-- [Portfolio packaging](docs/portfolio.md)
 
 ## License And Contact
 
